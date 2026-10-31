@@ -81,10 +81,17 @@ async def test_login_formats_and_rule_role(
 async def test_bootstrap_admin_from_ad(
     make_client: Any, infra: Infra, mock_ad: MockAd, tmp_path: Path
 ) -> None:
-    _, client = await _ldap_client(make_client, infra, mock_ad, tmp_path)
+    app, client = await _ldap_client(make_client, infra, mock_ad, tmp_path)
     me = (await client.login("ivanov", USER_PASSWORD, provider="ldap")).json()
     assert "superadmin" in {r["code"] for r in me["roles"]}
     assert (await client.get("/api/admin/users")).status_code == 200
+
+    # Вход провайдером dev под тем же логином не перезаписывает данные из AD.
+    assert (await client.login("ivanov")).json()["id"] == me["id"]
+    async with app.state.db_sessions() as db:
+        user = await db.get(User, me["id"])
+        assert user is not None and not user.ad_guid.startswith("dev:")
+        assert user.employee_id == "0001"
 
 
 async def test_disabled_user_cannot_log_in(

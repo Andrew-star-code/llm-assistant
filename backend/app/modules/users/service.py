@@ -47,6 +47,10 @@ def address_of(user: User, settings: Settings) -> str | None:
     )
 
 
+def is_dev_guid(guid: str) -> bool:
+    return guid.startswith(DEV_GUID_PREFIX)
+
+
 async def _find_existing(db: AsyncSession, du: DirectoryUser) -> User | None:
     user = await db.scalar(select(User).where(User.ad_guid == du.guid))
     if user is not None:
@@ -54,7 +58,7 @@ async def _find_existing(db: AsyncSession, du: DirectoryUser) -> User | None:
     by_login = await db.scalar(select(User).where(User.login == du.login))
     if by_login is None:
         return None
-    if by_login.ad_guid.startswith(DEV_GUID_PREFIX) or du.guid.startswith(DEV_GUID_PREFIX):
+    if is_dev_guid(by_login.ad_guid) or is_dev_guid(du.guid):
         # Тот же человек вошёл другим провайдером на дев-стенде — берём ту же запись.
         return by_login
     # Логин занят другой учёткой AD (учётку пересоздали): старую запись освобождаем от логина.
@@ -89,6 +93,9 @@ async def upsert_from_directory(
     """Создаёт или обновляет пользователя по данным каталога. Коммит — на вызывающей стороне."""
     now = now or utcnow()
     user = await _find_existing(db, du)
+    if user is not None and is_dev_guid(du.guid) and not is_dev_guid(user.ad_guid):
+        # Вход провайдером dev под пользователем из AD: данные AD не перезаписываем.
+        return user
     if user is None:
         user = User(ad_guid=du.guid, login=du.login, full_name=du.login, ad_groups=[], settings={})
         db.add(user)
