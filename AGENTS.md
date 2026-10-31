@@ -22,6 +22,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make typecheck` | mypy strict, tsc |
 | `make e2e` | Playwright против работающего api (сначала `make dev-up`) |
 | `make eval-rag` | hit@5 и MRR поиска по 4 конфигурациям (`eval/rag`, `--check`) на моделях стенда |
+| `make eval-scenarios` | Эталонные запросы сценариев + LLM-судья, сравнение с `baseline.json` |
 | `make test-worker` | Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (`worker check`) |
 | `make gen-api` | OpenAPI → `frontend/src/api/` + `docs/reference/api.md` (после любого изменения API) |
 | `make migrate` | Миграции Alembic |
@@ -54,15 +55,15 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ├── backend/tests/                  # unit, integration, security
 ├── frontend/src/                   # app, api (генерируется), features, admin, components/ui, lib, i18n
 ├── services/fake-llm/              # OpenAI-совместимый mock для разработки и тестов
-├── config/                         # app.yaml, models.yaml (+ оверлеи <env>), prompts/, templates/; дальше scenarios…
+├── config/                         # app.yaml, models.yaml (+ оверлеи <env>), prompts/, templates/, scenarios/
 ├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, .env.example
 ├── deploy/mock-ad/                 # Samba AD DC с тестовыми пользователями
-├── eval/rag/                       # оценка поиска: корпус, questions.yaml, run.py
+├── eval/                           # rag/ (hit@5, MRR), scenarios/ (эталоны сценариев, LLM-судья)
 └── scripts/docs_check.py
 ```
 
 Появятся по этапам: `services/data-gateway/`, `services/sandbox-runner/` ★,
-`deploy/nginx/`, `deploy/models/`, `deploy/monitoring/`, `deploy/offline/`, `eval/scenarios/`, `config/scenarios/` и др. (§5).
+`deploy/nginx/`, `deploy/models/`, `deploy/monitoring/`, `deploy/offline/` и др. (§5).
 
 ### Карта изменений
 
@@ -72,7 +73,7 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 | Добавить кнопку в поле ввода | `frontend/src/features/composer/` | строки в `i18n/` |
 | Поменять рендер Markdown, формул, кода | `frontend/src/features/markdown/` | тесты рендера |
 | Добавить инструмент для модели | `backend/app/modules/tools/builtin/` + регистрация в `tools/registry.py` | `docs/guides/add-tool.md`, тест на fake-LLM |
-| Добавить корпоративный сценарий | админка «Сценарии» или `config/scenarios/*.yaml` | промпт в `config/prompts/scenarios/` |
+| Добавить корпоративный сценарий | админка «Сценарии» или `config/scenarios/*.yaml` | промпт в `config/prompts/scenarios/`, эталоны в `eval/scenarios/`, `docs/guides/add-scenario.md` |
 | Сменить или добавить модель | `config/models.yaml` + `deploy/models/` | `docs/runbooks/models.md` |
 | Изменить системный промпт | `config/prompts/system/` | прогон `eval/scenarios` |
 | Добавить поле профиля из AD | маппинг атрибутов в конфиге + `modules/users/` + миграция + `features/profile/` | `docs/guides/ad-setup.md` |
@@ -184,3 +185,11 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
   события пишите только через `emit`/`delta`.
 - **Номера цитат** выдаёт `SourceBook` (общая на ответ); не нумеруйте фрагменты в инструментах
   сами — `render_fragments` в `tools/builtin/knowledge.py`.
+- **Сценарий читается из БД на каждое сообщение** (`completions/generation.py`) — не кэшируйте
+  его: «правка действует без перезапуска» — критерий приёмки. Seed из `config/scenarios` только
+  добавляет новые коды и не трогает правки админа.
+- **Промпт сценария — шаблон админа**: рендер только через `scenarios.service.render_prompt`
+  (песочница Jinja2), никогда через `PromptRenderer` файловых шаблонов.
+- **Тестовые чаты** (`chats.is_test`) не попадают в историю и поиск — новые выборки чатов
+  пользователя фильтруйте по `is_test` так же. e2e создают сценарии выключенными, чтобы не засорять
+  стартовый экран дев-стенда.

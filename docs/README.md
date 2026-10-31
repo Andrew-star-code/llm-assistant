@@ -6,7 +6,7 @@
 | [status.md](status.md) | Прогресс этапов, кто чем занят, открытые вопросы, демо-сценарии |
 | [architecture/](architecture/overview.md) | [Обзор](architecture/overview.md), [безопасность: вход, сессии, права](architecture/security.md), [поток сообщения](architecture/request-flow.md), [SSE-протокол](architecture/sse-protocol.md) |
 | [adr/](adr/0000-template.md) | Архитектурные решения: [шаблон](adr/0000-template.md), 0001–0012 |
-| [guides/](guides/README.md) | Пошаговые инструкции: [настройка AD](guides/ad-setup.md), [страница админки](guides/add-admin-page.md), [смена модели](guides/add-model.md), [инструмент для модели](guides/add-tool.md), дальше — «как добавить…» |
+| [guides/](guides/README.md) | Пошаговые инструкции: [настройка AD](guides/ad-setup.md), [страница админки](guides/add-admin-page.md), [смена модели](guides/add-model.md), [инструмент для модели](guides/add-tool.md), [сценарий](guides/add-scenario.md), дальше — «как добавить…» |
 | [reference/](reference/config.md) | Справочники: [config.md](reference/config.md), [api.md](reference/api.md), [db-schema.md](reference/db-schema.md) (генерируются), [permissions.md](reference/permissions.md) |
 | [runbooks/](runbooks/README.md) | Эксплуатация: модели, бэкапы, инциденты, секреты |
 
