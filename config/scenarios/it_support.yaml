@@ -1,0 +1,17 @@
+code: it_support
+name: ИТ-поддержка
+description: Доступы, VPN, пароли, оборудование — и заявка в поддержку
+icon: life-buoy
+roles: []
+model_role: chat
+thinking_default: false
+prompt_template: scenarios/it_support.md.j2
+tools: [search_knowledge_base, list_attachments, read_document, create_document]
+knowledge_bases: [it-support]
+rag_mode: auto
+requires_attachment: false
+starter_prompts:
+  - Не подключается VPN — что проверить?
+  - Как сбросить пароль от учётной записи?
+  - "Оформи заявку в поддержку: не работает принтер на 3 этаже"
+sort_order: 20

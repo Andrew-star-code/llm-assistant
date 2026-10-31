@@ -212,7 +212,7 @@ export interface paths {
     put?: never;
     /**
      * Create Chat
-     * @description Пустой чат; в списке появится после первого сообщения.
+     * @description Пустой чат; в списке появится после первого сообщения. Сценарий — только доступный.
      */
     post: operations["createChat"];
     delete?: never;
@@ -795,6 +795,110 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/scenarios": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Scenarios
+     * @description Сценарии, доступные ролям пользователя (пустые роли сценария — всем).
+     */
+    get: operations["listScenarios"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/scenarios": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Scenarios */
+    get: operations["adminListScenarios"];
+    put?: never;
+    /** Create Scenario */
+    post: operations["adminCreateScenario"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/scenarios/options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Options
+     * @description Что можно выбрать в редакторе: модели, инструменты, базы, роли, иконки, переменные.
+     */
+    get: operations["adminScenarioOptions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/scenarios/{scenario_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Scenario */
+    get: operations["adminGetScenario"];
+    /**
+     * Update Scenario
+     * @description Полная замена полей; действует со следующего сообщения во всех чатах сценария.
+     */
+    put: operations["adminUpdateScenario"];
+    post?: never;
+    /**
+     * Delete Scenario
+     * @description Удаление: чаты сценария продолжаются как обычные (scenario_id → null).
+     */
+    delete: operations["adminDeleteScenario"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/scenarios/{scenario_id}/test-chat": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Test Chat
+     * @description Тестовый чат прямо в редакторе: от имени админа, без проверки ролей сценария, не виден в
+     *     истории. Генерация читает сохранённую версию — после «Сохранить» тест сразу её видит.
+     */
+    post: operations["adminScenarioTestChat"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/users": {
     parameters: {
       query?: never;
@@ -1081,6 +1185,11 @@ export interface components {
       folder_id?: string | null;
       /** Thinking Enabled */
       thinking_enabled?: boolean | null;
+      /**
+       * Scenario Id
+       * @description Сценарий (§8.7); должен быть доступен.
+       */
+      scenario_id?: string | null;
     };
     /** ChatDetail */
     ChatDetail: {
@@ -1102,10 +1211,19 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+      /** Scenario Id */
+      scenario_id?: string | null;
       /** Active Leaf Id */
       active_leaf_id: string | null;
       /** Thinking Enabled */
       thinking_enabled: boolean | null;
+      /** @description Активный сценарий чата. */
+      scenario?: components["schemas"]["ScenarioRef"] | null;
+      /**
+       * Is Test
+       * @default false
+       */
+      is_test: boolean;
       /**
        * Messages
        * @description Все сообщения чата (дерево через parent_id).
@@ -1132,6 +1250,8 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+      /** Scenario Id */
+      scenario_id?: string | null;
     };
     /** ChatModelInfo */
     ChatModelInfo: {
@@ -1155,6 +1275,11 @@ export interface components {
       active_leaf_id?: string | null;
       /** Thinking Enabled */
       thinking_enabled?: boolean | null;
+      /**
+       * Scenario Id
+       * @description null — сбросить сценарий чата.
+       */
+      scenario_id?: string | null;
     };
     /** CheckResult */
     CheckResult: {
@@ -1915,6 +2040,233 @@ export interface components {
        */
       role_ids: string[];
     };
+    /**
+     * ScenarioCard
+     * @description Карточка на стартовом экране (§7.9) — то, что нужно пользователю.
+     */
+    ScenarioCard: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description: string | null;
+      /** Icon */
+      icon: string | null;
+      /** Starter Prompts */
+      starter_prompts: string[];
+      /** Requires Attachment */
+      requires_attachment: boolean;
+      /** Attachment Hint */
+      attachment_hint: string | null;
+      /**
+       * Thinking Available
+       * @description Модель сценария поддерживает «Размышлять».
+       */
+      thinking_available: boolean;
+      /** Thinking Default */
+      thinking_default: boolean;
+    };
+    /**
+     * ScenarioOptions
+     * @description Что можно выбрать в редакторе.
+     */
+    ScenarioOptions: {
+      /** Model Roles */
+      model_roles: string[];
+      /** Tools */
+      tools: string[];
+      /** Knowledge Bases */
+      knowledge_bases: {
+        [key: string]: string;
+      }[];
+      /** Roles */
+      roles: {
+        [key: string]: string;
+      }[];
+      /** Icons */
+      icons: string[];
+      /** Variables */
+      variables: {
+        [key: string]: string;
+      };
+      /** Rag Modes */
+      rag_modes: ("auto" | "tool" | "off")[];
+    };
+    /**
+     * ScenarioOut
+     * @description Сценарий в админке — все поля.
+     */
+    ScenarioOut: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description?: string | null;
+      /** Icon */
+      icon?: string | null;
+      /**
+       * Roles
+       * @description Коды ролей; пусто — всем.
+       */
+      roles?: string[];
+      /**
+       * Model Role
+       * @default chat
+       */
+      model_role: string;
+      /**
+       * Prompt Template
+       * @description Текст шаблона Jinja2.
+       * @default
+       */
+      prompt_template: string;
+      /**
+       * Tools
+       * @description Инструменты; null — все включённые.
+       */
+      tools?: string[] | null;
+      /**
+       * Knowledge Bases
+       * @description Коды баз знаний; пусто — все доступные.
+       */
+      knowledge_bases?: string[];
+      /**
+       * Rag Mode
+       * @default auto
+       * @enum {string}
+       */
+      rag_mode: "auto" | "tool" | "off";
+      /**
+       * Requires Attachment
+       * @default false
+       */
+      requires_attachment: boolean;
+      /** Attachment Hint */
+      attachment_hint?: string | null;
+      /** Starter Prompts */
+      starter_prompts?: string[];
+      /** Thinking Default */
+      thinking_default?: boolean | null;
+      /**
+       * Is Active
+       * @default true
+       */
+      is_active: boolean;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order: number;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Source */
+      source: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Unknown Roles
+       * @description Коды ролей, которых пока нет в системе.
+       */
+      unknown_roles?: string[];
+      /** Unknown Knowledge Bases */
+      unknown_knowledge_bases?: string[];
+    };
+    /** ScenarioRef */
+    ScenarioRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Icon */
+      icon: string | null;
+      /** Requires Attachment */
+      requires_attachment: boolean;
+      /** Attachment Hint */
+      attachment_hint: string | null;
+    };
+    /**
+     * ScenarioSpec
+     * @description Сценарий из YAML и из редактора админки — одна схема.
+     */
+    ScenarioSpec: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description?: string | null;
+      /** Icon */
+      icon?: string | null;
+      /**
+       * Roles
+       * @description Коды ролей; пусто — всем.
+       */
+      roles?: string[];
+      /**
+       * Model Role
+       * @default chat
+       */
+      model_role: string;
+      /**
+       * Prompt Template
+       * @description Текст шаблона Jinja2.
+       * @default
+       */
+      prompt_template: string;
+      /**
+       * Tools
+       * @description Инструменты; null — все включённые.
+       */
+      tools?: string[] | null;
+      /**
+       * Knowledge Bases
+       * @description Коды баз знаний; пусто — все доступные.
+       */
+      knowledge_bases?: string[];
+      /**
+       * Rag Mode
+       * @default auto
+       * @enum {string}
+       */
+      rag_mode: "auto" | "tool" | "off";
+      /**
+       * Requires Attachment
+       * @default false
+       */
+      requires_attachment: boolean;
+      /** Attachment Hint */
+      attachment_hint?: string | null;
+      /** Starter Prompts */
+      starter_prompts?: string[];
+      /** Thinking Default */
+      thinking_default?: boolean | null;
+      /**
+       * Is Active
+       * @default true
+       */
+      is_active: boolean;
+      /**
+       * Sort Order
+       * @default 0
+       */
+      sort_order: number;
+    };
     /** SearchFragment */
     SearchFragment: {
       /** Text */
@@ -2064,6 +2416,14 @@ export interface components {
       ok: boolean;
       /** Error */
       error?: string | null;
+    };
+    /** TestChatOut */
+    TestChatOut: {
+      /**
+       * Chat Id
+       * Format: uuid
+       */
+      chat_id: string;
     };
     /**
      * ToolStep
@@ -3750,6 +4110,225 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["IncidentOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  listScenarios: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioCard"][];
+        };
+      };
+    };
+  };
+  adminListScenarios: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioOut"][];
+        };
+      };
+    };
+  };
+  adminCreateScenario: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ScenarioSpec"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminScenarioOptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioOptions"];
+        };
+      };
+    };
+  };
+  adminGetScenario: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        scenario_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUpdateScenario: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        scenario_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ScenarioSpec"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDeleteScenario: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        scenario_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminScenarioTestChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        scenario_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TestChatOut"];
         };
       };
       /** @description Validation Error */

@@ -43,6 +43,9 @@ from app.modules.kb.admin_router import router as kb_admin_router
 from app.modules.kb.router import router as kb_router
 from app.modules.llm.registry import ModelRegistry
 from app.modules.rbac.service import ensure_system_rbac
+from app.modules.scenarios.admin_router import router as scenarios_admin_router
+from app.modules.scenarios.router import router as scenarios_router
+from app.modules.scenarios.service import seed as seed_scenarios
 from app.modules.security.bruteforce import BruteforceGuard
 from app.modules.users.router import router as profile_router
 from app.modules.users.sync import run_periodic_sync
@@ -130,6 +133,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         log.exception("rbac.bootstrap_failed")
 
     try:
+        async with app.state.db_sessions() as session:
+            await seed_scenarios(session, settings.config_dir)
+    except Exception:
+        log.exception("scenarios.seed_failed")
+
+    try:
         await app.state.generations.mark_orphaned_interrupted()
     except Exception:
         log.exception("completions.orphans_check_failed")
@@ -191,6 +200,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(kb_router)
     api.include_router(kb_admin_router)
     api.include_router(incidents_router)
+    api.include_router(scenarios_router)
+    api.include_router(scenarios_admin_router)
     api.include_router(admin_router)
     app.include_router(api)
 

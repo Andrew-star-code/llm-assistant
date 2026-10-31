@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.modules.files.schemas import FileOut
+from app.modules.scenarios.schemas import ScenarioRef
 
 MessageStatus = Literal["completed", "streaming", "stopped", "error", "interrupted"]
 DislikeReason = Literal["inaccurate", "off_topic", "code_error", "incomplete", "other"]
@@ -37,11 +38,13 @@ class ChatListItem(BaseModel):
     pinned: bool
     last_message_at: datetime | None
     created_at: datetime
+    scenario_id: UUID | None = None
 
 
 class ChatCreate(BaseModel):
     folder_id: UUID | None = None
     thinking_enabled: bool | None = None
+    scenario_id: UUID | None = Field(None, description="Сценарий (§8.7); должен быть доступен.")
 
 
 class ChatUpdate(BaseModel):
@@ -52,6 +55,7 @@ class ChatUpdate(BaseModel):
     folder_id: UUID | None = None
     active_leaf_id: UUID | None = None
     thinking_enabled: bool | None = None
+    scenario_id: UUID | None = Field(None, description="null — сбросить сценарий чата.")
 
 
 class FeedbackOut(BaseModel):
@@ -121,6 +125,8 @@ class MessageOut(BaseModel):
 class ChatDetail(ChatListItem):
     active_leaf_id: UUID | None
     thinking_enabled: bool | None
+    scenario: ScenarioRef | None = Field(None, description="Активный сценарий чата.")
+    is_test: bool = False
     messages: list[MessageOut] = Field(description="Все сообщения чата (дерево через parent_id).")
 
 

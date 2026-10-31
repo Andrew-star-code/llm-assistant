@@ -53,8 +53,12 @@ class Chat(UUIDPkMixin, CreatedAtMixin, Base):
         Uuid, ForeignKey("folders.id", ondelete="SET NULL"), index=True
     )
     title: Mapped[str | None] = mapped_column(String(300))
-    # Сценарии — этап 5; внешний ключ появится вместе с таблицей scenarios.
-    scenario_id: Mapped[UUID | None] = mapped_column(Uuid)
+    # Сценарий чата (§8.7); сам сценарий читается из БД на каждое сообщение.
+    scenario_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("scenarios.id", ondelete="SET NULL"), index=True
+    )
+    # Тестовый чат из редактора сценария: не показывается в истории пользователя.
+    is_test: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     pinned: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     active_leaf_id: Mapped[UUID | None] = mapped_column(Uuid)
     thinking_enabled: Mapped[bool | None] = mapped_column(Boolean)

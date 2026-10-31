@@ -178,7 +178,10 @@ async def list_chats(
 ) -> list[Chat]:
     """Чаты с хотя бы одним сообщением, свежие сверху (§7.2: в списке — после первого сообщения)."""
     stmt = select(Chat).where(
-        Chat.user_id == user_id, Chat.deleted_at.is_(None), Chat.last_message_at.is_not(None)
+        Chat.user_id == user_id,
+        Chat.deleted_at.is_(None),
+        Chat.last_message_at.is_not(None),
+        Chat.is_test.is_(False),  # тестовые чаты редактора сценариев — не в истории
     )
     if pinned is not None:
         stmt = stmt.where(Chat.pinned.is_(pinned))
@@ -233,7 +236,7 @@ async def search(db: AsyncSession, user_id: UUID, query: str) -> list[SearchHit]
         return []
     tsquery = func.websearch_to_tsquery("russian", q)
     like = f"%{q.replace('%', r'\%').replace('_', r'\_')}%"
-    own_chats = and_(Chat.user_id == user_id, Chat.deleted_at.is_(None))
+    own_chats = and_(Chat.user_id == user_id, Chat.deleted_at.is_(None), Chat.is_test.is_(False))
 
     headline = func.ts_headline(
         "russian",

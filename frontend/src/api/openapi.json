@@ -375,7 +375,7 @@
           "chats"
         ],
         "summary": "Create Chat",
-        "description": "Пустой чат; в списке появится после первого сообщения.",
+        "description": "Пустой чат; в списке появится после первого сообщения. Сценарий — только доступный.",
         "operationId": "createChat",
         "requestBody": {
           "required": true,
@@ -2184,6 +2184,292 @@
         }
       }
     },
+    "/api/scenarios": {
+      "get": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "List Scenarios",
+        "description": "Сценарии, доступные ролям пользователя (пустые роли сценария — всем).",
+        "operationId": "listScenarios",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioCard"
+                  },
+                  "type": "array",
+                  "title": "Response Listscenarios"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/scenarios": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Scenarios",
+        "operationId": "adminListScenarios",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioOut"
+                  },
+                  "type": "array",
+                  "title": "Response Adminlistscenarios"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Scenario",
+        "operationId": "adminCreateScenario",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/scenarios/options": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Options",
+        "description": "Что можно выбрать в редакторе: модели, инструменты, базы, роли, иконки, переменные.",
+        "operationId": "adminScenarioOptions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOptions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/scenarios/{scenario_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Scenario",
+        "operationId": "adminGetScenario",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Scenario",
+        "description": "Полная замена полей; действует со следующего сообщения во всех чатах сценария.",
+        "operationId": "adminUpdateScenario",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioSpec"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Scenario",
+        "description": "Удаление: чаты сценария продолжаются как обычные (scenario_id → null).",
+        "operationId": "adminDeleteScenario",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/scenarios/{scenario_id}/test-chat": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Test Chat",
+        "description": "Тестовый чат прямо в редакторе: от имени админа, без проверки ролей сценария, не виден в\nистории. Генерация читает сохранённую версию — после «Сохранить» тест сразу её видит.",
+        "operationId": "adminScenarioTestChat",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestChatOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/users": {
       "get": {
         "tags": [
@@ -3048,6 +3334,19 @@
               }
             ],
             "title": "Thinking Enabled"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id",
+            "description": "Сценарий (§8.7); должен быть доступен."
           }
         },
         "type": "object",
@@ -3104,6 +3403,18 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          },
           "active_leaf_id": {
             "anyOf": [
               {
@@ -3126,6 +3437,22 @@
               }
             ],
             "title": "Thinking Enabled"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScenarioRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Активный сценарий чата."
+          },
+          "is_test": {
+            "type": "boolean",
+            "title": "Is Test",
+            "default": false
           },
           "messages": {
             "items": {
@@ -3200,6 +3527,18 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
           }
         },
         "type": "object",
@@ -3291,6 +3630,19 @@
               }
             ],
             "title": "Thinking Enabled"
+          },
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id",
+            "description": "null — сбросить сценарий чата."
           }
         },
         "type": "object",
@@ -5587,6 +5939,545 @@
         ],
         "title": "RolesIn"
       },
+      "ScenarioCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "starter_prompts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Starter Prompts"
+          },
+          "requires_attachment": {
+            "type": "boolean",
+            "title": "Requires Attachment"
+          },
+          "attachment_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Hint"
+          },
+          "thinking_available": {
+            "type": "boolean",
+            "title": "Thinking Available",
+            "description": "Модель сценария поддерживает «Размышлять»."
+          },
+          "thinking_default": {
+            "type": "boolean",
+            "title": "Thinking Default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "description",
+          "icon",
+          "starter_prompts",
+          "requires_attachment",
+          "attachment_hint",
+          "thinking_available",
+          "thinking_default"
+        ],
+        "title": "ScenarioCard",
+        "description": "Карточка на стартовом экране (§7.9) — то, что нужно пользователю."
+      },
+      "ScenarioOptions": {
+        "properties": {
+          "model_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Model Roles"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "knowledge_bases": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Knowledge Bases"
+          },
+          "roles": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "icons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Icons"
+          },
+          "variables": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Variables"
+          },
+          "rag_modes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "tool",
+                "off"
+              ]
+            },
+            "type": "array",
+            "title": "Rag Modes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_roles",
+          "tools",
+          "knowledge_bases",
+          "roles",
+          "icons",
+          "variables",
+          "rag_modes"
+        ],
+        "title": "ScenarioOptions",
+        "description": "Что можно выбрать в редакторе."
+      },
+      "ScenarioOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 2,
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles",
+            "description": "Коды ролей; пусто — всем."
+          },
+          "model_role": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Model Role",
+            "default": "chat"
+          },
+          "prompt_template": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Prompt Template",
+            "description": "Текст шаблона Jinja2.",
+            "default": ""
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tools",
+            "description": "Инструменты; null — все включённые."
+          },
+          "knowledge_bases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Knowledge Bases",
+            "description": "Коды баз знаний; пусто — все доступные."
+          },
+          "rag_mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "tool",
+              "off"
+            ],
+            "title": "Rag Mode",
+            "default": "auto"
+          },
+          "requires_attachment": {
+            "type": "boolean",
+            "title": "Requires Attachment",
+            "default": false
+          },
+          "attachment_hint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Hint"
+          },
+          "starter_prompts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Starter Prompts"
+          },
+          "thinking_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Default"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order",
+            "default": 0
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "unknown_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknown Roles",
+            "description": "Коды ролей, которых пока нет в системе."
+          },
+          "unknown_knowledge_bases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknown Knowledge Bases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "id",
+          "source",
+          "created_at"
+        ],
+        "title": "ScenarioOut",
+        "description": "Сценарий в админке — все поля."
+      },
+      "ScenarioRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "requires_attachment": {
+            "type": "boolean",
+            "title": "Requires Attachment"
+          },
+          "attachment_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "icon",
+          "requires_attachment",
+          "attachment_hint"
+        ],
+        "title": "ScenarioRef"
+      },
+      "ScenarioSpec": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 2,
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles",
+            "description": "Коды ролей; пусто — всем."
+          },
+          "model_role": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Model Role",
+            "default": "chat"
+          },
+          "prompt_template": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Prompt Template",
+            "description": "Текст шаблона Jinja2.",
+            "default": ""
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tools",
+            "description": "Инструменты; null — все включённые."
+          },
+          "knowledge_bases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Knowledge Bases",
+            "description": "Коды баз знаний; пусто — все доступные."
+          },
+          "rag_mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "tool",
+              "off"
+            ],
+            "title": "Rag Mode",
+            "default": "auto"
+          },
+          "requires_attachment": {
+            "type": "boolean",
+            "title": "Requires Attachment",
+            "default": false
+          },
+          "attachment_hint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Hint"
+          },
+          "starter_prompts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Starter Prompts"
+          },
+          "thinking_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Default"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "ScenarioSpec",
+        "description": "Сценарий из YAML и из редактора админки — одна схема."
+      },
       "SearchFragment": {
         "properties": {
           "text": {
@@ -5948,6 +6839,20 @@
           "ok"
         ],
         "title": "StepOut"
+      },
+      "TestChatOut": {
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chat Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chat_id"
+        ],
+        "title": "TestChatOut"
       },
       "ToolStep": {
         "properties": {

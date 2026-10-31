@@ -9,6 +9,7 @@
 | `system/attachments.md.j2` | Вложения чата: целиком (`full`) или оглавление и начало (`outline`) + подсказка про инструменты чтения (§9.3) | `files[].name/type/pages/text/outline/preview`, `mode` |
 | `system/knowledge.md.j2` | Фрагменты RAG с номерами для цитат `[n]` или пометка «ничего не найдено» (§10.4) | `fragments[].index/title/kb_name/page/section/text` |
 | `utility/rag_query.md.j2` | Переформулировка запроса для поиска с дословным переносом кодов и ФИО (§10.4) | `history[].role/text`, `message` |
+| `scenarios/*.md.j2` | Промпты встроенных сценариев (§8.7): при seed текст шаблона копируется в БД, дальше его правят в админке «Сценарии» | `user.*`, `company`, `now`, `scenario.name` |
 | `utility/title.md.j2` | Заголовок чата служебной моделью (3–6 слов) | `message` |
 
 Порядок сборки системного промпта: `base` → `user` → ★ память → сценарий (этап 5) → контекст RAG

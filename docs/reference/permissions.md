@@ -20,10 +20,11 @@
 | `admin.kb.manage` | Все базы знаний: создание, уровень и роли, документы, импорт из папки, удаление | 4 |
 | `admin.kb.manage_roles` | Ролевые базы тех ролей, что есть у самого пользователя (документы, импорт); создавать базы и менять роли нельзя | 4 |
 | `admin.incidents.view` | Список инцидентов (минимум; полностью — этап 7) | 4 |
+| `admin.scenarios.manage` | Сценарии: создание, редактирование, удаление, тестовый чат в редакторе | 5 |
 
 Запланированы по §13.1: `admin.chats.view`, `admin.chats.export`, `admin.chats.purge` (этап 6),
 `admin.limits.manage` (этап 8), остальные `admin.incidents.*` (этап 7),
-`admin.scenarios.manage` (этап 5), `admin.settings.manage` (этап 6).
+`admin.settings.manage` (этап 6).
 
 ## Системные роли
 

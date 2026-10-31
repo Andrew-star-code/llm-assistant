@@ -31,10 +31,20 @@ from app.modules.chats.schemas import (
     FolderUpdate,
     SearchHit,
 )
+from app.modules.scenarios import service as scenarios
+from app.modules.scenarios.models import Scenario
+from app.modules.scenarios.router import role_codes
+from app.modules.scenarios.schemas import ScenarioRef
 
 router = APIRouter(tags=["chats"])
 
 Limit = Annotated[int, Query(ge=1, le=MAX_LIMIT)]
+
+
+def scenario_ref(scenario: Scenario | None) -> ScenarioRef | None:
+    if scenario is None:
+        return None
+    return ScenarioRef.model_validate(scenario, from_attributes=True)
 
 
 def _item(chat: Chat) -> ChatListItem:
@@ -76,11 +86,17 @@ async def search_chats(
 
 @router.post("/chats", response_model=ChatDetail, status_code=201, operation_id="createChat")
 async def create_chat(body: ChatCreate, db: DbDep, current: CurrentUserDep) -> ChatDetail:
-    """Пустой чат; в списке появится после первого сообщения."""
+    """Пустой чат; в списке появится после первого сообщения. Сценарий — только доступный."""
     if body.folder_id:
         await service.get_folder(db, current.id, body.folder_id)
+    scenario = None
+    if body.scenario_id:
+        scenario = await scenarios.get_visible(db, body.scenario_id, role_codes(current))
     chat = Chat(
-        user_id=current.id, folder_id=body.folder_id, thinking_enabled=body.thinking_enabled
+        user_id=current.id,
+        folder_id=body.folder_id,
+        thinking_enabled=body.thinking_enabled,
+        scenario_id=scenario.id if scenario else None,
     )
     db.add(chat)
     await db.commit()
@@ -89,6 +105,7 @@ async def create_chat(body: ChatCreate, db: DbDep, current: CurrentUserDep) -> C
         **_item(chat).model_dump(),
         active_leaf_id=None,
         thinking_enabled=chat.thinking_enabled,
+        scenario=scenario_ref(scenario),
         messages=[],
     )
 
@@ -101,6 +118,10 @@ async def get_chat(chat_id: UUID, db: DbDep, current: CurrentUserDep) -> ChatDet
             **_item(chat).model_dump(),
             "active_leaf_id": chat.active_leaf_id,
             "thinking_enabled": chat.thinking_enabled,
+            "scenario": scenario_ref(
+                await db.get(Scenario, chat.scenario_id) if chat.scenario_id else None
+            ),
+            "is_test": chat.is_test,
             "messages": await service.chat_messages(db, chat.id, current.id),
         }
     )
@@ -128,6 +149,11 @@ async def update_chat(
         chat.active_leaf_id = leaf.id
     if "thinking_enabled" in fields:
         chat.thinking_enabled = body.thinking_enabled
+    if "scenario_id" in fields:
+        # Сброс — всегда; смена — только на доступный пользователю сценарий.
+        if body.scenario_id:
+            await scenarios.get_visible(db, body.scenario_id, role_codes(current))
+        chat.scenario_id = body.scenario_id
     await db.commit()
     return _item(chat)
 

@@ -47,6 +47,9 @@ class ModelRegistry:
             )
         return self._clients[role]
 
+    def roles(self) -> list[str]:
+        return sorted(self.models)
+
     def thinking_available(self, role: str) -> bool:
         return self.get(role).thinking.mode != "none"
 

@@ -44,8 +44,9 @@ async def test_bootstrap_admin_sees_admin_and_ordinary_user_gets_403(
 def _admin_routes() -> list[APIRoute]:
     from app.modules.incidents.router import router as incidents_router
     from app.modules.kb.admin_router import router as kb_admin_router
+    from app.modules.scenarios.admin_router import router as scenarios_admin_router
 
-    routers = (admin_router, kb_admin_router, incidents_router)
+    routers = (admin_router, kb_admin_router, incidents_router, scenarios_admin_router)
     return [r for router in routers for r in router.routes if isinstance(r, APIRoute)]
 
 

@@ -21,6 +21,13 @@
 | POST | `/api/admin/kb/{kb_id}/imports` | `adminStartImport` | Start Import | 202, 422 |
 | GET | `/api/admin/logins` | `adminListLogins` | List Logins | 200, 422 |
 | GET | `/api/admin/roles` | `adminListRoles` | List Roles | 200 |
+| GET | `/api/admin/scenarios` | `adminListScenarios` | List Scenarios | 200 |
+| POST | `/api/admin/scenarios` | `adminCreateScenario` | Create Scenario | 201, 422 |
+| GET | `/api/admin/scenarios/options` | `adminScenarioOptions` | Options | 200 |
+| GET | `/api/admin/scenarios/{scenario_id}` | `adminGetScenario` | Get Scenario | 200, 422 |
+| PUT | `/api/admin/scenarios/{scenario_id}` | `adminUpdateScenario` | Update Scenario | 200, 422 |
+| DELETE | `/api/admin/scenarios/{scenario_id}` | `adminDeleteScenario` | Delete Scenario | 204, 422 |
+| POST | `/api/admin/scenarios/{scenario_id}/test-chat` | `adminScenarioTestChat` | Test Chat | 201, 422 |
 | DELETE | `/api/admin/sessions/{session_id}` | `adminRevokeSession` | Revoke Session | 204, 422 |
 | GET | `/api/admin/users` | `adminListUsers` | List Users | 200, 422 |
 | GET | `/api/admin/users/{user_id}` | `adminGetUser` | Get User | 200, 422 |
@@ -68,5 +75,6 @@
 | GET | `/api/profile` | `getProfile` | Get Profile | 200 |
 | GET | `/api/profile/photo` | `getProfilePhoto` | Get Photo | 200, 404 |
 | PATCH | `/api/profile/settings` | `updateProfileSettings` | Update Settings | 200, 422 |
+| GET | `/api/scenarios` | `listScenarios` | List Scenarios | 200 |
 | GET | `/health` | `health` | Health | 200 |
 | GET | `/ready` | `ready` | Ready | 200, 503 |

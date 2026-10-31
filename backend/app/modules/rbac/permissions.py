@@ -25,6 +25,7 @@ class Perm(StrEnum):
     KB_MANAGE = "admin.kb.manage"
     KB_MANAGE_ROLES = "admin.kb.manage_roles"
     INCIDENTS_VIEW = "admin.incidents.view"
+    SCENARIOS_MANAGE = "admin.scenarios.manage"
 
 
 PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
@@ -40,6 +41,7 @@ PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
     Perm.KB_MANAGE: "Все базы знаний: создание, роли, документы, импорт, удаление",
     Perm.KB_MANAGE_ROLES: "Ролевые базы знаний тех ролей, что есть у самого менеджера",
     Perm.INCIDENTS_VIEW: "Просмотр инцидентов",
+    Perm.SCENARIOS_MANAGE: "Сценарии: создание, редактирование, тестовый чат",
 }
 
 SUPERADMIN = "superadmin"

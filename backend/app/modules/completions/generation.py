@@ -16,7 +16,7 @@ import asyncio
 import re
 import time
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 from uuid import UUID
 
@@ -50,6 +50,7 @@ from app.modules.completions.streaming import (
     cancel_key,
 )
 from app.modules.files.service import chat_files
+from app.modules.kb.models import KnowledgeBase
 from app.modules.llm.registry import ModelRegistry
 from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_stream
 from app.modules.llm.tokens import TokenCounter
@@ -66,6 +67,9 @@ from app.modules.rag.service import (
 )
 from app.modules.rag.service import Turn as RagTurn
 from app.modules.rbac import service as rbac
+from app.modules.scenarios.models import Scenario
+from app.modules.scenarios.service import now_text
+from app.modules.scenarios.service import render_prompt as render_scenario
 from app.modules.tools.base import Services, ToolContext
 from app.modules.tools.executor import ToolOutcome, execute, preview_label_params
 from app.modules.tools.models import ToolCall
@@ -261,7 +265,11 @@ class GenerationManager:
                     if m.status in ("completed", "stopped") and m.content
                 ]
                 is_first_answer = chat.title is None
-                plan = self.registry.plan(CHAT_ROLE, thinking=message.thinking)
+                # Сценарий — из БД на каждое сообщение: правка в админке действует сразу (§8.7).
+                scenario = await db.get(Scenario, chat.scenario_id) if chat.scenario_id else None
+                plan = self.registry.plan(
+                    scenario.model_role if scenario else CHAT_ROLE, thinking=message.thinking
+                )
                 counter = TokenCounter(plan.endpoint.tokenizer)
                 prompt_user = PromptUser(
                     full_name=user.full_name,
@@ -284,25 +292,48 @@ class GenerationManager:
                     endpoint=plan.endpoint,
                     counter=counter,
                 )
-                base_system = system_prompt(self.renderer, self.settings, prompt_user, utcnow())
+                now = utcnow()
+                base_system = system_prompt(self.renderer, self.settings, prompt_user, now)
+                if scenario is not None:
+                    scenario_text = render_scenario(
+                        scenario,
+                        {
+                            "user": asdict(prompt_user),
+                            "company": self.settings.chat.company_name,
+                            "now": now_text(now, self.settings.chat.timezone),
+                        },
+                    )
+                    base_system = "\n\n".join(x for x in (base_system, scenario_text) if x)
                 roles = await rbac.user_roles(db, user.id)
                 permissions = rbac.effective_permissions(
                     roles, await rbac.permissions_for_roles(db, (r.role.id for r in roles))
                 )
-                # TODO(stage-5): режим RAG и базы знаний — из сценария чата.
-                rag_mode = self.settings.rag.mode
+                rag_mode = scenario.rag_mode if scenario else self.settings.rag.mode
+                # Базы сценария сужают область поиска; пусто — все доступные пользователю.
+                only_kb_ids = None
+                if scenario is not None and scenario.knowledge_bases:
+                    only_kb_ids = list(
+                        (
+                            await db.scalars(
+                                select(KnowledgeBase.id).where(
+                                    KnowledgeBase.code.in_(scenario.knowledge_bases)
+                                )
+                            )
+                        ).all()
+                    )
                 # Вложения ищутся вместе с базами, когда в промпте только их оглавление (§10.4).
                 scope = await build_scope(
                     db, user.id, (r.role.id for r in roles),
                     attachment_ids=[f.id for f in attachments.files]
                     if attachments.mode == "outline" else (),
+                    only_kb_ids=only_kb_ids,
                 )  # fmt: skip
                 has_kb = bool(scope.kb_ids or scope.personal_kb_ids)
-                # TODO(stage-5): список инструментов сценария вместо None.
+                # Инструменты: включены ∩ разрешены сценарием ∩ доступны ролям (§9.1).
                 tools = (
                     available_tools(
                         enabled=self.settings.tools.enabled,
-                        scenario=None,
+                        scenario=scenario.tools if scenario else None,
                         permissions=permissions,
                         has_attachments=bool(attachments.files),
                         has_knowledge=has_kb and rag_mode != "off",
@@ -363,6 +394,7 @@ class GenerationManager:
                 "thinking": plan.thinking,
                 **prompt.trace(),
                 "rag_mode": rag_mode,
+                "scenario": scenario.code if scenario else None,
                 **({"rag": rag_trace} if rag_trace else {}),
                 "attachments": {
                     "mode": attachments.mode,

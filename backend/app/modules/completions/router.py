@@ -14,7 +14,7 @@ from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.deps import DbDep
 from app.core.errors import AppError, NotFoundError
-from app.modules.auth.deps import CurrentUserDep
+from app.modules.auth.deps import CurrentUser, CurrentUserDep
 from app.modules.chats import service as chats
 from app.modules.chats.models import Chat, Message
 from app.modules.chats.schemas import (
@@ -27,7 +27,12 @@ from app.modules.chats.schemas import (
 from app.modules.completions.generation import CHAT_ROLE, GenerationManager
 from app.modules.completions.streaming import sse_events
 from app.modules.files import service as files_service
+from app.modules.files.models import File
 from app.modules.llm.registry import ModelRegistry
+from app.modules.rbac.permissions import Perm
+from app.modules.scenarios import service as scenarios
+from app.modules.scenarios.models import Scenario
+from app.modules.scenarios.router import role_codes
 
 router = APIRouter(tags=["completions"])
 
@@ -47,15 +52,42 @@ async def _ensure_idle(db: DbDep, chat: Chat) -> None:
         )
 
 
-def _thinking(request: Request, requested: bool | None, chat: Chat) -> bool:
+def _thinking(
+    request: Request, requested: bool | None, chat: Chat, scenario: Scenario | None = None
+) -> bool:
+    """Запрошенное → сохранённое в чате → по умолчанию сценария → по умолчанию модели (§7.3)."""
     registry: ModelRegistry = request.app.state.models
-    if not registry.thinking_available(CHAT_ROLE):
+    role = scenario.model_role if scenario else CHAT_ROLE
+    if not registry.thinking_available(role):
         return False
     if requested is not None:
         return requested
     if chat.thinking_enabled is not None:
         return chat.thinking_enabled
-    return registry.get(CHAT_ROLE).thinking.default
+    if scenario is not None and scenario.thinking_default is not None:
+        return scenario.thinking_default
+    return registry.get(role).thinking.default
+
+
+async def chat_scenario(db: DbDep, chat: Chat, current: CurrentUser) -> Scenario | None:
+    """Сценарий чата, если он ещё доступен пользователю (роли могли смениться).
+
+    Тестовый чат из редактора доступен тому, кто управляет сценариями, — даже без роли сценария
+    и для выключенного сценария.
+    """
+    if chat.scenario_id is None:
+        return None
+    scenario = await db.get(Scenario, chat.scenario_id)
+    if scenario is not None and (
+        scenarios.visible(scenario, role_codes(current))
+        or (chat.is_test and current.has(Perm.SCENARIOS_MANAGE))
+    ):
+        return scenario
+    raise AppError(
+        "Сценарий этого чата вам больше недоступен — сбросьте его, чтобы продолжить",
+        code="scenario_unavailable",
+        status_code=403,
+    )
 
 
 @router.get("/models/chat", response_model=ChatModelInfo, operation_id="getChatModel")
@@ -93,7 +125,18 @@ async def send_message(
         if parent is None or parent.chat_id != chat.id or parent.role != "assistant":
             raise AppError("Продолжать можно только от ответа этого чата", code="bad_parent")
 
-    thinking = _thinking(request, body.thinking, chat)
+    scenario = await chat_scenario(db, chat, current)
+    if scenario is not None and scenario.requires_attachment and not body.attachment_ids:
+        has_files = await db.scalar(
+            select(exists().where(File.chat_id == chat.id, File.kind == "upload"))
+        )
+        if not has_files:
+            raise AppError(
+                scenario.attachment_hint or "Для этого сценария приложите файл",
+                code="attachment_required",
+                status_code=422,
+            )
+    thinking = _thinking(request, body.thinking, chat, scenario)
     now = utcnow()
     user_message = Message(
         chat_id=chat.id,
@@ -159,7 +202,7 @@ async def regenerate(
         role="assistant",
         content="",
         status="streaming",
-        thinking=_thinking(request, body.thinking, chat),
+        thinking=_thinking(request, body.thinking, chat, await chat_scenario(db, chat, current)),
         created_at=utcnow(),
     )
     db.add(assistant)

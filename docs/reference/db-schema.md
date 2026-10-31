@@ -32,7 +32,8 @@
 | `user_id` | UUID | not null | → users.id, index |
 | `folder_id` | UUID | null | → folders.id, index |
 | `title` | VARCHAR(300) | null |  |
-| `scenario_id` | UUID | null |  |
+| `scenario_id` | UUID | null | → scenarios.id, index |
+| `is_test` | BOOLEAN | not null |  |
 | `pinned` | BOOLEAN | not null |  |
 | `active_leaf_id` | UUID | null |  |
 | `thinking_enabled` | BOOLEAN | null |  |
@@ -251,6 +252,31 @@
 | `name` | VARCHAR(256) | not null |  |
 | `kind` | VARCHAR(32) | not null |  |
 | `description` | TEXT | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `scenarios`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `code` | VARCHAR(100) | not null | unique |
+| `name` | VARCHAR(200) | not null |  |
+| `description` | TEXT | null |  |
+| `icon` | VARCHAR(64) | null |  |
+| `roles` | JSONB | not null |  |
+| `model_role` | VARCHAR(32) | not null |  |
+| `prompt_template` | TEXT | not null |  |
+| `tools` | JSONB | null |  |
+| `knowledge_bases` | JSONB | not null |  |
+| `rag_mode` | VARCHAR(8) | not null |  |
+| `requires_attachment` | BOOLEAN | not null |  |
+| `attachment_hint` | VARCHAR(200) | null |  |
+| `starter_prompts` | JSONB | not null |  |
+| `thinking_default` | BOOLEAN | null |  |
+| `is_active` | BOOLEAN | not null |  |
+| `sort_order` | INTEGER | not null |  |
+| `source` | VARCHAR(16) | not null |  |
+| `extra` | JSONB | null |  |
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 

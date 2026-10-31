@@ -10,6 +10,7 @@ from app.modules.incidents.models import Incident
 from app.modules.kb.models import KbDocument, KbImport, KbRole, KnowledgeBase
 from app.modules.rag.models import MessageSource
 from app.modules.rbac.models import Permission, Role, RolePermission, UserRole
+from app.modules.scenarios.models import Scenario
 from app.modules.security.models import LoginEvent
 from app.modules.tools.models import ToolCall
 from app.modules.users.models import User
@@ -32,6 +33,7 @@ __all__ = [
     "Permission",
     "Role",
     "RolePermission",
+    "Scenario",
     "ToolCall",
     "User",
     "UserRole",
