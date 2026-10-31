@@ -54,7 +54,7 @@ from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_st
 from app.modules.llm.tokens import TokenCounter
 from app.modules.rbac import service as rbac
 from app.modules.tools.base import Services, ToolContext
-from app.modules.tools.executor import ToolOutcome, execute
+from app.modules.tools.executor import ToolOutcome, execute, preview_label_params
 from app.modules.tools.models import ToolCall
 from app.modules.tools.registry import available_tools
 from app.modules.users.models import User
@@ -444,6 +444,7 @@ class GenerationManager:
                     "call_id": call.id,
                     "tool": call.name,
                     "label": tool.status_label if tool else "tools.unknown",
+                    "params": preview_label_params(tool, call.arguments),
                 },
             )
         outcome = await execute(

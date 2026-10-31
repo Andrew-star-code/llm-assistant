@@ -14,7 +14,7 @@ PY_SOURCES  := backend services scripts
 .PHONY: help install env dev-up dev-down dev-reset dev-logs dev-ps migrate \
         lint fmt typecheck test test-unit test-backend test-frontend e2e gen-api docs-config docs-db \
         docs-check \
-        images check deploy
+        images test-worker check deploy
 
 help: ## Список команд
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -31,7 +31,7 @@ $(ENV_FILE):
 
 # ------------------------------------------------------------------ дев-стенд
 
-dev-up: env ## Поднять дев-стенд с нуля одной командой (postgres, redis, qdrant, mock-ad, fake-llm, embed, api, frontend)
+dev-up: env ## Поднять дев-стенд с нуля одной командой (postgres, redis, qdrant, mock-ad, fake-llm, embed, api, worker, frontend)
 	$(COMPOSE) up -d --build --wait --wait-timeout 900
 	@echo ""
 	@echo "  Фронтенд:  http://localhost:5173"
@@ -103,7 +103,10 @@ images: env ## Собрать образы приложения
 	$(COMPOSE) build
 	docker build --target runtime -t ai-assistant/web:$${APP_VERSION:-dev} frontend
 
-check: lint typecheck test docs-check images ## Всё перед пушем: линт → типы → тесты → документация → образы
+test-worker: env ## Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (worker check)
+	$(COMPOSE) run --rm --build --no-deps worker python -m app.cli worker check
+
+check: lint typecheck test docs-check images test-worker ## Всё перед пушем: линт → типы → тесты → документация → образы
 	@echo "make check: OK"
 
 deploy: ## Выкатка на сервер — этап 10 (§16.2)

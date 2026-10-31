@@ -28,7 +28,8 @@ zip-бомбы (`zip_bomb`: распакованный объём, число з
 чисел, шапка, автофильтр, формулы), CSV с BOM, PPTX — python-pptx по `presentation.pptx`.
 
 **Безопасность:** доступ только владельцу (`service.get_file` → 404 на чужое), имя файла — только
-для показа, на диске — случайный ключ; `X-Content-Type-Options: nosniff`, `CSP: sandbox`,
+для показа, на диске — случайный ключ; `X-Content-Type-Options: nosniff`, `CSP: sandbox` (только
+для показа в браузере — на скачивании Chromium из-за неё теряет имя файла),
 `Content-Disposition` с RFC 5987.
 
 **Зависит от:** `core.storage` (локальный диск), `workers` (разбор и генерация), `ingestion`.

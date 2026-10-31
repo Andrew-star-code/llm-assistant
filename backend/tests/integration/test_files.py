@@ -182,6 +182,7 @@ async def test_large_document_outline_and_read_tool(
     start = next(e for e in events if e.event == "tool.start")
     end = next(e for e in events if e.event == "tool.end")
     assert start.data["tool"] == "read_document" and start.data["label"] == "tools.read_document"
+    assert start.data["params"] == {"name": "Отчёт.docx"}
     assert end.data["status"] == "ok" and end.data["params"] == {"name": "Отчёт.docx"}
     assert text_of(events) == f"Готово. Результат инструмента: {samples.NEEDLE}"
 
@@ -268,6 +269,7 @@ async def test_generate_excel_and_word(
     assert download.status_code == 200
     assert "attachment;" in download.headers["content-disposition"]
     assert download.headers["x-content-type-options"] == "nosniff"
+    assert "content-security-policy" not in download.headers  # иначе Chromium теряет имя файла
     sheet = load_workbook(io.BytesIO(download.content)).active
     assert sheet is not None and sheet["B6"].value == "=SUM(B2:B5)"
     if xlsx["preview"]:
@@ -296,6 +298,7 @@ async def test_generate_pdf(
     inline = await client.get(f"/api/files/{pdf['file_id']}/content?download=false")
     assert inline.headers["content-type"] == "application/pdf"
     assert inline.headers["content-disposition"].startswith("inline;")
+    assert inline.headers["content-security-policy"] == "sandbox"
 
 
 @pytest.mark.skipif(not tesseract_available(), reason="нужен Tesseract")

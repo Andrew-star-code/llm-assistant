@@ -224,6 +224,9 @@ class SearchInDocuments(Tool):
     timeout_s = 30
     needs_attachments = True
 
+    def label_params(self, args: Any) -> dict[str, str]:
+        return {"query": args.query}
+
     async def run(self, ctx: ToolContext, args: Any) -> ToolResult:
         files = [resolve_file(ctx, args.file)] if args.file else list(ctx.attachments)
         names = {str(f.id): f.filename for f in files}

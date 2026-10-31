@@ -59,7 +59,34 @@ services:
     build:
       context: ../..
       dockerfile: backend/Dockerfile
+      target: api
     image: ai-assistant/api:${APP_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+      APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_QDRANT_API_KEY: ${QDRANT_API_KEY}
+      HF_HUB_OFFLINE: "1"
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - api-storage:/srv/storage
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      qdrant: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+    logging: *default-logging
+
+  worker:
+    # Воркер файлов (§4): разбор вложений и генерация DOCX/PDF/XLSX/PPTX. Тот же код, что у api,
+    # плюс LibreOffice, Tesseract и шрифты. Хранилище файлов — общий с api том.
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+      target: worker
+    image: ai-assistant/worker:${APP_VERSION:-dev}
     restart: unless-stopped
     environment:
       APP_ENV: ${APP_ENV:-dev}

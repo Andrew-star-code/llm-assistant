@@ -16,21 +16,23 @@
 - Если ответ всё ещё `streaming`, а исполнитель не продлевает `gen:alive:{message_id}`, сервер отдаёт
   `error` с кодом `interrupted` и `message.end` со статусом `interrupted`.
 - Скрытые инструменты (например, `report_incident`) событий не порождают.
+- Шаги инструментов и файлы ответа после завершения доступны и по REST: поля `tools` и `files`
+  сообщения в `GET /api/chats/{id}` — интерфейс строит из них ту же ленту после перезагрузки.
 
 | Событие | Данные | Когда |
 | --- | --- | --- |
 | `message.start` | `message_id`, `chat_id`, `parent_id`, `model`, `thinking`, `protocol_version` | начало генерации |
 | `reasoning.delta` | `text` | очередной кусок размышлений |
 | `content.delta` | `text` | очередной кусок ответа |
-| `tool.start` | `call_id`, `tool`, `label` | начат видимый инструмент |
-| `tool.end` | `call_id`, `status`, `label` | закончен видимый инструмент |
+| `tool.start` | `call_id`, `tool`, `label` (i18n-ключ строки статуса, например `tools.read_document`), `params` (параметры строки, например `{"name": "Отчёт.docx"}`) | начат видимый инструмент |
+| `tool.end` | `call_id`, `tool`, `status` (`ok`, `error`, `timeout`), `label`, `params` | закончен видимый инструмент |
 | `sources` | карточки источников | после шагов RAG |
-| `file` | `file_id`, `name`, `mime`, `size`, `preview` | создан файл |
+| `file` | `file_id`, `name`, `mime`, `size`, `preview` (есть PDF-превью) | создан файл (после `tool.end` его инструмента) |
 | `usage` | `prompt_tokens`, `completion_tokens`, `reasoning_tokens` | в конце |
 | `limits` | остатки по метрикам пользователя | в конце |
 | `title` | `chat_id`, `title` | сгенерирован заголовок |
 | `error` | `code`, `message`, `retryable` | ошибка |
-| `message.end` | `status` (`completed`, `stopped`, `error`, `interrupted`), `finish_reason` | конец |
+| `message.end` | `status` (`completed`, `stopped`, `error`, `interrupted`), `finish_reason` (`stop`, `length`, `max_iterations` — модель не уложилась в `tools.max_iterations`, …) | конец |
 
 Пример:
 

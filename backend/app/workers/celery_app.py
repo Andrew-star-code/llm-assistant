@@ -10,9 +10,10 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from celery import Celery
+from celery import Celery, signals
 
 from app.core.config import Settings, get_settings
+from app.core.logging import configure_logging
 from app.workers import jobs
 
 QUEUE = "files"
@@ -43,6 +44,12 @@ def make_celery(settings: Settings) -> Celery:
 
 
 celery_app = make_celery(get_settings())
+
+
+@signals.setup_logging.connect  # type: ignore[untyped-decorator]
+def _setup_logging(**_: Any) -> None:
+    # Те же JSON-логи, что у api; секреты и тексты документов не логируются.
+    configure_logging(get_settings().logging)
 
 
 @celery_app.task(name="files.parse")  # type: ignore[untyped-decorator]

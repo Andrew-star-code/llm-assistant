@@ -12,6 +12,9 @@
   ad sync                                        — синхронизировать пользователей с AD
   create-admin --login L                         — выдать роль superadmin
 
+Этап 3:
+  worker check — самопроверка образа воркера: pandoc, LibreOffice, Tesseract
+
 Дальше появятся (§10.3): ``kb import``, ``purge``.
 """
 
@@ -100,6 +103,13 @@ def cmd_create_admin(args: argparse.Namespace) -> int:
     return 1 if settings is None else ad.cmd_create_admin(settings, args.login)
 
 
+def cmd_worker(_: argparse.Namespace) -> int:
+    from app.cli.worker import cmd_worker_check
+
+    settings = _settings_or_exit()
+    return 1 if settings is None else cmd_worker_check(settings)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -135,6 +145,12 @@ def build_parser() -> argparse.ArgumentParser:
     admin = sub.add_parser("create-admin", help="Выдать пользователю роль superadmin")
     admin.add_argument("--login", required=True)
     admin.set_defaults(func=cmd_create_admin)
+
+    worker = sub.add_parser("worker", help="Воркер файлов")
+    worker_sub = worker.add_subparsers(dest="worker_command", required=True)
+    worker_sub.add_parser("check", help="Проверить pandoc, LibreOffice, Tesseract").set_defaults(
+        func=cmd_worker
+    )
     return parser
 
 

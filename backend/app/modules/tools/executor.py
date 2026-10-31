@@ -14,7 +14,7 @@ from typing import Any
 import structlog
 from pydantic import ValidationError
 
-from app.modules.tools.base import ToolContext, ToolError
+from app.modules.tools.base import Tool, ToolContext, ToolError
 from app.modules.tools.registry import get_tool
 
 log = structlog.stdlib.get_logger("app.tools")
@@ -40,6 +40,16 @@ def truncate(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[:limit] + f"\n\n[…результат обрезан: показаны {limit} из {len(text)} символов]"
+
+
+def preview_label_params(tool: Tool | None, raw_arguments: str) -> dict[str, str]:
+    """Параметры строки статуса до запуска (для ``tool.start``); при кривых аргументах — пусто."""
+    if tool is None:
+        return {}
+    try:
+        return tool.label_params(tool.args_model.model_validate_json(raw_arguments or "{}"))
+    except (ValueError, ValidationError):
+        return {}
 
 
 async def execute(

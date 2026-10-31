@@ -31,6 +31,22 @@ services:
       fake-llm: {condition: service_healthy}
       mock-ad: {condition: service_healthy}
 
+  worker:
+    # Перезапуск при изменении кода (у Celery нет своего reload).
+    command: ["watchfiles", "--filter", "python",
+              "celery -A app.workers.celery_app worker -Q files -c 2 --without-gossip --without-mingle -n files@%h",
+              "/srv/backend/app"]
+    environment:
+      APP_ENV: dev
+    env_file:
+      - path: ./api.local.env
+        required: false
+    volumes:
+      - ../../backend/app:/srv/backend/app:ro
+      - ../../config:/srv/config:ro
+      - api-storage:/srv/storage
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
   migrate:
     volumes:
       - ../../backend/app:/srv/backend/app:ro

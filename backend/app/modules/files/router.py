@@ -21,8 +21,11 @@ from app.workers.dispatch import Dispatcher
 router = APIRouter(prefix="/files", tags=["files"])
 
 # Отдаём пользовательские файлы так, чтобы браузер их не исполнял: HTML — текстом, без sniffing.
+# CSP sandbox — только для показа в браузере: на ответе-вложении Chromium из-за него теряет имя
+# файла при скачивании, а исполнять вложение браузер и так не станет.
 SAFE_INLINE = {"pdf": "application/pdf"}
-SECURITY_HEADERS = {"X-Content-Type-Options": "nosniff", "Content-Security-Policy": "sandbox"}
+NOSNIFF = {"X-Content-Type-Options": "nosniff"}
+INLINE_HEADERS = {**NOSNIFF, "Content-Security-Policy": "sandbox"}
 
 
 def _disposition(kind: str, filename: str) -> str:
@@ -84,14 +87,11 @@ async def content(
     if data is None:
         raise NotFoundError("Файл не найден")
     if download:
-        media = row.mime
-        disposition = _disposition("attachment", row.filename)
-    else:
-        media = SAFE_INLINE.get(row.file_type, "text/plain; charset=utf-8")
-        disposition = _disposition("inline", row.filename)
-    return Response(
-        data, media_type=media, headers={"Content-Disposition": disposition, **SECURITY_HEADERS}
-    )
+        headers = {"Content-Disposition": _disposition("attachment", row.filename), **NOSNIFF}
+        return Response(data, media_type=row.mime, headers=headers)
+    media = SAFE_INLINE.get(row.file_type, "text/plain; charset=utf-8")
+    headers = {"Content-Disposition": _disposition("inline", row.filename), **INLINE_HEADERS}
+    return Response(data, media_type=media, headers=headers)
 
 
 @router.get(
@@ -114,7 +114,7 @@ async def preview(
         media_type="application/pdf",
         headers={
             "Content-Disposition": _disposition("inline", f"{row.filename}.pdf"),
-            **SECURITY_HEADERS,
+            **INLINE_HEADERS,
         },
     )
 

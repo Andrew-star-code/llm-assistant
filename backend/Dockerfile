@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
-# Образ api (и в будущем worker/scheduler — тот же образ с другой командой).
+# Образы api (цель api) и воркера файлов (цель worker: тот же код + LibreOffice, Tesseract, шрифты).
 # Контекст сборки — корень репозитория: нужны uv.lock workspace и каталог config/.
-FROM python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
+FROM python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337 AS api
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -40,3 +40,20 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
 
 CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-access-log"]
+
+
+# ---------------------------------------------------------------- воркер файлов (§4, §9.3–9.4)
+# Разбор вложений (LibreOffice для DOC/RTF/ODT/XLS/PPT, OCR сканов) и генерация DOCX/PDF/XLSX/PPTX.
+# pandoc — в колесе pypandoc-binary. Шрифты: метрически совместимые с Calibri/Cambria/Times/Arial,
+# иначе PDF и превью «поплывут».
+FROM api AS worker
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \
+      tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng \
+      fonts-dejavu-core fonts-liberation2 fonts-crosextra-carlito fonts-crosextra-caladea \
+ && rm -rf /var/lib/apt/lists/*
+USER app
+HEALTHCHECK NONE
+CMD ["celery", "-A", "app.workers.celery_app", "worker", "-Q", "files", "-c", "2", "--without-gossip", "--without-mingle", "-n", "files@%h"]
