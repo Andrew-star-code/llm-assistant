@@ -38,3 +38,7 @@ ldap:
       - {attribute: department, contains: "ИТ", roles: [it]}
   group_roles: []
   sync_interval_minutes: 60
+
+chat:
+  company_name: "ООО «Корпорация»"  # TODO(question): название компании для системного промпта
+  timezone: Europe/Moscow

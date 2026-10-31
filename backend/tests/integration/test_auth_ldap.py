@@ -164,8 +164,10 @@ async def test_ad_diagnostics_report(infra: Infra, mock_ad: MockAd, tmp_path: Pa
     assert report.address == "Иван Петрович"
     assert report.department == "ИТ-отдел"
     assert {(r.code, r.source) for r in report.roles} >= {
-        ("dept:ИТ-отдел", "department"), ("it", "rule"), ("superadmin", "bootstrap"),
-    }  # fmt: skip
+        ("dept:ИТ-отдел", "department"),
+        ("it", "rule"),
+        ("superadmin", "bootstrap"),
+    }
     assert report.password_check is not None and report.password_check.ok
     text = format_report(report)
     for fragment in (
@@ -215,7 +217,10 @@ async def test_sync_blocks_and_logs_out_user_disabled_in_ad(
     finally:
         mock_ad.exec("samba-tool", "user", "enable", "smirnova")
     await sync_all(
-        app.state.db_sessions, app.state.ldap_directory, settings=app.state.settings,
-        storage=app.state.storage, sessions=app.state.sessions,
-    )  # fmt: skip
+        app.state.db_sessions,
+        app.state.ldap_directory,
+        settings=app.state.settings,
+        storage=app.state.storage,
+        sessions=app.state.sessions,
+    )
     assert (await client.login("smirnova", USER_PASSWORD, provider="ldap")).status_code == 200

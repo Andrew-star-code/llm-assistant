@@ -3,6 +3,8 @@
 from app.modules.admin.models import AppSetting
 from app.modules.audit.models import AuditLog
 from app.modules.auth.models import UserSession
+from app.modules.chats.models import Chat, Folder, Message
+from app.modules.feedback.models import Feedback
 from app.modules.rbac.models import Permission, Role, RolePermission, UserRole
 from app.modules.security.models import LoginEvent
 from app.modules.users.models import User
@@ -10,7 +12,11 @@ from app.modules.users.models import User
 __all__ = [
     "AppSetting",
     "AuditLog",
+    "Chat",
+    "Feedback",
+    "Folder",
     "LoginEvent",
+    "Message",
     "Permission",
     "Role",
     "RolePermission",

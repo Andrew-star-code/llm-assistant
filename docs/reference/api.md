@@ -23,6 +23,23 @@
 | GET | `/api/auth/me` | `getMe` | Me | 200 |
 | POST | `/api/auth/notice/accept` | `acceptNotice` | Accept Notice | 204 |
 | GET | `/api/auth/providers` | `getAuthProviders` | Providers | 200 |
+| GET | `/api/chats` | `listChats` | List Chats | 200, 422 |
+| POST | `/api/chats` | `createChat` | Create Chat | 201, 422 |
+| GET | `/api/chats/search` | `searchChats` | Search Chats | 200, 422 |
+| GET | `/api/chats/{chat_id}` | `getChat` | Get Chat | 200, 422 |
+| PATCH | `/api/chats/{chat_id}` | `updateChat` | Update Chat | 200, 422 |
+| DELETE | `/api/chats/{chat_id}` | `deleteChat` | Delete Chat | 204, 422 |
+| POST | `/api/chats/{chat_id}/messages` | `sendMessage` | Send Message | 202, 422 |
+| GET | `/api/folders` | `listFolders` | List Folders | 200 |
+| POST | `/api/folders` | `createFolder` | Create Folder | 201, 422 |
+| PATCH | `/api/folders/{folder_id}` | `updateFolder` | Update Folder | 200, 422 |
+| DELETE | `/api/folders/{folder_id}` | `deleteFolder` | Delete Folder | 204, 422 |
+| PUT | `/api/messages/{message_id}/feedback` | `setFeedback` | Set Feedback | 200, 422 |
+| DELETE | `/api/messages/{message_id}/feedback` | `clearFeedback` | Clear Feedback | 204, 422 |
+| POST | `/api/messages/{message_id}/regenerate` | `regenerateMessage` | Regenerate | 202, 422 |
+| POST | `/api/messages/{message_id}/stop` | `stopMessage` | Stop | 202, 422 |
+| GET | `/api/messages/{message_id}/stream` | `streamMessage` | Stream | 200, 422 |
+| GET | `/api/models/chat` | `getChatModel` | Chat Model | 200 |
 | GET | `/api/profile` | `getProfile` | Get Profile | 200 |
 | GET | `/api/profile/photo` | `getProfilePhoto` | Get Photo | 200, 404 |
 | PATCH | `/api/profile/settings` | `updateProfileSettings` | Update Settings | 200, 422 |

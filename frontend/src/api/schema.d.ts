@@ -197,6 +197,232 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/chats": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Chats
+     * @description Чаты с сообщениями, свежие сверху. Закреплённые — отдельно (``pinned=true``).
+     */
+    get: operations["listChats"];
+    put?: never;
+    /**
+     * Create Chat
+     * @description Пустой чат; в списке появится после первого сообщения.
+     */
+    post: operations["createChat"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/chats/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Search Chats
+     * @description Поиск по названиям и тексту сообщений (Ctrl+K, §7.2).
+     */
+    get: operations["searchChats"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/chats/{chat_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Chat */
+    get: operations["getChat"];
+    put?: never;
+    post?: never;
+    /**
+     * Delete Chat
+     * @description Мягкое удаление: чат исчезает у пользователя, но остаётся для админа (§7.2, §13).
+     */
+    delete: operations["deleteChat"];
+    options?: never;
+    head?: never;
+    /**
+     * Update Chat
+     * @description Переименование, закрепление, перенос в папку, активная ветка, режим thinking.
+     */
+    patch: operations["updateChat"];
+    trace?: never;
+  };
+  "/api/folders": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Folders */
+    get: operations["listFolders"];
+    put?: never;
+    /** Create Folder */
+    post: operations["createFolder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/folders/{folder_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete Folder
+     * @description Удаление папки: чаты переносятся в корень (``move``) или удаляются мягко (``delete``).
+     */
+    delete: operations["deleteFolder"];
+    options?: never;
+    head?: never;
+    /** Update Folder */
+    patch: operations["updateFolder"];
+    trace?: never;
+  };
+  "/api/models/chat": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Chat Model
+     * @description Доступен ли переключатель «Размышлять» (§7.3) и его значение по умолчанию.
+     */
+    get: operations["getChatModel"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/chats/{chat_id}/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send Message
+     * @description Сохраняет сообщение и пустой ответ ``streaming``, запускает генерацию, сразу отвечает.
+     */
+    post: operations["sendMessage"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/messages/{message_id}/regenerate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Regenerate
+     * @description Новая версия ответа — сестринское сообщение к тому же вопросу (§8.6). «Повторить» — то же.
+     */
+    post: operations["regenerateMessage"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/messages/{message_id}/stop": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Stop
+     * @description Ставит флаг отмены в Redis — его увидит процесс, который генерирует ответ (§8.6).
+     */
+    post: operations["stopMessage"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/messages/{message_id}/stream": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Stream
+     * @description События ответа (docs/architecture/sse-protocol.md); переподключение — с Last-Event-ID.
+     */
+    get: operations["streamMessage"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/messages/{message_id}/feedback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Feedback */
+    put: operations["setFeedback"];
+    post?: never;
+    /** Clear Feedback */
+    delete: operations["clearFeedback"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/users": {
     parameters: {
       query?: never;
@@ -462,6 +688,87 @@ export interface components {
        */
       until?: string | null;
     };
+    /** ChatCreate */
+    ChatCreate: {
+      /** Folder Id */
+      folder_id?: string | null;
+      /** Thinking Enabled */
+      thinking_enabled?: boolean | null;
+    };
+    /** ChatDetail */
+    ChatDetail: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Title */
+      title: string | null;
+      /** Folder Id */
+      folder_id: string | null;
+      /** Pinned */
+      pinned: boolean;
+      /** Last Message At */
+      last_message_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Active Leaf Id */
+      active_leaf_id: string | null;
+      /** Thinking Enabled */
+      thinking_enabled: boolean | null;
+      /**
+       * Messages
+       * @description Все сообщения чата (дерево через parent_id).
+       */
+      messages: components["schemas"]["MessageOut"][];
+    };
+    /** ChatListItem */
+    ChatListItem: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Title */
+      title: string | null;
+      /** Folder Id */
+      folder_id: string | null;
+      /** Pinned */
+      pinned: boolean;
+      /** Last Message At */
+      last_message_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** ChatModelInfo */
+    ChatModelInfo: {
+      /** Thinking Available */
+      thinking_available: boolean;
+      /** Thinking Default */
+      thinking_default: boolean;
+    };
+    /**
+     * ChatUpdate
+     * @description Частичное обновление: меняются только переданные поля.
+     */
+    ChatUpdate: {
+      /** Title */
+      title?: string | null;
+      /** Pinned */
+      pinned?: boolean | null;
+      /** Folder Id */
+      folder_id?: string | null;
+      /** Active Leaf Id */
+      active_leaf_id?: string | null;
+      /** Thinking Enabled */
+      thinking_enabled?: boolean | null;
+    };
     /** CheckResult */
     CheckResult: {
       /**
@@ -552,6 +859,59 @@ export interface components {
         [key: string]: string | null;
       };
     };
+    /** FeedbackIn */
+    FeedbackIn: {
+      /**
+       * Rating
+       * @enum {integer}
+       */
+      rating: 1 | -1;
+      /** Reasons */
+      reasons?: ("inaccurate" | "off_topic" | "code_error" | "incomplete" | "other")[];
+      /** Comment */
+      comment?: string | null;
+    };
+    /** FeedbackOut */
+    FeedbackOut: {
+      /**
+       * Rating
+       * @enum {integer}
+       */
+      rating: 1 | -1;
+      /** Reasons */
+      reasons: ("inaccurate" | "off_topic" | "code_error" | "incomplete" | "other")[];
+      /** Comment */
+      comment: string | null;
+    };
+    /** FolderIn */
+    FolderIn: {
+      /** Name */
+      name: string;
+    };
+    /** FolderOut */
+    FolderOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Sort Order */
+      sort_order: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** FolderUpdate */
+    FolderUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Sort Order */
+      sort_order?: number | null;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -641,6 +1001,65 @@ export interface components {
       settings: components["schemas"]["UserSettings"];
       notice: components["schemas"]["Notice"];
     };
+    /** MessageError */
+    MessageError: {
+      /** Code */
+      code: string;
+      /** Message */
+      message: string;
+    };
+    /** MessageOut */
+    MessageOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Chat Id
+       * Format: uuid
+       */
+      chat_id: string;
+      /** Parent Id */
+      parent_id: string | null;
+      /**
+       * Role
+       * @enum {string}
+       */
+      role: "user" | "assistant";
+      /** Content */
+      content: string;
+      /** Reasoning */
+      reasoning: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "completed" | "streaming" | "stopped" | "error" | "interrupted";
+      /** Thinking */
+      thinking: boolean;
+      /** Model */
+      model: string | null;
+      /** Finish Reason */
+      finish_reason: string | null;
+      /** Prompt Tokens */
+      prompt_tokens: number | null;
+      /** Completion Tokens */
+      completion_tokens: number | null;
+      /** Reasoning Tokens */
+      reasoning_tokens: number | null;
+      /** Ttft Ms */
+      ttft_ms: number | null;
+      /** Latency Ms */
+      latency_ms: number | null;
+      error: components["schemas"]["MessageError"] | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      feedback?: components["schemas"]["FeedbackOut"] | null;
+    };
     /** Notice */
     Notice: {
       /** Required */
@@ -652,6 +1071,13 @@ export interface components {
     Page_AuditOut_: {
       /** Items */
       items: components["schemas"]["AuditOut"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Page[ChatListItem] */
+    Page_ChatListItem_: {
+      /** Items */
+      items: components["schemas"]["ChatListItem"][];
       /** Next Cursor */
       next_cursor?: string | null;
     };
@@ -754,6 +1180,11 @@ export interface components {
         [key: string]: components["schemas"]["CheckResult"];
       };
     };
+    /** RegenerateIn */
+    RegenerateIn: {
+      /** Thinking */
+      thinking?: boolean | null;
+    };
     /** RevokedOut */
     RevokedOut: {
       /** Revoked */
@@ -809,6 +1240,52 @@ export interface components {
        * @description Полный набор ручных ролей пользователя.
        */
       role_ids: string[];
+    };
+    /** SearchFragment */
+    SearchFragment: {
+      /** Text */
+      text: string;
+      /** Match */
+      match: boolean;
+    };
+    /** SearchHit */
+    SearchHit: {
+      /**
+       * Chat Id
+       * Format: uuid
+       */
+      chat_id: string;
+      /** Chat Title */
+      chat_title: string | null;
+      /** Message Id */
+      message_id: string | null;
+      /**
+       * Fragments
+       * @description Фрагмент текста с отмеченными совпадениями.
+       */
+      fragments: components["schemas"]["SearchFragment"][];
+      /** Last Message At */
+      last_message_at: string | null;
+    };
+    /** SendMessageIn */
+    SendMessageIn: {
+      /** Content */
+      content: string;
+      /**
+       * Parent Id
+       * @description Ответ, к которому продолжаем ветку; по умолчанию — активная ветка.
+       */
+      parent_id?: string | null;
+      /**
+       * Thinking
+       * @description Режим размышлений; null — как в чате.
+       */
+      thinking?: boolean | null;
+    };
+    /** SendMessageOut */
+    SendMessageOut: {
+      user_message: components["schemas"]["MessageOut"];
+      assistant_message: components["schemas"]["MessageOut"];
     };
     /** SessionOut */
     SessionOut: {
@@ -1218,6 +1695,539 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  listChats: {
+    parameters: {
+      query?: {
+        pinned?: boolean | null;
+        folder_id?: string | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_ChatListItem_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  createChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChatCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  searchChats: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchHit"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        chat_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  deleteChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        chat_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  updateChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        chat_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChatUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatListItem"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  listFolders: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FolderOut"][];
+        };
+      };
+    };
+  };
+  createFolder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FolderIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FolderOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  deleteFolder: {
+    parameters: {
+      query?: {
+        chats?: "move" | "delete";
+      };
+      header?: never;
+      path: {
+        folder_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  updateFolder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        folder_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FolderUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FolderOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getChatModel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatModelInfo"];
+        };
+      };
+    };
+  };
+  sendMessage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        chat_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendMessageIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SendMessageOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  regenerateMessage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        message_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegenerateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MessageOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  stopMessage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        message_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  streamMessage: {
+    parameters: {
+      query?: {
+        /** @description То же, что Last-Event-ID */
+        after?: number | null;
+      };
+      header?: {
+        "Last-Event-ID"?: string | null;
+      };
+      path: {
+        message_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description SSE, §8.5 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  setFeedback: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        message_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FeedbackIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FeedbackOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  clearFeedback: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        message_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
       };
     };
   };

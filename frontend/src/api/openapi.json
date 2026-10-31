@@ -276,6 +276,820 @@
         }
       }
     },
+    "/api/chats": {
+      "get": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "List Chats",
+        "description": "Чаты с сообщениями, свежие сверху. Закреплённые — отдельно (``pinned=true``).",
+        "operationId": "listChats",
+        "parameters": [
+          {
+            "name": "pinned",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pinned"
+            }
+          },
+          {
+            "name": "folder_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Folder Id"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ChatListItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Create Chat",
+        "description": "Пустой чат; в списке появится после первого сообщения.",
+        "operationId": "createChat",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/search": {
+      "get": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Search Chats",
+        "description": "Поиск по названиям и тексту сообщений (Ctrl+K, §7.2).",
+        "operationId": "searchChats",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  },
+                  "title": "Response Searchchats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chat_id}": {
+      "get": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Get Chat",
+        "operationId": "getChat",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chat Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Update Chat",
+        "description": "Переименование, закрепление, перенос в папку, активная ветка, режим thinking.",
+        "operationId": "updateChat",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chat Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatListItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Delete Chat",
+        "description": "Мягкое удаление: чат исчезает у пользователя, но остаётся для админа (§7.2, §13).",
+        "operationId": "deleteChat",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chat Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/folders": {
+      "get": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "List Folders",
+        "operationId": "listFolders",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FolderOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listfolders"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Create Folder",
+        "operationId": "createFolder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/folders/{folder_id}": {
+      "patch": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Update Folder",
+        "operationId": "updateFolder",
+        "parameters": [
+          {
+            "name": "folder_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Folder Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "chats"
+        ],
+        "summary": "Delete Folder",
+        "description": "Удаление папки: чаты переносятся в корень (``move``) или удаляются мягко (``delete``).",
+        "operationId": "deleteFolder",
+        "parameters": [
+          {
+            "name": "folder_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Folder Id"
+            }
+          },
+          {
+            "name": "chats",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "move",
+                "delete"
+              ],
+              "type": "string",
+              "default": "move",
+              "title": "Chats"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/chat": {
+      "get": {
+        "tags": [
+          "completions"
+        ],
+        "summary": "Chat Model",
+        "description": "Доступен ли переключатель «Размышлять» (§7.3) и его значение по умолчанию.",
+        "operationId": "getChatModel",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatModelInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chat_id}/messages": {
+      "post": {
+        "tags": [
+          "completions"
+        ],
+        "summary": "Send Message",
+        "description": "Сохраняет сообщение и пустой ответ ``streaming``, запускает генерацию, сразу отвечает.",
+        "operationId": "sendMessage",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chat Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendMessageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{message_id}/regenerate": {
+      "post": {
+        "tags": [
+          "completions"
+        ],
+        "summary": "Regenerate",
+        "description": "Новая версия ответа — сестринское сообщение к тому же вопросу (§8.6). «Повторить» — то же.",
+        "operationId": "regenerateMessage",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{message_id}/stop": {
+      "post": {
+        "tags": [
+          "completions"
+        ],
+        "summary": "Stop",
+        "description": "Ставит флаг отмены в Redis — его увидит процесс, который генерирует ответ (§8.6).",
+        "operationId": "stopMessage",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{message_id}/stream": {
+      "get": {
+        "tags": [
+          "completions"
+        ],
+        "summary": "Stream",
+        "description": "События ответа (docs/architecture/sse-protocol.md); переподключение — с Last-Event-ID.",
+        "operationId": "streamMessage",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "То же, что Last-Event-ID",
+              "title": "After"
+            },
+            "description": "То же, что Last-Event-ID"
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE, §8.5",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{message_id}/feedback": {
+      "put": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Set Feedback",
+        "operationId": "setFeedback",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Clear Feedback",
+        "operationId": "clearFeedback",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/users": {
       "get": {
         "tags": [
@@ -1074,6 +1888,279 @@
         ],
         "title": "BlockIn"
       },
+      "ChatCreate": {
+        "properties": {
+          "folder_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
+          },
+          "thinking_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Enabled"
+          }
+        },
+        "type": "object",
+        "title": "ChatCreate"
+      },
+      "ChatDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "folder_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
+          },
+          "pinned": {
+            "type": "boolean",
+            "title": "Pinned"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "active_leaf_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Leaf Id"
+          },
+          "thinking_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Enabled"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "Все сообщения чата (дерево через parent_id)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "folder_id",
+          "pinned",
+          "last_message_at",
+          "created_at",
+          "active_leaf_id",
+          "thinking_enabled",
+          "messages"
+        ],
+        "title": "ChatDetail"
+      },
+      "ChatListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "folder_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
+          },
+          "pinned": {
+            "type": "boolean",
+            "title": "Pinned"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "folder_id",
+          "pinned",
+          "last_message_at",
+          "created_at"
+        ],
+        "title": "ChatListItem"
+      },
+      "ChatModelInfo": {
+        "properties": {
+          "thinking_available": {
+            "type": "boolean",
+            "title": "Thinking Available"
+          },
+          "thinking_default": {
+            "type": "boolean",
+            "title": "Thinking Default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thinking_available",
+          "thinking_default"
+        ],
+        "title": "ChatModelInfo"
+      },
+      "ChatUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "pinned": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pinned"
+          },
+          "folder_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
+          },
+          "active_leaf_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Leaf Id"
+          },
+          "thinking_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Enabled"
+          }
+        },
+        "type": "object",
+        "title": "ChatUpdate",
+        "description": "Частичное обновление: меняются только переданные поля."
+      },
       "CheckResult": {
         "properties": {
           "status": {
@@ -1392,6 +2479,168 @@
         ],
         "title": "DirectoryEntryOut"
       },
+      "FeedbackIn": {
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "enum": [
+              1,
+              -1
+            ],
+            "title": "Rating"
+          },
+          "reasons": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "inaccurate",
+                "off_topic",
+                "code_error",
+                "incomplete",
+                "other"
+              ]
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rating"
+        ],
+        "title": "FeedbackIn"
+      },
+      "FeedbackOut": {
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "enum": [
+              1,
+              -1
+            ],
+            "title": "Rating"
+          },
+          "reasons": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "inaccurate",
+                "off_topic",
+                "code_error",
+                "incomplete",
+                "other"
+              ]
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rating",
+          "reasons",
+          "comment"
+        ],
+        "title": "FeedbackOut"
+      },
+      "FolderIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FolderIn"
+      },
+      "FolderOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "sort_order",
+          "created_at"
+        ],
+        "title": "FolderOut"
+      },
+      "FolderUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "type": "object",
+        "title": "FolderUpdate"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1652,6 +2901,211 @@
         ],
         "title": "Me"
       },
+      "MessageError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "MessageError"
+      },
+      "MessageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "chat_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chat Id"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "streaming",
+              "stopped",
+              "error",
+              "interrupted"
+            ],
+            "title": "Status"
+          },
+          "thinking": {
+            "type": "boolean",
+            "title": "Thinking"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "finish_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish Reason"
+          },
+          "prompt_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Tokens"
+          },
+          "completion_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Tokens"
+          },
+          "reasoning_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Tokens"
+          },
+          "ttft_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttft Ms"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "chat_id",
+          "parent_id",
+          "role",
+          "content",
+          "reasoning",
+          "status",
+          "thinking",
+          "model",
+          "finish_reason",
+          "prompt_tokens",
+          "completion_tokens",
+          "reasoning_tokens",
+          "ttft_ms",
+          "latency_ms",
+          "error",
+          "created_at"
+        ],
+        "title": "MessageOut"
+      },
       "Notice": {
         "properties": {
           "required": {
@@ -1696,6 +3150,33 @@
           "items"
         ],
         "title": "Page[AuditOut]"
+      },
+      "Page_ChatListItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChatListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[ChatListItem]"
       },
       "Page_LoginEventOut_": {
         "properties": {
@@ -2059,6 +3540,23 @@
         ],
         "title": "ReadinessResponse"
       },
+      "RegenerateIn": {
+        "properties": {
+          "thinking": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking"
+          }
+        },
+        "type": "object",
+        "title": "RegenerateIn"
+      },
       "RevokedOut": {
         "properties": {
           "revoked": {
@@ -2200,6 +3698,140 @@
           "role_ids"
         ],
         "title": "RolesIn"
+      },
+      "SearchFragment": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "match": {
+            "type": "boolean",
+            "title": "Match"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "match"
+        ],
+        "title": "SearchFragment"
+      },
+      "SearchHit": {
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chat Id"
+          },
+          "chat_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Title"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "fragments": {
+            "items": {
+              "$ref": "#/components/schemas/SearchFragment"
+            },
+            "type": "array",
+            "title": "Fragments",
+            "description": "Фрагмент текста с отмеченными совпадениями."
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chat_id",
+          "chat_title",
+          "message_id",
+          "fragments",
+          "last_message_at"
+        ],
+        "title": "SearchHit"
+      },
+      "SendMessageIn": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Content"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "Ответ, к которому продолжаем ветку; по умолчанию — активная ветка."
+          },
+          "thinking": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking",
+            "description": "Режим размышлений; null — как в чате."
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "SendMessageIn"
+      },
+      "SendMessageOut": {
+        "properties": {
+          "user_message": {
+            "$ref": "#/components/schemas/MessageOut"
+          },
+          "assistant_message": {
+            "$ref": "#/components/schemas/MessageOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_message",
+          "assistant_message"
+        ],
+        "title": "SendMessageOut"
       },
       "SessionOut": {
         "properties": {

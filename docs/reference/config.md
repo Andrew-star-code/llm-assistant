@@ -72,6 +72,12 @@
 | `ldap.timeout_s` | float | 5.0 | `APP_LDAP__TIMEOUT_S` | Тайм-аут подключения и запроса к AD, с. |
 | `users.default_address_form` | name_patronymic \| first_name \| full_name \| formal | `name_patronymic` | `APP_USERS__DEFAULT_ADDRESS_FORM` | Форма обращения по умолчанию (§11.1): name_patronymic — «Имя Отчество», first_name — «Имя», full_name — «Фамилия Имя Отчество», formal — «на вы» без имени. |
 | `storage.root` | Path | `/srv/storage` | `APP_STORAGE__ROOT` | Каталог тома с файлами (фото, загрузки, документы). |
+| `chat.company_name` | str | `Компания` | `APP_CHAT__COMPANY_NAME` | Название компании в системном промпте. |
+| `chat.timezone` | str | `Europe/Moscow` | `APP_CHAT__TIMEZONE` | Часовой пояс компании: дата и время в промпте, группы чатов. |
+| `chat.max_message_chars` | int | 32000 | `APP_CHAT__MAX_MESSAGE_CHARS` | Максимальная длина сообщения, симв. |
+| `chat.stream_ttl_seconds` | int | 600 | `APP_CHAT__STREAM_TTL_SECONDS` | Сколько поток генерации хранится в Redis после завершения (§8.5). |
+| `chat.heartbeat_seconds` | int | 15 | `APP_CHAT__HEARTBEAT_SECONDS` | Интервал heartbeat в SSE, с. |
+| `chat.title_timeout_seconds` | float | 15 | `APP_CHAT__TITLE_TIMEOUT_SECONDS` | Тайм-аут генерации заголовка, с. |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`
@@ -105,4 +111,5 @@
 | `models.<роль>.sampling.default.presence_penalty` | float \| null | null | — |  |
 | `models.<роль>.sampling.default.repetition_penalty` | float \| null | null | — |  |
 | `models.<роль>.dim` | int \| null | null | — | Размерность векторов (для embed). |
+| `models.<роль>.tokenizer` | Path \| null | null | — | Локальный tokenizer.json модели для точного подсчёта токенов (§8.3); без него — оценка по длине текста. |
 | `models.<роль>.timeout_s` | float | 600 | — | Тайм-аут запроса к модели, с. |

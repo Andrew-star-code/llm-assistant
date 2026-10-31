@@ -25,6 +25,45 @@
 | `ts` | TIMESTAMP WITH TIME ZONE | not null | index |
 | `id` | UUID | not null | PK |
 
+## `chats`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `user_id` | UUID | not null | → users.id, index |
+| `folder_id` | UUID | null | → folders.id, index |
+| `title` | VARCHAR(300) | null |  |
+| `scenario_id` | UUID | null |  |
+| `pinned` | BOOLEAN | not null |  |
+| `active_leaf_id` | UUID | null |  |
+| `thinking_enabled` | BOOLEAN | null |  |
+| `last_message_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `deleted_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `deleted_by` | UUID | null | → users.id, index |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `feedback`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `message_id` | UUID | not null | → messages.id, index |
+| `user_id` | UUID | not null | → users.id, index |
+| `rating` | SMALLINT | not null |  |
+| `reasons` | JSONB | not null |  |
+| `comment` | TEXT | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `folders`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `user_id` | UUID | not null | → users.id, index |
+| `name` | VARCHAR(200) | not null |  |
+| `sort_order` | INTEGER | not null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
 ## `login_events`
 
 | Колонка | Тип | NULL | Ключи и индексы |
@@ -41,6 +80,31 @@
 | `details` | JSONB | not null |  |
 | `reviewed_by` | UUID | null | → users.id, index |
 | `id` | UUID | not null | PK |
+
+## `messages`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `chat_id` | UUID | not null | → chats.id, index |
+| `parent_id` | UUID | null | → messages.id, index |
+| `role` | VARCHAR(16) | not null |  |
+| `content` | TEXT | not null |  |
+| `reasoning` | TEXT | null |  |
+| `status` | VARCHAR(16) | not null |  |
+| `thinking` | BOOLEAN | not null |  |
+| `model` | VARCHAR(256) | null |  |
+| `finish_reason` | VARCHAR(32) | null |  |
+| `prompt_tokens` | INTEGER | null |  |
+| `completion_tokens` | INTEGER | null |  |
+| `reasoning_tokens` | INTEGER | null |  |
+| `ttft_ms` | INTEGER | null |  |
+| `latency_ms` | INTEGER | null |  |
+| `error` | JSONB | null |  |
+| `trace` | JSONB | null |  |
+| `deleted_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `search_vector` | TSVECTOR | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 
 ## `permissions`
 

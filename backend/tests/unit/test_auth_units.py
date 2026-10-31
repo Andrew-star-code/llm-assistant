@@ -65,7 +65,7 @@ def test_user_filter_escapes_values() -> None:
         ("... data 773, v1db1", "password_expired"),
         ("Invalid credentials", "bad_credentials"),
     ],
-)  # fmt: skip
+)
 def test_classify_bind_error(message: str, reason: str) -> None:
     assert classify_bind_error(message) == reason
 
@@ -144,10 +144,12 @@ def test_compute_directory_roles() -> None:
 async def test_dev_provider() -> None:
     from app.core.config import DevUser
 
-    provider = DevProvider([
-        DevUser(login="boss", last_name="Иванов", first_name="Иван", middle_name="Петрович"),
-        DevUser(login="kim", last_name="Ким", first_name="Александр", manager="boss"),
-    ])  # fmt: skip
+    provider = DevProvider(
+        [
+            DevUser(login="boss", last_name="Иванов", first_name="Иван", middle_name="Петрович"),
+            DevUser(login="kim", last_name="Ким", first_name="Александр", manager="boss"),
+        ]
+    )
     user = await provider.authenticate("kim", "")
     assert user.guid == "dev:kim" and user.manager_name == "Иванов Иван Петрович"
     with pytest.raises(AuthFailure):

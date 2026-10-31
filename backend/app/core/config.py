@@ -20,6 +20,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, Self
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
@@ -261,6 +262,11 @@ class ModelEndpoint(_Section):
     reasoning_history: Literal["model_default", "drop", "keep"] = "model_default"
     sampling: Sampling = Field(default_factory=Sampling)
     dim: int | None = Field(None, gt=0, description="Размерность векторов (для embed).")
+    tokenizer: Path | None = Field(
+        None,
+        description="Локальный tokenizer.json модели для точного подсчёта токенов (§8.3); "
+        "без него — оценка по длине текста.",
+    )
     timeout_s: float = Field(600, gt=0, description="Тайм-аут запроса к модели, с.")
 
 
@@ -278,6 +284,27 @@ class UsersSettings(_Section):
         description="Форма обращения по умолчанию (§11.1): name_patronymic — «Имя Отчество», "
         "first_name — «Имя», full_name — «Фамилия Имя Отчество», formal — «на вы» без имени.",
     )
+
+
+class ChatSettings(_Section):
+    company_name: str = Field("Компания", description="Название компании в системном промпте.")
+    timezone: str = Field(
+        "Europe/Moscow", description="Часовой пояс компании: дата и время в промпте, группы чатов."
+    )
+    max_message_chars: int = Field(32000, gt=0, description="Максимальная длина сообщения, симв.")
+    stream_ttl_seconds: int = Field(
+        600, gt=0, description="Сколько поток генерации хранится в Redis после завершения (§8.5)."
+    )
+    heartbeat_seconds: int = Field(15, gt=0, description="Интервал heartbeat в SSE, с.")
+    title_timeout_seconds: float = Field(15, gt=0, description="Тайм-аут генерации заголовка, с.")
+
+    @model_validator(mode="after")
+    def _check_timezone(self) -> Self:
+        try:
+            ZoneInfo(self.timezone)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError(f"chat.timezone: неизвестный часовой пояс {self.timezone!r}") from exc
+        return self
 
 
 class StorageSettings(_Section):
@@ -319,6 +346,7 @@ class Settings(BaseSettings):
     ldap: LdapSettings = Field(default_factory=LdapSettings)
     users: UsersSettings = Field(default_factory=UsersSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
+    chat: ChatSettings = Field(default_factory=ChatSettings)
     models: dict[str, ModelEndpoint] = Field(
         default_factory=dict, description="Реестр моделей по ролям (config/models.yaml)."
     )

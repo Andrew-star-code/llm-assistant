@@ -81,6 +81,31 @@ def hello(name: str) -> str:
 """
 
 
+# Строки из шаблонов config/prompts (см. config/prompts/README.md): по ним fake-llm ведёт себя
+# как настоящая модель, которая следует системному промпту.
+ADDRESS_LINE = re.compile(r"Обращение к пользователю: ([^\n]+?)\.(?:\n|$)")
+TITLE_REQUEST = "Придумай короткий заголовок"
+TITLE_SOURCE = re.compile(r"<<<\s*(.*?)\s*>>>", re.DOTALL)
+
+
+def address_of(messages: list[dict[str, Any]]) -> str | None:
+    """Обращение из системного промпта — только для первого ответа диалога (§11.1)."""
+    if any(m.get("role") == "assistant" for m in messages):
+        return None
+    system = next((_text_of(m) for m in messages if m.get("role") == "system"), "")
+    match = ADDRESS_LINE.search(system)
+    if not match or match.group(1).startswith("на «вы»"):
+        return None
+    return match.group(1).strip()
+
+
+def title_from(text: str) -> str:
+    source = TITLE_SOURCE.search(text)
+    words = SCENARIO_MARKER.sub("", source.group(1) if source else text).split()[:5]
+    title = " ".join(words).strip(" .,!?:;«»\"'")
+    return (title[:1].upper() + title[1:]) if title else "Новый диалог"
+
+
 def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     messages: list[dict[str, Any]] = body.get("messages") or []
     user_text = last_user_text(messages)
@@ -89,9 +114,15 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     name = match.group(1) if match else ("thinking" if thinking else "default")
     clean = SCENARIO_MARKER.sub("", user_text).strip()
     last = messages[-1] if messages else {}
+    if not match and TITLE_REQUEST in user_text:
+        return Scenario("title", [Step("content", title_from(user_text))])
+    address = address_of(messages)
+
+    def greet(text: str) -> str:
+        return f"{address}, {text[:1].lower()}{text[1:]}" if address else text
 
     if name == "default":
-        return Scenario(name, [Step("content", f"Это ответ fake-llm на запрос: «{clean}».")])
+        return Scenario(name, [Step("content", greet(f"Это ответ fake-llm на запрос: «{clean}»."))])
     if name == "thinking":
         return Scenario(
             name,
@@ -101,7 +132,7 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
                     "Пользователь спрашивает. Подумаю шаг за шагом: "
                     "сначала разберу вопрос, затем сформулирую ответ.",
                 ),
-                Step("content", f"Обдуманный ответ fake-llm на запрос: «{clean}»."),
+                Step("content", greet(f"Обдуманный ответ fake-llm на запрос: «{clean}».")),
             ],
         )
     if name == "markdown":

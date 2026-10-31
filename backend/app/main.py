@@ -32,6 +32,12 @@ from app.modules.auth.providers.ldap import LdapDirectory, LdapProvider
 from app.modules.auth.router import router as auth_router
 from app.modules.auth.service import LoginService
 from app.modules.auth.sessions import SessionStore
+from app.modules.chats.router import router as chats_router
+from app.modules.completions.generation import GenerationManager
+from app.modules.completions.prompt import PromptRenderer
+from app.modules.completions.router import router as completions_router
+from app.modules.feedback.router import router as feedback_router
+from app.modules.llm.registry import ModelRegistry
 from app.modules.rbac.service import ensure_system_rbac
 from app.modules.security.bruteforce import BruteforceGuard
 from app.modules.users.router import router as profile_router
@@ -69,6 +75,14 @@ def init_services(app: FastAPI) -> None:
         providers["ldap"] = LdapProvider(directory)
     if "dev" in settings.auth.providers:
         providers["dev"] = DevProvider(settings.auth.dev_users)
+    app.state.models = ModelRegistry(settings)
+    app.state.generations = GenerationManager(
+        settings=settings,
+        redis=redis_client,
+        sessions=app.state.db_sessions,
+        registry=app.state.models,
+        renderer=PromptRenderer(settings.config_dir / "prompts"),
+    )
     app.state.login_service = LoginService(
         settings=settings,
         providers=providers,
@@ -79,6 +93,8 @@ def init_services(app: FastAPI) -> None:
 
 
 async def close_services(app: FastAPI) -> None:
+    await app.state.generations.shutdown()
+    await app.state.models.close()
     await app.state.qdrant_http.aclose()
     await app.state.redis.aclose()
     await app.state.db_engine.dispose()
@@ -104,6 +120,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         # Например, миграции ещё не применены: /ready покажет, что не так, процесс не падает.
         log.exception("rbac.bootstrap_failed")
+
+    try:
+        await app.state.generations.mark_orphaned_interrupted()
+    except Exception:
+        log.exception("completions.orphans_check_failed")
 
     sync_task = None
     if app.state.ldap_directory is not None and settings.ldap.sync_interval_minutes > 0:
@@ -155,6 +176,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api = APIRouter(prefix=API_PREFIX, dependencies=[Depends(verify_csrf)])
     api.include_router(auth_router)
     api.include_router(profile_router)
+    api.include_router(chats_router)
+    api.include_router(completions_router)
+    api.include_router(feedback_router)
     api.include_router(admin_router)
     app.include_router(api)
 

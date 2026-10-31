@@ -163,3 +163,37 @@ async def test_rerank(base_url: str) -> None:
 async def test_models(client: AsyncOpenAI) -> None:
     models = [m.id async for m in client.models.list()]
     assert "fake-chat" in models
+
+
+async def test_first_answer_uses_address_from_system_prompt(client: AsyncOpenAI) -> None:
+    system = "Правила.\n\nОбращение к пользователю: Иван Петрович.\nОбращайся так."
+    messages: list[Any] = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": "Привет"},
+    ]
+    first = await client.chat.completions.create(model="fake-chat", messages=messages)
+    assert (
+        first.choices[0].message.content == "Иван Петрович, это ответ fake-llm на запрос: «Привет»."
+    )
+
+    later = [*messages, {"role": "assistant", "content": "…"}, {"role": "user", "content": "Ещё"}]
+    second = await client.chat.completions.create(model="fake-chat", messages=later)
+    assert second.choices[0].message.content == "Это ответ fake-llm на запрос: «Ещё»."
+
+    formal: list[Any] = [
+        {"role": "system", "content": "Обращение к пользователю: на «вы», без имени."},
+        {"role": "user", "content": "Привет"},
+    ]
+    third = await client.chat.completions.create(model="fake-chat", messages=formal)
+    assert third.choices[0].message.content == "Это ответ fake-llm на запрос: «Привет»."
+
+
+async def test_title_request(client: AsyncOpenAI) -> None:
+    prompt = (
+        "Придумай короткий заголовок (3–6 слов)…\n"
+        "<<<\nкак оформить отпуск в декабре этого года\n>>>"
+    )
+    response = await client.chat.completions.create(
+        model="fake-utility", messages=[{"role": "user", "content": prompt}]
+    )
+    assert response.choices[0].message.content == "Как оформить отпуск в декабре"

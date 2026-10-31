@@ -43,13 +43,26 @@ MOCK_AD_SVC_PASSWORD = "Svc-Test-Passw0rd!"
 USER_PASSWORD = "Passw0rd!"
 
 DEV_USERS = [
-    {"login": "ivanov", "last_name": "Иванов", "first_name": "Иван", "middle_name": "Петрович",
-     "title": "Руководитель ИТ-отдела", "department": "ИТ-отдел",
-     "groups": ["CN=AI-Admins,CN=Users,DC=corp,DC=local"]},
-    {"login": "petrov", "last_name": "Петров", "first_name": "Сергей", "middle_name": "Алексеевич",
-     "title": "Бухгалтер", "department": "Бухгалтерия", "manager": "ivanov"},
+    {
+        "login": "ivanov",
+        "last_name": "Иванов",
+        "first_name": "Иван",
+        "middle_name": "Петрович",
+        "title": "Руководитель ИТ-отдела",
+        "department": "ИТ-отдел",
+        "groups": ["CN=AI-Admins,CN=Users,DC=corp,DC=local"],
+    },
+    {
+        "login": "petrov",
+        "last_name": "Петров",
+        "first_name": "Сергей",
+        "middle_name": "Алексеевич",
+        "title": "Бухгалтер",
+        "department": "Бухгалтерия",
+        "manager": "ivanov",
+    },
     {"login": "kim", "last_name": "Ким", "first_name": "Александр", "department": "ИТ-отдел"},
-]  # fmt: skip
+]
 
 
 @dataclass(frozen=True)
@@ -223,3 +236,99 @@ async def make_client(clean_db: None) -> AsyncIterator[Any]:
     for _, http, ctx in reversed(stack):
         await http.aclose()
         await ctx.__aexit__(None, None, None)
+
+
+# ------------------------------------------------------------------ fake-llm и чат
+
+
+@pytest.fixture(scope="session")
+def fake_llm_url() -> Iterator[str]:
+    """fake-llm настоящим uvicorn в отдельном потоке — с реальным стримингом."""
+    import socket
+    import threading
+
+    import uvicorn
+
+    from fake_llm.app import FakeSettings
+    from fake_llm.app import create_app as create_fake
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = int(s.getsockname()[1])
+    server = uvicorn.Server(
+        uvicorn.Config(
+            create_fake(FakeSettings(slow_delay_s=0.05)),
+            host="127.0.0.1",
+            port=port,
+            log_level="warning",
+        )
+    )
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 10
+    while not server.started:
+        assert time.monotonic() < deadline, "fake-llm не стартовал"
+        time.sleep(0.02)
+    yield f"http://127.0.0.1:{port}/v1"
+    server.should_exit = True
+    thread.join(timeout=5)
+
+
+def chat_settings(infra: Infra, tmp_path: Path, fake_llm_url: str, **overrides: Any) -> Settings:
+    models = {
+        role: {"base_url": fake_llm_url, "model": f"fake-{role}"}
+        for role in ("chat", "utility", "guard", "rerank")
+    }
+    return make_settings(
+        infra,
+        tmp_path,
+        models=models,
+        chat={"heartbeat_seconds": 1, "stream_ttl_seconds": 60},
+        **overrides,
+    )
+
+
+@dataclass(frozen=True)
+class SseEvent:
+    id: int
+    event: str
+    data: dict[str, Any]
+
+
+def parse_sse(text: str) -> list[SseEvent]:
+    import json
+
+    events = []
+    for block in text.split("\n\n"):
+        fields: dict[str, str] = {}
+        for line in block.splitlines():
+            if line.startswith(":") or ": " not in line:
+                continue
+            key, value = line.split(": ", 1)
+            fields[key] = value
+        if "event" in fields:
+            events.append(SseEvent(int(fields["id"]), fields["event"], json.loads(fields["data"])))
+    return events
+
+
+async def read_stream(
+    client: ApiClient, message_id: str, last_event_id: int | None = None
+) -> list[SseEvent]:
+    headers = {"Last-Event-ID": str(last_event_id)} if last_event_id is not None else {}
+    response = await client.get(f"/api/messages/{message_id}/stream", headers=headers, timeout=30)
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/event-stream")
+    return parse_sse(response.text)
+
+
+async def send(client: ApiClient, chat_id: str, text: str, **body: Any) -> dict[str, Any]:
+    response = await client.post(f"/api/chats/{chat_id}/messages", json={"content": text, **body})
+    assert response.status_code == 202, response.text
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def new_chat(client: ApiClient) -> str:
+    response = await client.post("/api/chats", json={})
+    assert response.status_code == 201, response.text
+    return str(response.json()["id"])
