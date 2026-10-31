@@ -1,11 +1,11 @@
-import { Bot, PanelLeftClose, PanelLeftOpen, Plus, Shield } from "lucide-react";
+import { Bot, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet } from "react-router";
 import { create } from "zustand";
 
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/features/auth/UserMenu";
 import { ApiStatus } from "@/features/system/ApiStatus";
-import { ThemeToggle } from "@/features/theme/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 interface SidebarState {
@@ -61,23 +61,14 @@ export function AppLayout() {
           <p className="px-4 py-2 text-sm text-muted-foreground">{t("sidebar.emptyHistory")}</p>
         )}
         <div className="mt-auto border-t border-border p-2">
-          <Link
-            to="/admin"
-            className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
-          >
-            <Shield className="size-4" />
-            {!collapsed && t("sidebar.admin")}
-          </Link>
+          <UserMenu collapsed={collapsed} />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between gap-4 border-b border-border px-4">
           <span className="truncate font-medium">{t("chat.newChatTitle")}</span>
-          <div className="flex items-center gap-3">
-            <ApiStatus />
-            <ThemeToggle />
-          </div>
+          <ApiStatus />
         </header>
         <main className="min-h-0 flex-1 overflow-y-auto">
           <Outlet />

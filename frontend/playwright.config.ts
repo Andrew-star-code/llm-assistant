@@ -1,19 +1,24 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// E2E по §18.1. На этапе 0 — смоук SPA; полный поток (вход, стрим, стоп) — с этапа 2,
-// тогда webServer заменится на поднятый make dev-up стенд.
+// E2E по §18.1 — против работающего бэкенда.
+// По умолчанию: собранная SPA (vite preview) с прокси на api из `make dev-up` (127.0.0.1:8000).
+// E2E_BASE_URL=http://localhost:5173 — прогон прямо против фронтенда дев-стенда.
 const port = 4173;
+const external = process.env.E2E_BASE_URL;
 
 export default defineConfig({
   testDir: "tests/e2e",
-  fullyParallel: true,
+  // Тесты меняют общие данные стенда (блокировки, настройки) — выполняем последовательно.
+  workers: 1,
   reporter: [["list"]],
-  use: { baseURL: `http://127.0.0.1:${port}`, trace: "retain-on-failure" },
+  use: { baseURL: external ?? `http://127.0.0.1:${port}`, trace: "retain-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${port}`,
-    url: `http://127.0.0.1:${port}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: external
+    ? undefined
+    : {
+        command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${port}`,
+        url: `http://127.0.0.1:${port}`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });
