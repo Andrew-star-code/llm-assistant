@@ -1,15 +1,20 @@
 # Протокол SSE стриминга ответа
 
-> Версия протокола: **1** (черновик). Реализация — этап 2: `backend/app/modules/completions/streaming.py`
-> и `frontend/src/api/sse.ts`. Меняется только вместе с этим документом и тестами обеих сторон (§8.5).
+> Версия протокола: **1**. Реализация: `backend/app/modules/completions/streaming.py` и
+> `frontend/src/api/sse.ts`. Меняется только вместе с этим документом и тестами обеих сторон (§8.5):
+> `backend/tests/integration/test_chat.py`, `frontend/tests/unit/chat.test.tsx`.
 
 Эндпоинт: `GET /api/messages/{id}/stream`, `Content-Type: text/event-stream`.
 
-- У каждого события есть порядковый `id` — клиент переподключается с заголовком `Last-Event-ID`
-  и получает только пропущенное.
+- У каждого события есть порядковый `id` (1, 2, 3, …; в Redis — `0-<id>`) — клиент
+  переподключается с заголовком `Last-Event-ID` (или `?after=<id>`) и получает только пропущенное.
+- Дельты `reasoning.delta` и `content.delta` склеиваются пачками не реже раза в 50 мс.
 - Каждые 15 секунд — heartbeat (комментарий `: ping`).
-- Поток хранится в Redis Stream `gen:{message_id}` ещё 10 минут после завершения; позже состояние
-  сообщения читается из БД.
+- Поток хранится в Redis Stream `gen:{message_id}` ещё 10 минут после завершения
+  (`chat.stream_ttl_seconds`). Если потока уже нет, сервер сразу отдаёт `message.end` с финальным
+  статусом, а клиент перечитывает сообщение по REST — после `message.end` он делает это всегда.
+- Если ответ всё ещё `streaming`, а исполнитель не продлевает `gen:alive:{message_id}`, сервер отдаёт
+  `error` с кодом `interrupted` и `message.end` со статусом `interrupted`.
 - Скрытые инструменты (например, `report_incident`) событий не порождают.
 
 | Событие | Данные | Когда |
@@ -43,6 +48,9 @@ event: message.end
 data: {"status":"completed","finish_reason":"stop"}
 ```
 
-Для разработки: fake-llm отдаёт размышления полем `reasoning` (как vLLM с `--reasoning-parser`;
-в старых версиях vLLM — `reasoning_content`, переключатель `FAKE_LLM_REASONING_FIELD`). Клиент LLM на
-этапе 2 должен понимать оба имени.
+Коды ошибок (`error.code`): `model_http_<status>`, `model_timeout`, `model_unavailable`,
+`internal_error`, `interrupted`. `retryable: true` — интерфейс показывает «Повторить» (перегенерация).
+
+Модель отдаёт размышления полем `reasoning` (vLLM с `--reasoning-parser`) или `reasoning_content`
+(старые версии vLLM) — `modules/llm/stream.py` понимает оба; fake-llm переключается
+`FAKE_LLM_REASONING_FIELD`.

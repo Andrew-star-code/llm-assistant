@@ -6,7 +6,7 @@
 | --- | --- |
 | [ad-setup.md](ad-setup.md) — настройка подключения к AD, маппинг атрибутов, роли отделов | 1 ✅ |
 | [add-admin-page.md](add-admin-page.md) — новая страница админки | 1 ✅ |
-| `add-model.md` — новая модель в реестре | 2 |
+| [add-model.md](add-model.md) — новая модель в реестре, режимы thinking | 2 ✅ |
 | `add-tool.md` — новый инструмент для модели | 3 |
 | `add-scenario.md` — корпоративный сценарий | 5 |
 | `add-limit-metric.md` — метрика лимитов | 8 |

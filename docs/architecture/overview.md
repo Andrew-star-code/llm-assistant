@@ -16,12 +16,12 @@ flowchart LR
   worker["worker + scheduler · Celery"] -.-> pg & qd & aux
 ```
 
-## Что уже есть (этап 0)
+## Что уже есть (этапы 0–2)
 
 | Компонент | Где | Состояние |
 | --- | --- | --- |
-| `api` | `backend/app` | Конфиг с валидацией, structlog с `request_id`, `/health`, `/ready`, `/metrics`, единый формат ошибок, Alembic |
-| `web` | `frontend/` | Каркас SPA: роутинг, layout, тема, i18n, типизированный клиент из OpenAPI |
+| `api` | `backend/app` | Конфиг, логи, health; вход через AD, сессии, RBAC, админка (этап 1); чаты, оркестратор, SSE через Redis Streams (этап 2) — [поток сообщения](request-flow.md) |
+| `web` | `frontend/` | SPA: вход, профиль, админка, чат со стримингом, Markdown/KaTeX/Shiki, история |
 | `fake-llm` | `services/fake-llm` | OpenAI-совместимый mock: чат (стрим, thinking, tool calls, ошибки), эмбеддинги, реранк |
 | `mock-ad` | `deploy/mock-ad` | Samba AD DC с тестовыми пользователями, LDAPS |
 | `embed` (dev) | `deploy/compose/compose.dev.yml` | bge-m3 на CPU (text-embeddings-inference) |
