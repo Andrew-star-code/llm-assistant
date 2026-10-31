@@ -13,7 +13,7 @@ RAG по базам знаний трёх уровней, инструмента
 | Команда | Что делает |
 | --- | --- |
 | `make install` | Зависимости (uv, pnpm) и pre-commit-хуки |
-| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, fake-llm, embed, api, worker, frontend |
+| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, fake-llm, embed, api, worker, worker-kb, frontend |
 | `make dev-down` / `make dev-reset` | Остановить стенд / остановить и удалить данные |
 | `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → сборка образов |
 | `make test` | Unit- и интеграционные тесты (pytest, Vitest; нужен Docker: testcontainers и mock-AD) |
@@ -21,6 +21,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make lint` / `make fmt` | Линтеры (ruff, eslint, prettier) / автоформат |
 | `make typecheck` | mypy strict, tsc |
 | `make e2e` | Playwright против работающего api (сначала `make dev-up`) |
+| `make eval-rag` | hit@5 и MRR поиска по 4 конфигурациям (`eval/rag`, `--check`) на моделях стенда |
 | `make test-worker` | Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (`worker check`) |
 | `make gen-api` | OpenAPI → `frontend/src/api/` + `docs/reference/api.md` (после любого изменения API) |
 | `make migrate` | Миграции Alembic |
@@ -30,7 +31,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make deploy` | Выкатка на сервер — этап 10 |
 
 CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `openapi`, `api-docs`, `db-docs`,
-`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`; дальше — `kb import`.
+`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`, `kb list`, `kb import --kb <код> <папка>`.
 В дев-стенде: `docker compose … exec api python -m app.cli …`.
 
 Вход на дев-стенде: провайдер dev — кнопки на странице входа (seed из `config/app.dev.yaml`);
@@ -56,11 +57,12 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ├── config/                         # app.yaml, models.yaml (+ оверлеи <env>), prompts/, templates/; дальше scenarios…
 ├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, .env.example
 ├── deploy/mock-ad/                 # Samba AD DC с тестовыми пользователями
+├── eval/rag/                       # оценка поиска: корпус, questions.yaml, run.py
 └── scripts/docs_check.py
 ```
 
 Появятся по этапам: `services/data-gateway/`, `services/sandbox-runner/` ★,
-`deploy/nginx/`, `deploy/models/`, `deploy/monitoring/`, `deploy/offline/`, `eval/`, `config/scenarios/` и др. (§5).
+`deploy/nginx/`, `deploy/models/`, `deploy/monitoring/`, `deploy/offline/`, `eval/scenarios/`, `config/scenarios/` и др. (§5).
 
 ### Карта изменений
 
@@ -87,6 +89,8 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 | Добавить сценарий fake-llm | `services/fake-llm/src/fake_llm/scenarios.py` | README сервиса, тест |
 | Поддержать новый формат вложений | `modules/files/sniff.py` + `modules/ingestion/parsers.py` | README `ingestion`, тест в `tests/unit/test_files.py` |
 | Сменить шаблон DOCX/PPTX | `config/templates/` | `config/templates/README.md` |
+| Поменять параметры поиска или чанкинга | `rag.search`, `rag.chunking` в `config/app.yaml` | прогон `make eval-rag`; после смены BM25 — переиндексация |
+| Добавить уровень или поле базы знаний | `modules/kb/` + `modules/rag/service.build_scope` | тесты изоляции в `test_rag.py` |
 
 ## 4. Соглашения
 
@@ -169,3 +173,14 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
   используйте `mutateAsync().then(…)`.
 - **Playwright и кириллица**: без UTF-8-локали Chromium называет скачанный файл «download» —
   локаль задана в `playwright.config.ts`.
+- **Права поиска строит сервер** (`rag.service.build_scope`) при каждом запросе; инструменты и
+  авто-поиск получают готовый `Scope` и могут его только сузить. Тест изоляции — отдельно для
+  dense и BM25 (`test_rag.py`), меняете фильтры — гоняйте оба.
+- **Удаление документа базы** удаляет его точки из Qdrant сразу в api (`kb.service.remove_document`),
+  не через очередь: «пропадает из поиска за минуту» — это гарантирует api.
+- **Новая версия документа** пишется с новым `version` в id точек и вытесняет старые
+  (`rag.store.write_document`); переиндексация = `mark_reindex` (version + 1) и задача `kb.index`.
+- **`EventWriter`** вызывают параллельные инструменты: запись в Redis Stream — под замком, новые
+  события пишите только через `emit`/`delta`.
+- **Номера цитат** выдаёт `SourceBook` (общая на ответ); не нумеруйте фрагменты в инструментах
+  сами — `render_fragments` в `tools/builtin/knowledge.py`.

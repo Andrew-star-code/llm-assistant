@@ -5,7 +5,7 @@
 | [SPEC.md](SPEC.md) | ТЗ и план разработки — единственный источник требований |
 | [status.md](status.md) | Прогресс этапов, кто чем занят, открытые вопросы, демо-сценарии |
 | [architecture/](architecture/overview.md) | [Обзор](architecture/overview.md), [безопасность: вход, сессии, права](architecture/security.md), [поток сообщения](architecture/request-flow.md), [SSE-протокол](architecture/sse-protocol.md) |
-| [adr/](adr/0000-template.md) | Архитектурные решения: [шаблон](adr/0000-template.md), 0001–0011 |
+| [adr/](adr/0000-template.md) | Архитектурные решения: [шаблон](adr/0000-template.md), 0001–0012 |
 | [guides/](guides/README.md) | Пошаговые инструкции: [настройка AD](guides/ad-setup.md), [страница админки](guides/add-admin-page.md), [смена модели](guides/add-model.md), [инструмент для модели](guides/add-tool.md), дальше — «как добавить…» |
 | [reference/](reference/config.md) | Справочники: [config.md](reference/config.md), [api.md](reference/api.md), [db-schema.md](reference/db-schema.md) (генерируются), [permissions.md](reference/permissions.md) |
 | [runbooks/](runbooks/README.md) | Эксплуатация: модели, бэкапы, инциденты, секреты |
@@ -25,6 +25,7 @@
 | [0009](adr/0009-file-storage-volume.md) | Файлы — том на диске за интерфейсом Storage |
 | [0010](adr/0010-dev-stand-mocks.md) | Дев-стенд: fake-llm, Samba AD DC, bge-m3 на CPU, uv workspace |
 | [0011](adr/0011-document-parsing.md) | Разбор вложений: свои парсеры + LibreOffice + Tesseract, docling — опционально |
+| [0012](adr/0012-search-queries-and-fusion.md) | Поиск: dense и BM25 отдельными запросами, слияние RRF в api (ради трассировки и деградации) |
 
 Документация — часть Definition of Done (§17): задача без обновлённых документов не закрыта.
 `make docs-check` проверяет README модулей, актуальность сгенерированных справочников и ссылки.
