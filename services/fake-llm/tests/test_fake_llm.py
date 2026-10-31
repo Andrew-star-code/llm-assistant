@@ -197,3 +197,53 @@ async def test_title_request(client: AsyncOpenAI) -> None:
         model="fake-utility", messages=[{"role": "user", "content": prompt}]
     )
     assert response.choices[0].message.content == "Как оформить отпуск в декабре"
+
+
+async def test_parallel_tool_calls(client: AsyncOpenAI) -> None:
+    result = await _collect(
+        client, "[[scenario:tool:list_attachments+search_in_documents]] «отпуск»"
+    )
+    assert result["finish"] == "tool_calls"
+    calls = result["tool_calls"]
+    assert [calls[0]["name"], calls[1]["name"]] == ["list_attachments", "search_in_documents"]
+    assert json.loads(calls[1]["arguments"]) == {"query": "отпуск"}
+
+
+def test_tool_scenario_arguments_and_final_answer() -> None:
+    from fake_llm.scenarios import resolve
+
+    system = {"role": "system", "content": "=== Файл «отчёт.docx» (docx, страниц: 30) ==="}
+    user = {"role": "user", "content": "[[scenario:tool:read_document]] прочитай стр. 25"}
+    first = resolve({"messages": [system, user]}, 0)
+    [step] = first.steps
+    assert step.tool_name == "read_document"
+    assert step.tool_arguments == {"file": "отчёт.docx", "page_from": 25, "page_to": 25}
+
+    pdf = resolve({"messages": [system, {**user, "content": "[[scenario:tool:create_pdf]]"}]}, 0)
+    assert pdf.steps[0].tool_name == "create_document"
+    assert pdf.steps[0].tool_arguments["format"] == "pdf"
+
+    question = {"role": "user", "content": "[[scenario:tool:read_document]] где «код проекта»?"}
+    tool = {"role": "tool", "tool_call_id": "c1", "content": "[стр. 25]\nКод проекта: ZX-42\n"}
+    final = resolve({"messages": [system, question, {"role": "assistant"}, tool]}, 0)
+    assert final.steps[0].text == "Готово. Результат инструмента: Код проекта: ZX-42"
+
+
+def test_tool_loop_never_finishes() -> None:
+    from fake_llm.scenarios import resolve
+
+    tool = {"role": "tool", "tool_call_id": "c1", "content": "файлов нет"}
+    user = {"role": "user", "content": "[[scenario:tool_loop]]"}
+    assert resolve({"messages": [user, tool]}, 0).finish_reason == "tool_calls"
+
+
+def test_find_in_system_prompt() -> None:
+    from fake_llm.scenarios import resolve
+
+    system = {"role": "system", "content": "Документ:\n[стр. 12]\nКодовое слово: ЛАЗУРЬ-7\n"}
+    user = {"role": "user", "content": "[[scenario:find]] «кодовое слово»"}
+    assert resolve({"messages": [system, user]}, 0).steps[0].text == (
+        "Нашёл в документе: Кодовое слово: ЛАЗУРЬ-7"
+    )
+    missing = resolve({"messages": [user]}, 0).steps[0].text
+    assert missing == "В документах нет «кодовое слово»."

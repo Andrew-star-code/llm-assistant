@@ -15,7 +15,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-SCENARIO_MARKER = re.compile(r"\[\[scenario:([a-z0-9_:\-]+)\]\]")
+SCENARIO_MARKER = re.compile(r"\[\[scenario:([a-z0-9_:+\-]+)\]\]")
 
 
 @dataclass
@@ -106,6 +106,122 @@ def title_from(text: str) -> str:
     return (title[:1].upper() + title[1:]) if title else "Новый диалог"
 
 
+# Заголовок вложения в системном промпте (config/prompts/system/attachments.md.j2).
+ATTACHMENT_HEADER = re.compile(r"=== Файл «(.+?)»")
+QUOTED = re.compile(r"«([^»]+)»")
+PAGE_REF = re.compile(r"стр\w*\.?\s*(\d+)", re.IGNORECASE)
+
+SPREADSHEET_ARGS: dict[str, Any] = {
+    "format": "xlsx",
+    "title": "Продажи по кварталам",
+    "sheets": [
+        {
+            "name": "Продажи",
+            "columns": [
+                {"header": "Квартал", "type": "text"},
+                {"header": "Выручка", "type": "currency"},
+                {"header": "Доля", "type": "percent"},
+            ],
+            "rows": [
+                ["I кв.", 1200000, 0.2],
+                ["II кв.", 1500000, 0.25],
+                ["III кв.", 1800000, 0.3],
+                ["IV кв.", 1500000, 0.25],
+                ["Итого", "=SUM(B2:B5)", "=SUM(C2:C5)"],
+            ],
+        }
+    ],
+}
+DOCUMENT_MARKDOWN = r"""# Формулы
+
+Энергия покоя: $E = mc^2$.
+
+$$\int_0^1 x^2\,dx = \frac{1}{3}$$
+
+| Величина | Значение |
+| --- | --- |
+| Скорость света | 299 792 458 м/с |
+"""
+PRESENTATION_ARGS: dict[str, Any] = {
+    "title": "План проекта",
+    "slides": [
+        {"layout": "title", "title": "План проекта", "bullets": ["Отдел разработки"]},
+        {"layout": "content", "title": "Этапы", "bullets": ["Анализ", "Разработка", "Запуск"]},
+    ],
+}
+
+
+def find_line(haystack: str, needle: str) -> str | None:
+    """Строка текста, где встречается ``needle`` (без учёта регистра)."""
+    lowered = needle.casefold().strip()
+    if not lowered:
+        return None
+    for line in haystack.splitlines():
+        if lowered in line.casefold():
+            return line.strip()
+    return None
+
+
+def needle_of(text: str) -> str:
+    quoted = QUOTED.search(text)
+    return quoted.group(1) if quoted else text
+
+
+def tool_arguments(name: str, messages: list[dict[str, Any]], clean: str) -> dict[str, Any]:
+    """Типовые аргументы инструментов этапа 3 — как их сформировала бы модель."""
+    system = next((_text_of(m) for m in messages if m.get("role") == "system"), "")
+    attachment = ATTACHMENT_HEADER.search(system)
+    file = attachment.group(1) if attachment else "документ"
+    if name == "create_spreadsheet":
+        return SPREADSHEET_ARGS
+    if name == "create_csv":
+        return {**SPREADSHEET_ARGS, "format": "csv"}
+    if name in ("create_document", "create_pdf"):
+        fmt = "pdf" if name == "create_pdf" else "docx"
+        return {"format": fmt, "title": "Формулы", "markdown": DOCUMENT_MARKDOWN}
+    if name == "create_presentation":
+        return PRESENTATION_ARGS
+    if name == "read_document":
+        page = PAGE_REF.search(clean)
+        start = int(page.group(1)) if page else 1
+        return {"file": file, "page_from": start, "page_to": start}
+    if name in ("get_document_outline", "read_spreadsheet"):
+        return {"file": file}
+    if name == "search_in_documents":
+        return {"query": needle_of(clean) or "документ"}
+    return {}
+
+
+# Псевдонимы сценариев: имя инструмента и формат файла.
+TOOL_ALIASES = {"create_csv": "create_spreadsheet", "create_pdf": "create_document"}
+
+
+def tool_scenario(
+    name: str, tools: list[str], messages: list[dict[str, Any]], clean: str, *, loop: bool = False
+) -> Scenario:
+    """Вызов инструментов; после ответа инструмента (``role: tool``) — финальный текст."""
+    last = messages[-1] if messages else {}
+    if last.get("role") == "tool" and not loop:
+        results: list[str] = []
+        for message in reversed(messages):
+            if message.get("role") != "tool":
+                break
+            results.insert(0, _text_of(message))
+        joined = "\n".join(results)
+        found = find_line(joined, needle_of(clean)) if QUOTED.search(clean) else None
+        summary = found or joined[:300]
+        return Scenario(name, [Step("content", f"Готово. Результат инструмента: {summary}")])
+    steps = [
+        Step(
+            "tool_call",
+            tool_name=TOOL_ALIASES.get(tool, tool),
+            tool_arguments=tool_arguments(tool, messages, clean),
+        )
+        for tool in tools
+    ]
+    return Scenario(name, steps, finish_reason="tool_calls")
+
+
 def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     messages: list[dict[str, Any]] = body.get("messages") or []
     user_text = last_user_text(messages)
@@ -155,6 +271,17 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
             ],
             finish_reason="tool_calls",
         )
+    if name == "find":
+        # Ответ «по документу»: строка из системного промпта или результатов инструментов.
+        haystack = "\n".join(_text_of(m) for m in messages if m.get("role") in ("system", "tool"))
+        needle = needle_of(clean)
+        line = find_line(haystack, needle)
+        text = f"Нашёл в документе: {line}" if line else f"В документах нет «{needle}»."
+        return Scenario(name, [Step("content", text)])
+    if name.startswith("tool:"):
+        return tool_scenario(name, name.removeprefix("tool:").split("+"), messages, clean)
+    if name == "tool_loop":
+        return tool_scenario(name, ["list_attachments"], messages, clean, loop=True)
     if name == "error_500":
         return Scenario(name, [], http_error=500)
     if name == "disconnect":
@@ -190,6 +317,9 @@ SCENARIO_NAMES = (
     "markdown",
     "markdown_slow",
     "tool_call_search",
+    "find",
+    "tool:<имя>[+<имя>…]",
+    "tool_loop",
     "error_500",
     "disconnect",
     "slow",
