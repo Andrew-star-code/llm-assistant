@@ -275,8 +275,13 @@ def embed(text: str, dim: int) -> list[float]:
     return [v / norm for v in vector]
 
 
+def _stems(text: str) -> set[str]:
+    """Грубый «стемминг» для мока: первые 5 букв слова (договора/договору → догов)."""
+    return {w[:5] for w in re.findall(r"\w+", text.lower()) if len(w) > 1}
+
+
 def overlap_score(query: str, document: str) -> float:
-    """Доля слов запроса, встречающихся в документе, — балл 0..1 для реранка."""
-    q = set(re.findall(r"\w+", query.lower()))
-    d = set(re.findall(r"\w+", document.lower()))
+    """Доля основ слов запроса, встречающихся в документе, — балл 0..1 для реранка."""
+    q = _stems(query)
+    d = _stems(document)
     return round(len(q & d) / len(q), 4) if q else 0.0

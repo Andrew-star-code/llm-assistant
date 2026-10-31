@@ -85,6 +85,10 @@ def hello(name: str) -> str:
 # как настоящая модель, которая следует системному промпту.
 ADDRESS_LINE = re.compile(r"Обращение к пользователю: ([^\n]+?)\.(?:\n|$)")
 TITLE_REQUEST = "Придумай короткий заголовок"
+REWRITE_REQUEST = "Переформулируй запрос"
+# Заголовки фрагментов RAG (system/knowledge.md.j2, результаты search_*): «[3] «Регламент»…».
+FRAGMENT_HEADER = re.compile(r"^\[(\d+)\] «")
+ATTACHMENT_START = "=== Файл «"
 TITLE_SOURCE = re.compile(r"<<<\s*(.*?)\s*>>>", re.DOTALL)
 
 
@@ -151,6 +155,22 @@ PRESENTATION_ARGS: dict[str, Any] = {
 }
 
 
+def citation_for(haystack: str, line: str) -> str:
+    """« [n]», если строка взята из пронумерованного фрагмента (ближайший заголовок выше)."""
+    lines = haystack.splitlines()
+    for i, current in enumerate(lines):
+        if current.strip() != line:
+            continue
+        for previous in reversed(lines[:i]):
+            if previous.startswith(ATTACHMENT_START):
+                return ""
+            header = FRAGMENT_HEADER.match(previous)
+            if header:
+                return f" [{header.group(1)}]"
+        return ""
+    return ""
+
+
 def find_line(haystack: str, needle: str) -> str | None:
     """Строка текста, где встречается ``needle`` (без учёта регистра)."""
     lowered = needle.casefold().strip()
@@ -209,7 +229,7 @@ def tool_scenario(
             results.insert(0, _text_of(message))
         joined = "\n".join(results)
         found = find_line(joined, needle_of(clean)) if QUOTED.search(clean) else None
-        summary = found or joined[:300]
+        summary = f"{found}{citation_for(joined, found)}" if found else joined[:300]
         return Scenario(name, [Step("content", f"Готово. Результат инструмента: {summary}")])
     steps = [
         Step(
@@ -225,6 +245,11 @@ def tool_scenario(
 def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     messages: list[dict[str, Any]] = body.get("messages") or []
     user_text = last_user_text(messages)
+    if REWRITE_REQUEST in user_text:
+        # Переформулировка для RAG: сообщение пользователя без маркера сценария, как есть.
+        source = TITLE_SOURCE.search(user_text)
+        query = SCENARIO_MARKER.sub("", source.group(1) if source else user_text)
+        return Scenario("rewrite", [Step("content", " ".join(query.split()) or "запрос")])
     match = SCENARIO_MARKER.search(user_text)
     thinking = bool((body.get("chat_template_kwargs") or {}).get("enable_thinking"))
     name = match.group(1) if match else ("thinking" if thinking else "default")
@@ -276,7 +301,11 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
         haystack = "\n".join(_text_of(m) for m in messages if m.get("role") in ("system", "tool"))
         needle = needle_of(clean)
         line = find_line(haystack, needle)
-        text = f"Нашёл в документе: {line}" if line else f"В документах нет «{needle}»."
+        text = (
+            f"Нашёл в документе: {line}{citation_for(haystack, line)}"
+            if line
+            else f"В документах нет «{needle}»."
+        )
         return Scenario(name, [Step("content", text)])
     if name.startswith("tool:"):
         return tool_scenario(name, name.removeprefix("tool:").split("+"), messages, clean)

@@ -247,3 +247,36 @@ def test_find_in_system_prompt() -> None:
     )
     missing = resolve({"messages": [user]}, 0).steps[0].text
     assert missing == "В документах нет «кодовое слово»."
+
+
+def test_rewrite_request_returns_question_without_marker() -> None:
+    from fake_llm.scenarios import resolve
+
+    prompt = (
+        "Переформулируй запрос пользователя…\n<<<\n[[scenario:tool:read_document]] Где  договор?"
+        "\n>>>"
+    )
+    scenario = resolve({"messages": [{"role": "user", "content": prompt}]}, 0)
+    assert scenario.name == "rewrite" and scenario.steps[0].text == "Где договор?"
+
+
+def test_find_cites_knowledge_fragment() -> None:
+    from fake_llm.scenarios import resolve
+
+    system = (
+        "Фрагменты из баз знаний…\n[1] «Регламент» (Общая), стр. 2\nПро отпуск.\n"
+        "[2] «Договоры», стр. 5\nДоговор № 17-42/Б подписан.\n"
+        "=== Файл «a.txt» (txt, страниц: 1) ===\nСтрока вложения про договор."
+    )
+    user = {"role": "user", "content": "[[scenario:find]] «17-42/Б»"}
+    text = resolve({"messages": [{"role": "system", "content": system}, user]}, 0).steps[0].text
+    assert text == "Нашёл в документе: Договор № 17-42/Б подписан. [2]"
+    attachment = {"role": "user", "content": "[[scenario:find]] «Строка вложения»"}
+    text = resolve({"messages": [{"role": "system", "content": system}, attachment]}, 0)
+    assert text.steps[0].text == "Нашёл в документе: Строка вложения про договор."
+
+
+def test_rerank_matches_word_forms() -> None:
+    from fake_llm.app import overlap_score
+
+    assert overlap_score("договорам поставки", "Типовой договор поставок") == 1.0
