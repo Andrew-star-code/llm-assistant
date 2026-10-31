@@ -40,3 +40,7 @@ storage/
 # Документы для массового импорта в базы знаний на дев-стенде
 deploy/compose/import/*
 !deploy/compose/import/.gitkeep
+
+# Отчёты прогонов eval (baseline.json — копия принятого отчёта — коммитится)
+eval/scenarios/report.json
+eval/rag/report.json

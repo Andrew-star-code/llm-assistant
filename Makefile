@@ -12,7 +12,7 @@ PNPM        := pnpm --dir frontend
 PY_SOURCES  := backend services scripts eval
 
 .PHONY: help install env dev-up dev-down dev-reset dev-logs dev-ps migrate \
-        lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag gen-api docs-config docs-db \
+        lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios gen-api docs-config docs-db \
         docs-check \
         images test-worker check deploy
 
@@ -87,6 +87,10 @@ e2e: ## E2E-тесты Playwright
 
 eval-rag: env ## Оценка поиска (§10.6): hit@5 и MRR по 4 конфигурациям на моделях стенда
 	$(COMPOSE) run --rm --no-deps -v $(CURDIR)/eval:/srv/eval:ro api python /srv/eval/rag/run.py --check
+
+eval-scenarios: env ## Эталонные запросы сценариев (§18): ответы + LLM-судья, сравнение с прошлым прогоном
+	$(COMPOSE) run --rm --no-deps -v $(CURDIR)/eval:/srv/eval api python /srv/eval/scenarios/run.py \
+		--report /srv/eval/scenarios/report.json --baseline /srv/eval/scenarios/baseline.json
 
 gen-api: ## Перегенерировать OpenAPI, клиентские типы фронтенда и docs/reference/api.md
 	APP_ENV=dev $(UV) python -m app.cli openapi -o frontend/src/api/openapi.json
