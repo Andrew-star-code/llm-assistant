@@ -1,0 +1,35 @@
+# Реестр моделей по ролям (§8.2). Код обращается к ролям, а не к именам моделей:
+# смена модели — правка этого файла и deploy/models/, без изменений кода (docs/runbooks/models.md).
+models:
+  chat:
+    base_url: http://llm-chat:8000/v1
+    model: Qwen/Qwen3.8-27B
+    context_length: 131072            # сколько реально отдаём, а не максимум модели
+    max_output_tokens: 16384
+    supports_tools: true
+    thinking:
+      mode: chat_template_kwarg       # chat_template_kwarg | reasoning_effort | separate_model | none
+      kwarg: enable_thinking
+      default: false
+    reasoning_history: model_default  # model_default | drop | keep
+    sampling:                         # значения из карточки модели
+      thinking: {temperature: 1.0, top_p: 0.95, top_k: 20}
+      default: {temperature: 0.7, top_p: 0.8, top_k: 20, presence_penalty: 1.5}
+  coder:
+    base_url: http://llm-coder:8000/v1
+    model: Qwen/Qwen3.8-27B-FP8
+    thinking: {mode: chat_template_kwarg, kwarg: enable_thinking, default: true}
+  utility:
+    base_url: http://llm-utility:8000/v1
+    model: Qwen/Qwen3.5-4B
+    thinking: {mode: chat_template_kwarg, kwarg: enable_thinking, default: false}
+  guard:
+    base_url: http://llm-guard:8000/v1
+    model: Qwen/Qwen3Guard-Gen-4B
+  embed:
+    base_url: http://embed:8000/v1
+    model: BAAI/bge-m3
+    dim: 1024
+  rerank:
+    base_url: http://rerank:8000/v1
+    model: BAAI/bge-reranker-v2-m3

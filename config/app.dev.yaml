@@ -1,0 +1,13 @@
+# Оверлей для локальной разработки (APP_ENV=dev): mock-AD из deploy/mock-ad, вход dev без пароля.
+logging:
+  level: DEBUG
+  format: console
+
+auth:
+  providers: [dev, ldap]
+  bootstrap_admins: [ivanov]
+
+ldap:
+  urls: ["ldaps://dc1.corp.local:636"]
+  ca_cert_file: /run/mock-ad/ca.pem            # mock-AD выкладывает свой CA в общий том
+  bind_password_file: /run/secrets/ldap_bind_password

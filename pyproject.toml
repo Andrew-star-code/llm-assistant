@@ -1,0 +1,61 @@
+# Корень uv-workspace: один lock-файл (uv.lock) и одно окружение для всех Python-пакетов репозитория.
+# Сами пакеты — в backend/ и services/*; здесь только общие dev-инструменты и их настройки.
+[project]
+name = "ai-assistant-workspace"
+version = "0.0.0"
+requires-python = ">=3.12,<3.13"
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["backend", "services/fake-llm"]
+
+[tool.uv.sources]
+ai-assistant-api = { workspace = true }
+fake-llm = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ai-assistant-api",
+    "fake-llm",
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+    "openai",
+    "pre-commit",
+    "types-pyyaml",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["frontend", "backend/migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF", "SIM", "PTH", "N"]
+ignore = [
+    "RUF001", "RUF002", "RUF003", # кириллица в строках и комментариях — норма для проекта
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "fake_llm"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = ["backend", "services/fake-llm/src"]
+explicit_package_bases = true
+exclude = ["backend/migrations/"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["backend/tests", "services/fake-llm/tests"]
+addopts = "--import-mode=importlib"
