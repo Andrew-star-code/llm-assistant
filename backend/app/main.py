@@ -6,11 +6,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+from pathlib import Path
 
 import structlog
-from fastapi import FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from prometheus_client import make_asgi_app
 
 from app import __version__
@@ -21,23 +23,74 @@ from app.core.health import ReadinessCheck
 from app.core.health import router as health_router
 from app.core.logging import configure_logging
 from app.core.request_context import RequestContextMiddleware
+from app.core.storage import LocalStorage
+from app.modules.admin.router import router as admin_router
+from app.modules.auth.deps import verify_csrf
+from app.modules.auth.providers.base import AuthProvider
+from app.modules.auth.providers.dev import DevProvider
+from app.modules.auth.providers.ldap import LdapDirectory, LdapProvider
+from app.modules.auth.router import router as auth_router
+from app.modules.auth.service import LoginService
+from app.modules.auth.sessions import SessionStore
+from app.modules.rbac.service import ensure_system_rbac
+from app.modules.security.bruteforce import BruteforceGuard
+from app.modules.users.router import router as profile_router
+from app.modules.users.sync import run_periodic_sync
 
 log = structlog.stdlib.get_logger("app")
 
 API_PREFIX = "/api"
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+def _read_secret_file(path: Path | None) -> str:
+    return path.read_text(encoding="utf-8").strip() if path else ""
+
+
+def init_services(app: FastAPI) -> None:
+    """Создаёт клиенты и сервисы в app.state. Вызывается из lifespan и из тестов."""
     settings: Settings = app.state.settings
     engine = db.create_engine(settings)
     redis_client = redis.create_redis(settings)
-    qdrant_http = qdrant.create_qdrant_http(settings)
-
     app.state.db_engine = engine
     app.state.db_sessions = db.create_session_factory(engine)
     app.state.redis = redis_client
-    app.state.qdrant_http = qdrant_http
+    app.state.qdrant_http = qdrant.create_qdrant_http(settings)
+    app.state.storage = LocalStorage(settings.storage.root)
+    app.state.sessions = SessionStore(redis_client, settings.auth.session)
+    app.state.bruteforce = BruteforceGuard(redis_client, settings.auth.bruteforce)
+
+    providers: dict[str, AuthProvider] = {}
+    app.state.ldap_directory = None
+    if "ldap" in settings.auth.providers:
+        directory = LdapDirectory(
+            settings.ldap, read_password=lambda: _read_secret_file(settings.ldap.bind_password_file)
+        )
+        app.state.ldap_directory = directory
+        providers["ldap"] = LdapProvider(directory)
+    if "dev" in settings.auth.providers:
+        providers["dev"] = DevProvider(settings.auth.dev_users)
+    app.state.login_service = LoginService(
+        settings=settings,
+        providers=providers,
+        sessions=app.state.sessions,
+        bruteforce=app.state.bruteforce,
+        storage=app.state.storage,
+    )
+
+
+async def close_services(app: FastAPI) -> None:
+    await app.state.qdrant_http.aclose()
+    await app.state.redis.aclose()
+    await app.state.db_engine.dispose()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    settings: Settings = app.state.settings
+    init_services(app)
+    engine = app.state.db_engine
+    redis_client = app.state.redis
+    qdrant_http = app.state.qdrant_http
     checks: dict[str, ReadinessCheck] = {
         "postgres": lambda: db.ping(engine),
         "redis": lambda: redis.ping(redis_client),
@@ -45,13 +98,35 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     }
     app.state.readiness_checks = checks
 
+    try:
+        async with app.state.db_sessions() as session:
+            await ensure_system_rbac(session)
+    except Exception:
+        # Например, миграции ещё не применены: /ready покажет, что не так, процесс не падает.
+        log.exception("rbac.bootstrap_failed")
+
+    sync_task = None
+    if app.state.ldap_directory is not None and settings.ldap.sync_interval_minutes > 0:
+        sync_task = asyncio.create_task(
+            run_periodic_sync(
+                redis_client,
+                app.state.db_sessions,
+                app.state.ldap_directory,
+                settings=settings,
+                storage=app.state.storage,
+                sessions=app.state.sessions,
+            )
+        )
+
     log.info("app.started", env=settings.env.value, version=__version__)
     try:
         yield
     finally:
-        await qdrant_http.aclose()
-        await redis_client.aclose()
-        await engine.dispose()
+        if sync_task is not None:
+            sync_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await sync_task
+        await close_services(app)
         log.info("app.stopped")
 
 
@@ -66,6 +141,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
         docs_url=None if is_prod else f"{API_PREFIX}/docs",
         redoc_url=None,
+        swagger_ui_oauth2_redirect_url=None,
         openapi_url=None if is_prod else f"{API_PREFIX}/openapi.json",
     )
     app.state.settings = settings
@@ -74,7 +150,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
 
     app.include_router(health_router)
-    # Бизнес-роутеры модулей подключаются здесь с префиксом API_PREFIX (этапы 1+).
+
+    # Все бизнес-роутеры — под /api и с проверкой CSRF на изменяющих запросах (§15).
+    api = APIRouter(prefix=API_PREFIX, dependencies=[Depends(verify_csrf)])
+    api.include_router(auth_router)
+    api.include_router(profile_router)
+    api.include_router(admin_router)
+    app.include_router(api)
 
     # Метрики для Prometheus; наружу не публикуются — nginx не проксирует /metrics (§16.6).
     app.mount("/metrics", make_asgi_app())

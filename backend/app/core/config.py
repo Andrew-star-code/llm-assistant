@@ -66,6 +66,11 @@ class LoggingSettings(_Section):
 class SessionSettings(_Section):
     idle_timeout_minutes: int = Field(480, gt=0, description="Тайм-аут простоя сессии, минут.")
     absolute_timeout_hours: int = Field(168, gt=0, description="Абсолютный срок жизни сессии, ч.")
+    cookie_name: str = Field("sid", description="Имя cookie сессии (HttpOnly).")
+    csrf_cookie_name: str = Field("csrftoken", description="Имя cookie CSRF-токена (читается JS).")
+    cookie_secure: bool = Field(
+        True, description="Флаг Secure у cookie; false — только для dev по http."
+    )
 
 
 class BruteforceRule(_Section):
@@ -85,6 +90,24 @@ class BruteforceSettings(_Section):
     )
 
 
+class DevUser(_Section):
+    """Пользователь провайдера dev: вход без пароля, данные — как будто из AD."""
+
+    login: str
+    last_name: str
+    first_name: str
+    middle_name: str = ""
+    title: str = ""
+    department: str = ""
+    company: str = ""
+    office: str = ""
+    email: str = ""
+    phone: str = ""
+    mobile: str = ""
+    manager: str = Field("", description="Логин руководителя из того же списка.")
+    groups: list[str] = Field(default_factory=list, description="DN групп AD.")
+
+
 class AuthSettings(_Section):
     providers: list[Literal["ldap", "dev"]] = Field(
         default_factory=lambda: list[Literal["ldap", "dev"]](["ldap"]),
@@ -96,6 +119,14 @@ class AuthSettings(_Section):
     )
     session: SessionSettings = Field(default_factory=SessionSettings)
     bruteforce: BruteforceSettings = Field(default_factory=BruteforceSettings)
+    dev_users: list[DevUser] = Field(
+        default_factory=list, description="Seed-пользователи провайдера dev (только разработка)."
+    )
+    first_login_notice: str = Field(
+        "Переписка с ассистентом сохраняется и может проверяться администраторами в соответствии "
+        "с политикой компании. Не передавайте ассистенту пароли и чужие персональные данные.",
+        description="Текст уведомления при первом входе по умолчанию; меняется в админке (§15).",
+    )
 
 
 class LdapAttributes(_Section):
@@ -162,7 +193,8 @@ class LdapSettings(_Section):
     attributes: LdapAttributes = Field(default_factory=LdapAttributes)
     department_roles: DepartmentRoles = Field(default_factory=DepartmentRoles)
     group_roles: list[GroupRole] = Field(default_factory=list)
-    sync_interval_minutes: int = Field(60, gt=0)
+    sync_interval_minutes: int = Field(60, ge=0, description="Период синхронизации; 0 — выключена.")
+    timeout_s: float = Field(5.0, gt=0, description="Тайм-аут подключения и запроса к AD, с.")
 
     @model_validator(mode="after")
     def _check_urls(self) -> Self:
@@ -235,6 +267,25 @@ class ModelEndpoint(_Section):
 REQUIRED_MODEL_ROLES = ("chat", "utility", "embed", "rerank")
 
 
+# --------------------------------------------------------------------------- прочее
+
+AddressForm = Literal["name_patronymic", "first_name", "full_name", "formal"]
+
+
+class UsersSettings(_Section):
+    default_address_form: AddressForm = Field(
+        "name_patronymic",
+        description="Форма обращения по умолчанию (§11.1): name_patronymic — «Имя Отчество», "
+        "first_name — «Имя», full_name — «Фамилия Имя Отчество», formal — «на вы» без имени.",
+    )
+
+
+class StorageSettings(_Section):
+    root: Path = Field(
+        Path("/srv/storage"), description="Каталог тома с файлами (фото, загрузки, документы)."
+    )
+
+
 # --------------------------------------------------------------------------- корень
 
 
@@ -258,10 +309,16 @@ class Settings(BaseSettings):
     qdrant_url: str = Field("http://localhost:6333", description="HTTP-адрес Qdrant.")
     qdrant_api_key: SecretStr | None = Field(None, description="API-ключ Qdrant (секрет).")
     readiness_timeout_s: float = Field(2.0, gt=0, description="Тайм-аут каждой проверки /ready, с.")
+    trusted_proxies: list[str] = Field(
+        default_factory=list,
+        description="IP прокси (nginx), чьему X-Forwarded-For доверяем при определении IP клиента.",
+    )
 
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
     ldap: LdapSettings = Field(default_factory=LdapSettings)
+    users: UsersSettings = Field(default_factory=UsersSettings)
+    storage: StorageSettings = Field(default_factory=StorageSettings)
     models: dict[str, ModelEndpoint] = Field(
         default_factory=dict, description="Реестр моделей по ролям (config/models.yaml)."
     )

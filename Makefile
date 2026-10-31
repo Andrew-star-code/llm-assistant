@@ -12,7 +12,8 @@ PNPM        := pnpm --dir frontend
 PY_SOURCES  := backend services scripts
 
 .PHONY: help install env dev-up dev-down dev-reset dev-logs dev-ps migrate \
-        lint fmt typecheck test test-backend test-frontend e2e gen-api docs-config docs-check \
+        lint fmt typecheck test test-unit test-backend test-frontend e2e gen-api docs-config docs-db \
+        docs-check \
         images check deploy
 
 help: ## Список команд
@@ -69,7 +70,11 @@ typecheck: ## Проверка типов: mypy (strict), tsc
 	$(UV) mypy backend/app backend/tests services/fake-llm scripts
 	$(PNPM) typecheck
 
-test: test-backend test-frontend ## Все unit- и интеграционные тесты
+test: test-backend test-frontend ## Все unit- и интеграционные тесты (нужен Docker: testcontainers, mock-AD)
+
+test-unit: ## Быстрые тесты без Docker: unit бэкенда и фронтенда
+	$(UV) pytest backend/tests/unit services/fake-llm/tests
+	$(PNPM) test
 
 test-backend:
 	$(UV) pytest
@@ -87,6 +92,9 @@ gen-api: ## Перегенерировать OpenAPI, клиентские ти�
 
 docs-config: ## Перегенерировать docs/reference/config.md
 	APP_ENV=dev $(UV) python -m app.cli config docs -o docs/reference/config.md
+
+docs-db: ## Перегенерировать docs/reference/db-schema.md из моделей SQLAlchemy
+	$(UV) python -m app.cli db-docs -o docs/reference/db-schema.md
 
 docs-check: ## Документация не отстаёт от кода (README модулей, сгенерированные справочники, ссылки)
 	$(UV) python scripts/docs_check.py

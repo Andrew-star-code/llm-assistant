@@ -58,6 +58,11 @@ class ForbiddenError(AppError):
     code = "forbidden"
 
 
+class UnauthenticatedError(AppError):
+    status_code = 401
+    code = "unauthenticated"
+
+
 def _request_id(request: Request) -> str | None:
     return getattr(request.state, "request_id", None)
 

@@ -9,11 +9,9 @@ from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
+import app.models  # noqa: F401 — регистрирует все таблицы в Base.metadata
 from app.core.config import get_settings
 from app.core.db import Base
-
-# Модели модулей импортируются здесь, чтобы autogenerate видел все таблицы (этапы 1+):
-# import app.modules.users.models
 
 config = context.config
 if config.config_file_name is not None:

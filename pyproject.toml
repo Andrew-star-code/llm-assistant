@@ -27,12 +27,16 @@ dev = [
     "openai",
     "pre-commit",
     "types-pyyaml",
+    "testcontainers[postgres,redis]>=4.15.0",
+    "types-ldap3>=2.9.13.20260827",
+    "types-docker>=7.2.0.20261006",
 ]
 
 [tool.ruff]
 target-version = "py312"
 line-length = 100
 extend-exclude = ["frontend", "backend/migrations/versions"]
+force-exclude = true  # исключения действуют и когда pre-commit передаёт файлы явно
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF", "SIM", "PTH", "N"]
@@ -59,3 +63,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["backend/tests", "services/fake-llm/tests"]
 addopts = "--import-mode=importlib"
+filterwarnings = [
+    # ldap3 2.9.1 импортирует устаревшие имена pyasn1; версия pyasn1 закреплена в uv.lock.
+    "ignore:(tagMap|typeMap) is deprecated:DeprecationWarning:ldap3",
+]

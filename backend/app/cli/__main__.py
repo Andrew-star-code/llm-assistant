@@ -5,8 +5,14 @@
   config docs [-o F]  — сгенерировать справочник конфигурации (docs/reference/config.md)
   openapi [-o F]      — выгрузить схему OpenAPI (для генерации клиента фронтенда)
   api-docs [-o F]     — сгенерировать справочник API (docs/reference/api.md)
+  db-docs [-o F]      — сгенерировать схему БД (docs/reference/db-schema.md)
 
-Дальше появятся (§5, §6.7, §10.3): ``ad check``, ``create-admin``, ``kb import``, ``purge``.
+Этап 1:
+  ad check --user L [--password-prompt] [--json] — диагностика AD для пользователя (§6.7)
+  ad sync                                        — синхронизировать пользователей с AD
+  create-admin --login L                         — выдать роль superadmin
+
+Дальше появятся (§10.3): ``kb import``, ``purge``.
 """
 
 from __future__ import annotations
@@ -15,7 +21,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from app.core.config import ConfigError, load_settings
+from app.core.config import ConfigError, Settings, load_settings
 
 
 def _write(text: str, output: str | None) -> None:
@@ -61,6 +67,39 @@ def cmd_api_docs(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_db_docs(args: argparse.Namespace) -> int:
+    from app.cli.db_docs import render
+
+    _write(render(), args.output)
+    return 0
+
+
+def _settings_or_exit() -> Settings | None:
+    try:
+        return load_settings()
+    except ConfigError as exc:
+        print(exc, file=sys.stderr)
+        return None
+
+
+def cmd_ad(args: argparse.Namespace) -> int:
+    from app.cli import ad
+
+    settings = _settings_or_exit()
+    if settings is None:
+        return 1
+    if args.ad_command == "check":
+        return ad.cmd_ad_check(settings, args.user, args.password_prompt, args.json)
+    return ad.cmd_ad_sync(settings)
+
+
+def cmd_create_admin(args: argparse.Namespace) -> int:
+    from app.cli import ad
+
+    settings = _settings_or_exit()
+    return 1 if settings is None else ad.cmd_create_admin(settings, args.login)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -79,6 +118,23 @@ def build_parser() -> argparse.ArgumentParser:
     api_docs = sub.add_parser("api-docs", help="Сгенерировать docs/reference/api.md")
     api_docs.add_argument("-o", "--output")
     api_docs.set_defaults(func=cmd_api_docs)
+
+    db_docs = sub.add_parser("db-docs", help="Сгенерировать docs/reference/db-schema.md")
+    db_docs.add_argument("-o", "--output")
+    db_docs.set_defaults(func=cmd_db_docs)
+
+    ad = sub.add_parser("ad", help="Active Directory")
+    ad_sub = ad.add_subparsers(dest="ad_command", required=True)
+    check = ad_sub.add_parser("check", help="Диагностика AD для пользователя")
+    check.add_argument("--user", required=True, help="Логин: ivanov, CORP\\ivanov или UPN")
+    check.add_argument("--password-prompt", action="store_true", help="Проверить и пароль")
+    check.add_argument("--json", action="store_true", help="Вывести отчёт в JSON")
+    check.set_defaults(func=cmd_ad)
+    ad_sub.add_parser("sync", help="Синхронизировать пользователей с AD").set_defaults(func=cmd_ad)
+
+    admin = sub.add_parser("create-admin", help="Выдать пользователю роль superadmin")
+    admin.add_argument("--login", required=True)
+    admin.set_defaults(func=cmd_create_admin)
     return parser
 
 

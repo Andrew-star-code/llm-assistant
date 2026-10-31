@@ -38,10 +38,430 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/auth/providers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Providers */
+    get: operations["getAuthProviders"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/csrf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Csrf
+     * @description Выдаёт CSRF-cookie до входа; после входа токен привязан к сессии.
+     */
+    get: operations["getCsrfToken"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/login": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Login */
+    post: operations["login"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/logout": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Logout */
+    post: operations["logout"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Me */
+    get: operations["getMe"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/notice/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Accept Notice
+     * @description Пользователь подтвердил уведомление о хранении переписки (§7.10, §15).
+     */
+    post: operations["acceptNotice"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/profile": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Profile */
+    get: operations["getProfile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/profile/settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Settings */
+    patch: operations["updateProfileSettings"];
+    trace?: never;
+  };
+  "/api/profile/photo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Photo */
+    get: operations["getProfilePhoto"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Users
+     * @description Поиск по логину, ФИО, отделу и должности; сортировка по ФИО.
+     */
+    get: operations["adminListUsers"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get User */
+    get: operations["adminGetUser"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/photo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get User Photo */
+    get: operations["adminGetUserPhoto"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/block": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Block User
+     * @description Блокирует пользователя с причиной и сроком и сразу завершает все его сессии (§6.4).
+     */
+    post: operations["adminBlockUser"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/unblock": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Unblock User
+     * @description Снимает блокировку и временную блокировку логина за перебор паролей.
+     */
+    post: operations["adminUnblockUser"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/logout": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Logout User */
+    post: operations["adminLogoutUser"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/sessions/{session_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Revoke Session */
+    delete: operations["adminRevokeSession"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/roles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Set User Roles
+     * @description Задаёт ручные роли. Роли из AD пересчитываются при входе и синхронизации.
+     */
+    put: operations["adminSetUserRoles"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/roles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Roles
+     * @description Все роли с числом пользователей; роли без пользователей — кандидаты на перенос (§6.3).
+     */
+    get: operations["adminListRoles"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/logins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Logins */
+    get: operations["adminListLogins"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/audit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Audit */
+    get: operations["adminListAudit"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/ad/diagnostics": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ad Diagnostics
+     * @description Проверка подключения к AD и данных пользователя без проверки пароля (§6.7).
+     */
+    post: operations["adminAdDiagnostics"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AuditOut */
+    AuditOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Ts
+       * Format: date-time
+       */
+      ts: string;
+      /** Actor Id */
+      actor_id: string | null;
+      /** Actor Name */
+      actor_name: string | null;
+      /** Action */
+      action: string;
+      /** Target Type */
+      target_type: string | null;
+      /** Target Id */
+      target_id: string | null;
+      /** Details */
+      details: {
+        [key: string]: unknown;
+      };
+      /** Ip */
+      ip: string | null;
+    };
+    /** BlockIn */
+    BlockIn: {
+      /** Reason */
+      reason: string;
+      /**
+       * Until
+       * @description До какого момента; null — бессрочно.
+       */
+      until?: string | null;
+    };
     /** CheckResult */
     CheckResult: {
       /**
@@ -54,6 +474,89 @@ export interface components {
       /** Error */
       error?: string | null;
     };
+    /** ControllerOut */
+    ControllerOut: {
+      /** Url */
+      url: string;
+      /** Ok */
+      ok: boolean;
+      /** Duration Ms */
+      duration_ms: number;
+      /** Error */
+      error?: string | null;
+    };
+    /** CsrfOut */
+    CsrfOut: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /** DevUserOut */
+    DevUserOut: {
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
+      /** Title */
+      title: string | null;
+      /** Department */
+      department: string | null;
+    };
+    /** DiagnosticsIn */
+    DiagnosticsIn: {
+      /** Login */
+      login: string;
+    };
+    /** DiagnosticsReport */
+    DiagnosticsReport: {
+      /** Login */
+      login: string;
+      /** Controllers */
+      controllers: components["schemas"]["ControllerOut"][];
+      service_bind: components["schemas"]["StepOut"];
+      /** User Found */
+      user_found: boolean;
+      entry?: components["schemas"]["DirectoryEntryOut"] | null;
+      /** Full Name */
+      full_name?: string | null;
+      /** Middle Name Source */
+      middle_name_source?: ("attribute" | "display_name" | "none") | null;
+      /** Address Form */
+      address_form?: string | null;
+      /** Address */
+      address?: string | null;
+      /** Department */
+      department?: string | null;
+      /**
+       * Roles
+       * @default []
+       */
+      roles: components["schemas"]["RoleSpecOut"][];
+      password_check?: components["schemas"]["StepOut"] | null;
+      /** Ok */
+      ok: boolean;
+    };
+    /** DirectoryEntryOut */
+    DirectoryEntryOut: {
+      /** Dn */
+      dn: string | null;
+      /** Guid */
+      guid: string;
+      /** Disabled */
+      disabled: boolean;
+      /** In Access Group */
+      in_access_group: boolean;
+      /** Groups */
+      groups: string[];
+      /** Attributes */
+      attributes: {
+        [key: string]: string | null;
+      };
+    };
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][];
+    };
     /** HealthResponse */
     HealthResponse: {
       /**
@@ -62,6 +565,182 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** LoginEventOut */
+    LoginEventOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Ts
+       * Format: date-time
+       */
+      ts: string;
+      /** User Id */
+      user_id: string | null;
+      /** Login Attempted */
+      login_attempted: string;
+      /** Ip */
+      ip: string | null;
+      /** User Agent */
+      user_agent: string | null;
+      /** Method */
+      method: string;
+      /** Success */
+      success: boolean;
+      /** Failure Reason */
+      failure_reason: string | null;
+      /** Risk Flags */
+      risk_flags: string[];
+    };
+    /** LoginIn */
+    LoginIn: {
+      /** Login */
+      login: string;
+      /**
+       * Password
+       * @default
+       */
+      password: string;
+      /**
+       * Provider
+       * @default ldap
+       * @enum {string}
+       */
+      provider: "ldap" | "dev";
+    };
+    /** Me */
+    Me: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
+      /** First Name */
+      first_name: string | null;
+      /** Middle Name */
+      middle_name: string | null;
+      /** Address */
+      address: string | null;
+      /** Title */
+      title: string | null;
+      /** Department */
+      department: string | null;
+      /** Has Photo */
+      has_photo: boolean;
+      /** Roles */
+      roles: components["schemas"]["RoleOut"][];
+      /** Permissions */
+      permissions: string[];
+      settings: components["schemas"]["UserSettings"];
+      notice: components["schemas"]["Notice"];
+    };
+    /** Notice */
+    Notice: {
+      /** Required */
+      required: boolean;
+      /** Text */
+      text: string;
+    };
+    /** Page[AuditOut] */
+    Page_AuditOut_: {
+      /** Items */
+      items: components["schemas"]["AuditOut"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Page[LoginEventOut] */
+    Page_LoginEventOut_: {
+      /** Items */
+      items: components["schemas"]["LoginEventOut"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Page[UserListItem] */
+    Page_UserListItem_: {
+      /** Items */
+      items: components["schemas"]["UserListItem"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Profile */
+    Profile: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
+      /** Last Name */
+      last_name: string | null;
+      /** First Name */
+      first_name: string | null;
+      /** Middle Name */
+      middle_name: string | null;
+      /** Title */
+      title: string | null;
+      /** Department */
+      department: string | null;
+      /** Company */
+      company: string | null;
+      /** Office */
+      office: string | null;
+      /** Email */
+      email: string | null;
+      /** Phone */
+      phone: string | null;
+      /** Mobile */
+      mobile: string | null;
+      /** Manager Name */
+      manager_name: string | null;
+      /** Has Photo */
+      has_photo: boolean;
+      /** Roles */
+      roles: components["schemas"]["RoleOut"][];
+      /**
+       * Address Form
+       * @enum {string}
+       */
+      address_form: "name_patronymic" | "first_name" | "full_name" | "formal";
+      /** Address Form Is Default */
+      address_form_is_default: boolean;
+      /**
+       * Address
+       * @description Как ассистент обращается к пользователю; null — «на вы».
+       */
+      address: string | null;
+      settings: components["schemas"]["UserSettings"];
+      /** Last Login At */
+      last_login_at: string | null;
+    };
+    /**
+     * ProfileSettingsUpdate
+     * @description Частичное обновление: меняются только переданные поля.
+     */
+    ProfileSettingsUpdate: {
+      /**
+       * Address Form
+       * @description Форма обращения; null — вернуть значение по умолчанию.
+       */
+      address_form?: ("name_patronymic" | "first_name" | "full_name" | "formal") | null;
+      /** Theme */
+      theme?: ("light" | "dark" | "system") | null;
+    };
+    /** ProvidersOut */
+    ProvidersOut: {
+      /** Providers */
+      providers: ("ldap" | "dev")[];
+      /** Dev Users */
+      dev_users?: components["schemas"]["DevUserOut"][];
     };
     /** ReadinessResponse */
     ReadinessResponse: {
@@ -74,6 +753,199 @@ export interface components {
       checks: {
         [key: string]: components["schemas"]["CheckResult"];
       };
+    };
+    /** RevokedOut */
+    RevokedOut: {
+      /** Revoked */
+      revoked: number;
+    };
+    /** RoleListItem */
+    RoleListItem: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Kind */
+      kind: string;
+      /** Description */
+      description: string | null;
+      /** Users */
+      users: number;
+      /** Permissions */
+      permissions: string[];
+    };
+    /** RoleOut */
+    RoleOut: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Kind */
+      kind: string;
+      /** Source */
+      source: string;
+    };
+    /** RoleSpecOut */
+    RoleSpecOut: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "department" | "rule" | "group" | "bootstrap";
+    };
+    /** RolesIn */
+    RolesIn: {
+      /**
+       * Role Ids
+       * @description Полный набор ручных ролей пользователя.
+       */
+      role_ids: string[];
+    };
+    /** SessionOut */
+    SessionOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Last Seen At
+       * Format: date-time
+       */
+      last_seen_at: string;
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /** Ip */
+      ip: string | null;
+      /** User Agent */
+      user_agent: string | null;
+      /** Provider */
+      provider: string;
+      /** Active */
+      active: boolean;
+    };
+    /** StepOut */
+    StepOut: {
+      /** Ok */
+      ok: boolean;
+      /** Error */
+      error?: string | null;
+    };
+    /** UserCard */
+    UserCard: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
+      /** Upn */
+      upn: string | null;
+      /** Email */
+      email: string | null;
+      /** Title */
+      title: string | null;
+      /** Department */
+      department: string | null;
+      /** Company */
+      company: string | null;
+      /** Office */
+      office: string | null;
+      /** Phone */
+      phone: string | null;
+      /** Mobile */
+      mobile: string | null;
+      /** Manager Name */
+      manager_name: string | null;
+      /** Employee Id */
+      employee_id: string | null;
+      /** Has Photo */
+      has_photo: boolean;
+      /** Ad Groups */
+      ad_groups: string[];
+      /** Ad Disabled */
+      ad_disabled: boolean;
+      /** Is Blocked */
+      is_blocked: boolean;
+      /** Blocked Reason */
+      blocked_reason: string | null;
+      /** Blocked Until */
+      blocked_until: string | null;
+      /** Last Login At */
+      last_login_at: string | null;
+      /** Synced At */
+      synced_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Roles */
+      roles: components["schemas"]["RoleOut"][];
+      /** Sessions */
+      sessions: components["schemas"]["SessionOut"][];
+      /** Recent Logins */
+      recent_logins: components["schemas"]["LoginEventOut"][];
+    };
+    /** UserListItem */
+    UserListItem: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
+      /** Title */
+      title: string | null;
+      /** Department */
+      department: string | null;
+      /** Is Blocked */
+      is_blocked: boolean;
+      /** Ad Disabled */
+      ad_disabled: boolean;
+      /** Last Login At */
+      last_login_at: string | null;
+    };
+    /** UserSettings */
+    UserSettings: {
+      /** Theme */
+      theme?: ("light" | "dark" | "system") | null;
+    };
+    /** ValidationError */
+    ValidationError: {
+      /** Location */
+      loc: (string | number)[];
+      /** Message */
+      msg: string;
+      /** Error Type */
+      type: string;
+      /** Input */
+      input?: unknown;
+      /** Context */
+      ctx?: Record<string, never>;
     };
   };
   responses: never;
@@ -129,6 +1001,606 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ReadinessResponse"];
+        };
+      };
+    };
+  };
+  getAuthProviders: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProvidersOut"];
+        };
+      };
+    };
+  };
+  getCsrfToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CsrfOut"];
+        };
+      };
+    };
+  };
+  login: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LoginIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      /** @description Неверный логин или пароль */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  logout: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getMe: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+    };
+  };
+  acceptNotice: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+    };
+  };
+  updateProfileSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProfileSettingsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getProfilePhoto: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/jpeg": unknown;
+        };
+      };
+      /** @description Фото нет */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  adminListUsers: {
+    parameters: {
+      query?: {
+        q?: string | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_UserListItem_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminGetUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserCard"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminGetUserPhoto: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/jpeg": unknown;
+        };
+      };
+      /** @description Фото нет */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminBlockUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BlockIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RevokedOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUnblockUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminLogoutUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RevokedOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminRevokeSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminSetUserRoles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RolesIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserCard"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListRoles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleListItem"][];
+        };
+      };
+    };
+  };
+  adminListLogins: {
+    parameters: {
+      query?: {
+        login?: string | null;
+        user_id?: string | null;
+        success?: boolean | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_LoginEventOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListAudit: {
+    parameters: {
+      query?: {
+        action?: string | null;
+        actor_id?: string | null;
+        target_id?: string | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_AuditOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminAdDiagnostics: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DiagnosticsIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DiagnosticsReport"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

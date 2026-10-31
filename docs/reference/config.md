@@ -19,18 +19,24 @@
 | `qdrant_url` | str | `http://localhost:6333` | `APP_QDRANT_URL` | HTTP-адрес Qdrant. |
 | `qdrant_api_key` | secret \| null | — | `APP_QDRANT_API_KEY` | API-ключ Qdrant (секрет). |
 | `readiness_timeout_s` | float | 2.0 | `APP_READINESS_TIMEOUT_S` | Тайм-аут каждой проверки /ready, с. |
+| `trusted_proxies` | list[str] | [] | `APP_TRUSTED_PROXIES` | IP прокси (nginx), чьему X-Forwarded-For доверяем при определении IP клиента. |
 | `logging.level` | DEBUG \| INFO \| WARNING \| ERROR | `INFO` | `APP_LOGGING__LEVEL` | Минимальный уровень логов. |
 | `logging.format` | json \| console | `json` | `APP_LOGGING__FORMAT` | json — для прода (stdout → сборщик логов), console — для разработки. |
 | `auth.providers` | list[ldap \| dev] | ['ldap'] | `APP_AUTH__PROVIDERS` | Провайдеры входа: ldap \| dev. dev запрещён при APP_ENV=prod. |
 | `auth.bootstrap_admins` | list[str] | [] | `APP_AUTH__BOOTSTRAP_ADMINS` | Логины первых superadmin; остальные роли — в админке. |
 | `auth.session.idle_timeout_minutes` | int | 480 | `APP_AUTH__SESSION__IDLE_TIMEOUT_MINUTES` | Тайм-аут простоя сессии, минут. |
 | `auth.session.absolute_timeout_hours` | int | 168 | `APP_AUTH__SESSION__ABSOLUTE_TIMEOUT_HOURS` | Абсолютный срок жизни сессии, ч. |
+| `auth.session.cookie_name` | str | `sid` | `APP_AUTH__SESSION__COOKIE_NAME` | Имя cookie сессии (HttpOnly). |
+| `auth.session.csrf_cookie_name` | str | `csrftoken` | `APP_AUTH__SESSION__CSRF_COOKIE_NAME` | Имя cookie CSRF-токена (читается JS). |
+| `auth.session.cookie_secure` | bool | true | `APP_AUTH__SESSION__COOKIE_SECURE` | Флаг Secure у cookie; false — только для dev по http. |
 | `auth.bruteforce.per_login.max_failures` | int | 5 | `APP_AUTH__BRUTEFORCE__PER_LOGIN__MAX_FAILURES` | Сколько неудачных попыток допускается в окне. |
 | `auth.bruteforce.per_login.window_minutes` | int | 15 | `APP_AUTH__BRUTEFORCE__PER_LOGIN__WINDOW_MINUTES` | Окно подсчёта, минут. |
 | `auth.bruteforce.per_login.lock_minutes` | int | 15 | `APP_AUTH__BRUTEFORCE__PER_LOGIN__LOCK_MINUTES` | Длительность блокировки, минут. |
 | `auth.bruteforce.per_ip.max_failures` | int | 20 | `APP_AUTH__BRUTEFORCE__PER_IP__MAX_FAILURES` | Сколько неудачных попыток допускается в окне. |
 | `auth.bruteforce.per_ip.window_minutes` | int | 15 | `APP_AUTH__BRUTEFORCE__PER_IP__WINDOW_MINUTES` | Окно подсчёта, минут. |
 | `auth.bruteforce.per_ip.lock_minutes` | int | 60 | `APP_AUTH__BRUTEFORCE__PER_IP__LOCK_MINUTES` | Длительность блокировки, минут. |
+| `auth.dev_users` | list[DevUser] | [] | `APP_AUTH__DEV_USERS` | Seed-пользователи провайдера dev (только разработка). |
+| `auth.first_login_notice` | str | `Переписка с ассистентом сохраняется и может проверяться администраторами в соответствии с политикой компании. Не передавайте ассистенту пароли и чужие персональные данные.` | `APP_AUTH__FIRST_LOGIN_NOTICE` | Текст уведомления при первом входе по умолчанию; меняется в админке (§15). |
 | `ldap.urls` | list[str] | [] | `APP_LDAP__URLS` | Контроллеры домена по порядку: ldaps://host:636. |
 | `ldap.start_tls` | bool | false | `APP_LDAP__START_TLS` | LDAP (389) + StartTLS вместо LDAPS. |
 | `ldap.ca_cert_file` | Path \| null | null | `APP_LDAP__CA_CERT_FILE` | Сертификат корпоративного CA. |
@@ -62,7 +68,10 @@
 | `ldap.department_roles.auto` | bool | true | `APP_LDAP__DEPARTMENT_ROLES__AUTO` | Создавать роль «Отдел: <название>» из атрибута department. |
 | `ldap.department_roles.rules` | list[AttributeRoleRule] | [] | `APP_LDAP__DEPARTMENT_ROLES__RULES` | Дополнительные роли по значениям атрибутов. |
 | `ldap.group_roles` | list[GroupRole] | [] | `APP_LDAP__GROUP_ROLES` |  |
-| `ldap.sync_interval_minutes` | int | 60 | `APP_LDAP__SYNC_INTERVAL_MINUTES` |  |
+| `ldap.sync_interval_minutes` | int | 60 | `APP_LDAP__SYNC_INTERVAL_MINUTES` | Период синхронизации; 0 — выключена. |
+| `ldap.timeout_s` | float | 5.0 | `APP_LDAP__TIMEOUT_S` | Тайм-аут подключения и запроса к AD, с. |
+| `users.default_address_form` | name_patronymic \| first_name \| full_name \| formal | `name_patronymic` | `APP_USERS__DEFAULT_ADDRESS_FORM` | Форма обращения по умолчанию (§11.1): name_patronymic — «Имя Отчество», first_name — «Имя», full_name — «Фамилия Имя Отчество», formal — «на вы» без имени. |
+| `storage.root` | Path | `/srv/storage` | `APP_STORAGE__ROOT` | Каталог тома с файлами (фото, загрузки, документы). |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`

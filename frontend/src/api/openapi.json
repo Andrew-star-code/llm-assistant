@@ -56,10 +56,1024 @@
           }
         }
       }
+    },
+    "/api/auth/providers": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Providers",
+        "operationId": "getAuthProviders",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvidersOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/csrf": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Csrf",
+        "description": "Выдаёт CSRF-cookie до входа; после входа токен привязан к сессии.",
+        "operationId": "getCsrfToken",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Неверный логин или пароль"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/notice/accept": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Accept Notice",
+        "description": "Пользователь подтвердил уведомление о хранении переписки (§7.10, §15).",
+        "operationId": "acceptNotice",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Profile",
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/settings": {
+      "patch": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Update Settings",
+        "operationId": "updateProfileSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/photo": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Photo",
+        "operationId": "getProfilePhoto",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/jpeg": {}
+            }
+          },
+          "404": {
+            "description": "Фото нет"
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Users",
+        "description": "Поиск по логину, ФИО, отделу и должности; сортировка по ФИО.",
+        "operationId": "adminListUsers",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_UserListItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get User",
+        "operationId": "adminGetUser",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/photo": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get User Photo",
+        "operationId": "adminGetUserPhoto",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/jpeg": {}
+            }
+          },
+          "404": {
+            "description": "Фото нет"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/block": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Block User",
+        "description": "Блокирует пользователя с причиной и сроком и сразу завершает все его сессии (§6.4).",
+        "operationId": "adminBlockUser",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/unblock": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Unblock User",
+        "description": "Снимает блокировку и временную блокировку логина за перебор паролей.",
+        "operationId": "adminUnblockUser",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/logout": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Logout User",
+        "operationId": "adminLogoutUser",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/sessions/{session_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Revoke Session",
+        "operationId": "adminRevokeSession",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/roles": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set User Roles",
+        "description": "Задаёт ручные роли. Роли из AD пересчитываются при входе и синхронизации.",
+        "operationId": "adminSetUserRoles",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolesIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/roles": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Roles",
+        "description": "Все роли с числом пользователей; роли без пользователей — кандидаты на перенос (§6.3).",
+        "operationId": "adminListRoles",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleListItem"
+                  },
+                  "type": "array",
+                  "title": "Response Adminlistroles"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/logins": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Logins",
+        "operationId": "adminListLogins",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Login"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "success",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Success"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_LoginEventOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/audit": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Audit",
+        "operationId": "adminListAudit",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "name": "actor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor Id"
+            }
+          },
+          {
+            "name": "target_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AuditOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/ad/diagnostics": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Ad Diagnostics",
+        "description": "Проверка подключения к AD и данных пользователя без проверки пароля (§6.7).",
+        "operationId": "adminAdDiagnostics",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiagnosticsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticsReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AuditOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Name"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "target_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Type"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "actor_id",
+          "actor_name",
+          "action",
+          "target_type",
+          "target_id",
+          "details",
+          "ip"
+        ],
+        "title": "AuditOut"
+      },
+      "BlockIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until",
+            "description": "До какого момента; null — бессрочно."
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "BlockIn"
+      },
       "CheckResult": {
         "properties": {
           "status": {
@@ -93,6 +1107,304 @@
         ],
         "title": "CheckResult"
       },
+      "ControllerOut": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "ok",
+          "duration_ms"
+        ],
+        "title": "ControllerOut"
+      },
+      "CsrfOut": {
+        "properties": {
+          "csrf_token": {
+            "type": "string",
+            "title": "Csrf Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csrf_token"
+        ],
+        "title": "CsrfOut"
+      },
+      "DevUserOut": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "full_name",
+          "title",
+          "department"
+        ],
+        "title": "DevUserOut"
+      },
+      "DiagnosticsIn": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Login"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login"
+        ],
+        "title": "DiagnosticsIn"
+      },
+      "DiagnosticsReport": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "controllers": {
+            "items": {
+              "$ref": "#/components/schemas/ControllerOut"
+            },
+            "type": "array",
+            "title": "Controllers"
+          },
+          "service_bind": {
+            "$ref": "#/components/schemas/StepOut"
+          },
+          "user_found": {
+            "type": "boolean",
+            "title": "User Found"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DirectoryEntryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "middle_name_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "attribute",
+                  "display_name",
+                  "none"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name Source"
+          },
+          "address_form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Form"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleSpecOut"
+            },
+            "type": "array",
+            "title": "Roles",
+            "default": []
+          },
+          "password_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "controllers",
+          "service_bind",
+          "user_found",
+          "ok"
+        ],
+        "title": "DiagnosticsReport"
+      },
+      "DirectoryEntryOut": {
+        "properties": {
+          "dn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dn"
+          },
+          "guid": {
+            "type": "string",
+            "title": "Guid"
+          },
+          "disabled": {
+            "type": "boolean",
+            "title": "Disabled"
+          },
+          "in_access_group": {
+            "type": "boolean",
+            "title": "In Access Group"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dn",
+          "guid",
+          "disabled",
+          "in_access_group",
+          "groups",
+          "attributes"
+        ],
+        "title": "DirectoryEntryOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -104,6 +1416,623 @@
         },
         "type": "object",
         "title": "HealthResponse"
+      },
+      "LoginEventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "login_attempted": {
+            "type": "string",
+            "title": "Login Attempted"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "risk_flags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Risk Flags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "user_id",
+          "login_attempted",
+          "ip",
+          "user_agent",
+          "method",
+          "success",
+          "failure_reason",
+          "risk_flags"
+        ],
+        "title": "LoginEventOut"
+      },
+      "LoginIn": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Login"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 1024,
+            "title": "Password",
+            "default": ""
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "ldap",
+              "dev"
+            ],
+            "title": "Provider",
+            "default": "ldap"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login"
+        ],
+        "title": "LoginIn"
+      },
+      "Me": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "has_photo": {
+            "type": "boolean",
+            "title": "Has Photo"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleOut"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/UserSettings"
+          },
+          "notice": {
+            "$ref": "#/components/schemas/Notice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login",
+          "full_name",
+          "first_name",
+          "middle_name",
+          "address",
+          "title",
+          "department",
+          "has_photo",
+          "roles",
+          "permissions",
+          "settings",
+          "notice"
+        ],
+        "title": "Me"
+      },
+      "Notice": {
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "required",
+          "text"
+        ],
+        "title": "Notice"
+      },
+      "Page_AuditOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[AuditOut]"
+      },
+      "Page_LoginEventOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LoginEventOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[LoginEventOut]"
+      },
+      "Page_UserListItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UserListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[UserListItem]"
+      },
+      "Profile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "office": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Office"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "mobile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile"
+          },
+          "manager_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Name"
+          },
+          "has_photo": {
+            "type": "boolean",
+            "title": "Has Photo"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleOut"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "address_form": {
+            "type": "string",
+            "enum": [
+              "name_patronymic",
+              "first_name",
+              "full_name",
+              "formal"
+            ],
+            "title": "Address Form"
+          },
+          "address_form_is_default": {
+            "type": "boolean",
+            "title": "Address Form Is Default"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address",
+            "description": "Как ассистент обращается к пользователю; null — «на вы»."
+          },
+          "settings": {
+            "$ref": "#/components/schemas/UserSettings"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login",
+          "full_name",
+          "last_name",
+          "first_name",
+          "middle_name",
+          "title",
+          "department",
+          "company",
+          "office",
+          "email",
+          "phone",
+          "mobile",
+          "manager_name",
+          "has_photo",
+          "roles",
+          "address_form",
+          "address_form_is_default",
+          "address",
+          "settings",
+          "last_login_at"
+        ],
+        "title": "Profile"
+      },
+      "ProfileSettingsUpdate": {
+        "properties": {
+          "address_form": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "name_patronymic",
+                  "first_name",
+                  "full_name",
+                  "formal"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Form",
+            "description": "Форма обращения; null — вернуть значение по умолчанию."
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "light",
+                  "dark",
+                  "system"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theme"
+          }
+        },
+        "type": "object",
+        "title": "ProfileSettingsUpdate",
+        "description": "Частичное обновление: меняются только переданные поля."
+      },
+      "ProvidersOut": {
+        "properties": {
+          "providers": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "ldap",
+                "dev"
+              ]
+            },
+            "type": "array",
+            "title": "Providers"
+          },
+          "dev_users": {
+            "items": {
+              "$ref": "#/components/schemas/DevUserOut"
+            },
+            "type": "array",
+            "title": "Dev Users"
+          }
+        },
+        "type": "object",
+        "required": [
+          "providers"
+        ],
+        "title": "ProvidersOut"
       },
       "ReadinessResponse": {
         "properties": {
@@ -129,6 +2058,619 @@
           "checks"
         ],
         "title": "ReadinessResponse"
+      },
+      "RevokedOut": {
+        "properties": {
+          "revoked": {
+            "type": "integer",
+            "title": "Revoked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revoked"
+        ],
+        "title": "RevokedOut"
+      },
+      "RoleListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "users": {
+            "type": "integer",
+            "title": "Users"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permissions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "kind",
+          "description",
+          "users",
+          "permissions"
+        ],
+        "title": "RoleListItem"
+      },
+      "RoleOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "kind",
+          "source"
+        ],
+        "title": "RoleOut"
+      },
+      "RoleSpecOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "department",
+              "rule",
+              "group",
+              "bootstrap"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "source"
+        ],
+        "title": "RoleSpecOut"
+      },
+      "RolesIn": {
+        "properties": {
+          "role_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Role Ids",
+            "description": "Полный набор ручных ролей пользователя."
+          }
+        },
+        "type": "object",
+        "required": [
+          "role_ids"
+        ],
+        "title": "RolesIn"
+      },
+      "SessionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "last_seen_at",
+          "expires_at",
+          "ip",
+          "user_agent",
+          "provider",
+          "active"
+        ],
+        "title": "SessionOut"
+      },
+      "StepOut": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "StepOut"
+      },
+      "UserCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "upn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upn"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "office": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Office"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "mobile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile"
+          },
+          "manager_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Name"
+          },
+          "employee_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Id"
+          },
+          "has_photo": {
+            "type": "boolean",
+            "title": "Has Photo"
+          },
+          "ad_groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ad Groups"
+          },
+          "ad_disabled": {
+            "type": "boolean",
+            "title": "Ad Disabled"
+          },
+          "is_blocked": {
+            "type": "boolean",
+            "title": "Is Blocked"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "blocked_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Until"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleOut"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionOut"
+            },
+            "type": "array",
+            "title": "Sessions"
+          },
+          "recent_logins": {
+            "items": {
+              "$ref": "#/components/schemas/LoginEventOut"
+            },
+            "type": "array",
+            "title": "Recent Logins"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login",
+          "full_name",
+          "upn",
+          "email",
+          "title",
+          "department",
+          "company",
+          "office",
+          "phone",
+          "mobile",
+          "manager_name",
+          "employee_id",
+          "has_photo",
+          "ad_groups",
+          "ad_disabled",
+          "is_blocked",
+          "blocked_reason",
+          "blocked_until",
+          "last_login_at",
+          "synced_at",
+          "created_at",
+          "roles",
+          "sessions",
+          "recent_logins"
+        ],
+        "title": "UserCard"
+      },
+      "UserListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "is_blocked": {
+            "type": "boolean",
+            "title": "Is Blocked"
+          },
+          "ad_disabled": {
+            "type": "boolean",
+            "title": "Ad Disabled"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login",
+          "full_name",
+          "title",
+          "department",
+          "is_blocked",
+          "ad_disabled",
+          "last_login_at"
+        ],
+        "title": "UserListItem"
+      },
+      "UserSettings": {
+        "properties": {
+          "theme": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "light",
+                  "dark",
+                  "system"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theme"
+          }
+        },
+        "type": "object",
+        "title": "UserSettings"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }

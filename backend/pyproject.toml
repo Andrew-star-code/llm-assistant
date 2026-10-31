@@ -16,6 +16,7 @@ dependencies = [
     "redis>=8.1",
     "httpx>=0.28",
     "prometheus-client>=0.26",
+    "ldap3>=2.9",
 ]
 
 [build-system]

@@ -2,7 +2,7 @@
 
 Проверяет:
 1. у каждого модуля backend/app/modules/* есть README.md;
-2. docs/reference/config.md совпадает со сгенерированным из настроек;
+2. docs/reference/config.md и db-schema.md совпадают со сгенерированными из настроек и моделей;
 3. docs/reference/api.md и frontend/src/api/openapi.json совпадают с текущей схемой OpenAPI
    (иначе не запущен make gen-api и клиент фронтенда разошёлся с бэкендом);
 4. относительные ссылки в Markdown (docs/, корневые *.md, README модулей) ведут на существующие
@@ -23,7 +23,7 @@ os.environ.setdefault("APP_CONFIG_DIR", str(ROOT / "config"))
 os.environ["APP_ENV"] = "dev"
 sys.path.insert(0, str(ROOT / "backend"))
 
-from app.cli import api_docs, config_docs  # noqa: E402
+from app.cli import api_docs, config_docs, db_docs  # noqa: E402
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 SKIP_DIRS = {"node_modules", ".venv", ".git", "dist"}
@@ -43,6 +43,7 @@ def check_generated() -> list[str]:
     expected = {
         "docs/reference/config.md": (config_docs.render(), "make docs-config"),
         "docs/reference/api.md": (api_docs.render(schema), "make gen-api"),
+        "docs/reference/db-schema.md": (db_docs.render(), "make docs-db"),
         "frontend/src/api/openapi.json": (api_docs.dump_openapi(schema), "make gen-api"),
     }
     errors = []

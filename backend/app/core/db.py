@@ -6,14 +6,17 @@
 
 from __future__ import annotations
 
-from sqlalchemy import MetaData, text
+import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import DateTime, MetaData, Uuid, func, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.core.config import Settings
 
@@ -46,3 +49,17 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
 async def ping(engine: AsyncEngine) -> None:
     async with engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+class UUIDPkMixin:
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+
+
+class CreatedAtMixin:
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), default=utcnow, nullable=False
+    )
