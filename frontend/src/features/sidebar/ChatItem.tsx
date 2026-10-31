@@ -159,7 +159,12 @@ export function ChatItem({
               className={cn(MENU_ITEM, "text-red-600")}
               onClick={() => {
                 setMenu(false);
-                remove.mutate(chat.id, { onSuccess: () => void navigate("/") });
+                // Не mutate(…, {onSuccess}): после удаления список перечитывается и этот пункт
+                // размонтируется раньше — колбэк мутации тогда не вызывается.
+                void remove
+                  .mutateAsync(chat.id)
+                  .then(() => navigate("/"))
+                  .catch(() => undefined);
               }}
             >
               <Trash2 className="size-4" /> {t("sidebar.confirmDelete")}
