@@ -29,6 +29,12 @@ class FakeEventSource {
   }
 }
 
+function streamOf(): FakeEventSource {
+  const source = FakeEventSource.last;
+  if (!source) throw new Error("поток не открыт");
+  return source;
+}
+
 function message(
   id: string,
   parent: string | null,
@@ -113,6 +119,94 @@ describe("Лента чата", () => {
     source.emit("message.end", { status: "completed", finish_reason: "stop" });
     expect(await screen.findByText("Готовый ответ")).toBeInTheDocument();
     expect(source.readyState).toBe(2);
+  });
+
+  it("показывает шаги инструментов и карточку созданного файла", async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    FakeEventSource.last = null; // иначе waitFor ниже увидит поток прошлого теста
+    let finished = false;
+    const streaming = chat(
+      [
+        message("u", null, "user"),
+        message("aa", "u", "assistant", { status: "streaming", content: "" }),
+      ],
+      "aa",
+    );
+    const file = {
+      id: "f1",
+      kind: "generated",
+      filename: "Продажи.xlsx",
+      mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      file_type: "xlsx",
+      size: 2048,
+      parse_status: "ready",
+      parse_error: null,
+      pages: null,
+      has_preview: true,
+      chat_id: "c1",
+      message_id: "aa",
+      created_at: "2026-10-31T10:00:00Z",
+    };
+    const step = {
+      call_id: "call_1",
+      tool: "create_spreadsheet",
+      status: "ok",
+      label: "tools.create_spreadsheet",
+      params: { name: "Продажи.xlsx" },
+      duration_ms: 120,
+    };
+    const done = chat(
+      [
+        message("u", null, "user"),
+        message("aa", "u", "assistant", {
+          content: "Таблица готова",
+          files: [file],
+          tools: [step],
+        }),
+      ],
+      "aa",
+    );
+    mockFetch({ ...COMMON, "GET /api/chats/c1": () => json(finished ? done : streaming) });
+    renderApp("/c/c1");
+
+    await waitFor(() => {
+      expect(FakeEventSource.last?.url).toBe("/api/messages/aa/stream");
+    });
+    const source = streamOf();
+    source.emit("tool.start", {
+      call_id: "call_1",
+      tool: "create_spreadsheet",
+      label: "tools.create_spreadsheet",
+      params: { name: "Продажи.xlsx" },
+    });
+    const running = await screen.findByTestId("tool-step");
+    expect(running).toHaveTextContent("Создаю таблицу Продажи.xlsx…");
+    expect(running).toHaveAttribute("data-status", "running");
+
+    source.emit("tool.end", { ...step, duration_ms: undefined });
+    source.emit("file", {
+      file_id: "f1",
+      name: "Продажи.xlsx",
+      mime: file.mime,
+      size: 2048,
+      preview: true,
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("tool-step")).toHaveAttribute("data-status", "ok");
+    });
+    expect(screen.getByTestId("file-name")).toHaveTextContent("Продажи.xlsx");
+    expect(screen.getByRole("link", { name: "Скачать" })).toHaveAttribute(
+      "href",
+      "/api/files/f1/content",
+    );
+
+    finished = true;
+    source.emit("message.end", { status: "completed", finish_reason: "stop" });
+    // После завершения то же самое строится из REST — и после перезагрузки страницы.
+    expect(await screen.findByText("Таблица готова")).toBeInTheDocument();
+    expect(screen.getByTestId("tool-step")).toHaveTextContent("Создаю таблицу Продажи.xlsx");
+    expect(screen.getByTestId("file-card")).toHaveTextContent("2 КБ");
+    expect(screen.getByRole("button", { name: "Просмотр" })).toBeInTheDocument();
   });
 
   it("переключает версии ответа «‹ 1/2 ›» и сохраняет выбор", async () => {

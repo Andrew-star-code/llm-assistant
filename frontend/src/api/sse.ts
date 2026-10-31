@@ -8,10 +8,32 @@
 
 export const PROTOCOL_VERSION = 1;
 
+export interface ToolStartEvent {
+  call_id: string;
+  tool: string;
+  label: string;
+  params: Record<string, string>;
+}
+
+export interface ToolEndEvent extends ToolStartEvent {
+  status: "ok" | "error" | "timeout";
+}
+
+export interface FileEvent {
+  file_id: string;
+  name: string;
+  mime: string;
+  size: number;
+  preview: boolean;
+}
+
 export interface StreamHandlers {
   onStart?: (data: { model: string; thinking: boolean; protocol_version: number }) => void;
   onReasoning?: (text: string) => void;
   onContent?: (text: string) => void;
+  onToolStart?: (data: ToolStartEvent) => void;
+  onToolEnd?: (data: ToolEndEvent) => void;
+  onFile?: (data: FileEvent) => void;
   onUsage?: (data: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -54,6 +76,15 @@ export function subscribeMessageStream(messageId: string, handlers: StreamHandle
   });
   on("content.delta", (d: { text: string }) => {
     handlers.onContent?.(d.text);
+  });
+  on("tool.start", (d: ToolStartEvent) => {
+    handlers.onToolStart?.(d);
+  });
+  on("tool.end", (d: ToolEndEvent) => {
+    handlers.onToolEnd?.(d);
+  });
+  on("file", (d: FileEvent) => {
+    handlers.onFile?.(d);
   });
   on("usage", (d: Parameters<NonNullable<StreamHandlers["onUsage"]>>[0]) => {
     handlers.onUsage?.(d);

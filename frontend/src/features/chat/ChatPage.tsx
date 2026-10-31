@@ -140,9 +140,9 @@ export function ChatPage() {
             setOverride({ chatId, value });
             updateChat.mutate({ chatId, body: { thinking_enabled: value } });
           }}
-          onSend={(content) => {
+          onSend={(content, attachmentIds) => {
             stickToBottom.current = true;
-            send.mutate({ chatId, content, thinking });
+            send.mutate({ chatId, content, thinking, attachmentIds });
           }}
           onStop={() => {
             if (streamingMessage) void stopMessage(streamingMessage.id);

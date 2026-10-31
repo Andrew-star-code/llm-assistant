@@ -223,7 +223,22 @@
     "placeholder": "Ask anything…",
     "send": "Send",
     "stop": "Stop (Esc)",
-    "thinking": "Think"
+    "thinking": "Think",
+    "attach": "Attach files",
+    "attachHint": "Attach files: up to {{count}}, up to {{mb}} MB each. You can also drag or paste them",
+    "dropHere": "Drop to attach files",
+    "attachments": {
+      "uploading": "uploading {{percent}}%",
+      "processing": "reading…",
+      "ready": "ready",
+      "error": "error: {{reason}}",
+      "unknownError": "upload failed",
+      "remove": "Remove file {{name}}",
+      "tooMany": "no more than {{max}} files per message",
+      "tooLarge": "file is larger than {{max}} MB",
+      "unsupported": "format is not supported",
+      "waiting": "Wait until the files are read"
+    }
   },
   "message": {
     "reasoning": "Reasoning",
@@ -275,5 +290,27 @@
     "title": "Search chats",
     "placeholder": "Search titles and messages",
     "results": "Search results"
+  },
+  "files": {
+    "preview": "Preview",
+    "download": "Download",
+    "close": "Close",
+    "previewError": "Cannot show the file — download it instead",
+    "noPreview": "Preview is not available for this format — download the file"
+  },
+  "tools": {
+    "list_attachments": "Looking at attached files",
+    "read_document": "Reading {{name}}",
+    "get_document_outline": "Looking at the outline of {{name}}",
+    "read_spreadsheet": "Reading spreadsheet {{name}}",
+    "search_in_documents": "Searching documents: “{{query}}”",
+    "create_document": "Creating document {{name}}",
+    "create_spreadsheet": "Creating spreadsheet {{name}}",
+    "create_presentation": "Creating presentation {{name}}",
+    "unknown": "Tool {{tool}}",
+    "status": {
+      "error": "error",
+      "timeout": "timed out"
+    }
   }
 }

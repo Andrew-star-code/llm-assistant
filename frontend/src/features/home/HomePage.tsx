@@ -28,9 +28,9 @@ export function HomePage() {
   const greeting = t(greetingKey(new Date()));
   const thinkingValue = thinking ?? model.data?.thinking_default ?? false;
 
-  const submit = (content: string) => {
+  const submit = (content: string, attachmentIds: string[]) => {
     send.mutate(
-      { chatId: null, content, thinking: thinkingValue },
+      { chatId: null, content, thinking: thinkingValue, attachmentIds },
       {
         onSuccess: ({ chatId }) => {
           void navigate(`/c/${chatId}`);

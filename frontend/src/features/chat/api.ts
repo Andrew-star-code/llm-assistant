@@ -68,6 +68,7 @@ export function useSendMessage() {
       chatId: string | null;
       content: string;
       thinking: boolean | null;
+      attachmentIds?: string[];
     }) => {
       let chatId = input.chatId;
       if (!chatId) {
@@ -78,7 +79,11 @@ export function useSendMessage() {
       const result = unwrap(
         await api.POST("/api/chats/{chat_id}/messages", {
           params: { path: { chat_id: chatId } },
-          body: { content: input.content, thinking: input.thinking },
+          body: {
+            content: input.content,
+            thinking: input.thinking,
+            attachment_ids: input.attachmentIds ?? [],
+          },
         }),
       );
       upsertMessages(

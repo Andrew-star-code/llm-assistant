@@ -12,11 +12,16 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { useLiveAnswer, useMessageStream } from "@/features/chat/live";
+import type { FileEvent } from "@/api/sse";
+import { useLiveAnswer, useMessageStream, type ToolStepView } from "@/features/chat/live";
 import type { Message } from "@/features/chat/tree";
+import type { Schemas } from "@/api/client";
+import { FileCard, FileChip } from "@/features/files/FileCard";
+import type { FileRef } from "@/features/files/fileRef";
 import { Markdown } from "@/features/markdown/Markdown";
 import { DislikeDialog } from "@/features/message/DislikeDialog";
 import { ReasoningBlock } from "@/features/message/ReasoningBlock";
+import { ToolSteps } from "@/features/message/ToolSteps";
 import { useCopy } from "@/lib/useCopy";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +38,36 @@ export interface MessageActions {
   canRegenerate: boolean;
 }
 
+type MessageFile = Schemas["FileOut"];
+
+function fromRest(file: MessageFile): FileRef {
+  return { id: file.id, name: file.filename, size: file.size, hasPreview: file.has_preview };
+}
+
+function fromEvent(file: FileEvent): FileRef {
+  return { id: file.file_id, name: file.name, size: file.size, hasPreview: file.preview };
+}
+
+function stepsOf(message: Message): ToolStepView[] {
+  return (message.tools ?? []).map((step) => ({
+    callId: step.call_id,
+    tool: step.tool,
+    label: step.label,
+    params: step.params ?? {},
+    status: step.status,
+  }));
+}
+
 function UserMessage({ message, highlighted }: { message: Message; highlighted: boolean }) {
   return (
-    <div className="flex justify-end" id={`message-${message.id}`}>
+    <div className="flex flex-col items-end gap-1.5" id={`message-${message.id}`}>
+      {message.files && message.files.length > 0 && (
+        <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5">
+          {message.files.map((file) => (
+            <FileChip key={file.id} file={fromRest(file)} />
+          ))}
+        </div>
+      )}
       <div
         className={cn(
           "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-sm",
@@ -87,6 +119,10 @@ function AssistantMessage({
   const reasoning = streaming ? (live?.reasoning ?? "") : (message.reasoning ?? "");
   const reasoningMs = streaming ? live?.reasoningMs : message.reasoning_ms;
   const error = streaming ? live?.error : message.error;
+  const steps = streaming ? (live?.tools ?? []) : stepsOf(message);
+  const files = streaming
+    ? (live?.files ?? []).map(fromEvent)
+    : (message.files ?? []).map(fromRest);
   const index = actions.versions.findIndex((v) => v.id === message.id);
   const rating = message.feedback?.rating ?? null;
 
@@ -96,10 +132,11 @@ function AssistantMessage({
       id={`message-${message.id}`}
     >
       {reasoning && <ReasoningBlock text={reasoning} ms={reasoningMs} streaming={streaming} />}
+      <ToolSteps steps={steps} />
       <div data-testid="assistant-message" data-status={message.status}>
         {content ? (
           <Markdown text={content} streaming={streaming} />
-        ) : streaming && !reasoning ? (
+        ) : streaming && !reasoning && !steps.length ? (
           <span className="inline-flex gap-1 py-2" aria-label={t("message.generating")}>
             <span className="size-2 animate-bounce rounded-full bg-muted-foreground/60" />
             <span className="size-2 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:150ms]" />
@@ -107,6 +144,14 @@ function AssistantMessage({
           </span>
         ) : null}
       </div>
+
+      {files.length > 0 && (
+        <div className="mt-2 flex flex-col gap-2" data-testid="message-files">
+          {files.map((file) => (
+            <FileCard key={file.id} file={file} />
+          ))}
+        </div>
+      )}
 
       {(message.status === "error" || message.status === "interrupted" || (streaming && error)) && (
         <div

@@ -11,7 +11,13 @@ export default defineConfig({
   // Тесты меняют общие данные стенда (блокировки, настройки) — выполняем последовательно.
   workers: 1,
   reporter: [["list"]],
-  use: { baseURL: external ?? `http://127.0.0.1:${port}`, trace: "retain-on-failure" },
+  use: {
+    baseURL: external ?? `http://127.0.0.1:${port}`,
+    trace: "retain-on-failure",
+    // Без UTF-8-локали Chromium на Linux не может дать скачанному файлу кириллическое имя
+    // и называет его «download» (проверка имени в files.spec.ts).
+    launchOptions: { env: { ...process.env, LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } },
+  },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: external
     ? undefined

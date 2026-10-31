@@ -2,12 +2,23 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { create } from "zustand";
 
-import { subscribeMessageStream } from "@/api/sse";
+import { subscribeMessageStream, type FileEvent } from "@/api/sse";
 import { chatKeys, invalidateChatLists, type ChatDetail } from "@/features/chat/api";
 import type { Message } from "@/features/chat/tree";
 
+/** Шаг инструмента в ленте ответа (§7.4): живой из SSE или из истории (`MessageOut.tools`). */
+export interface ToolStepView {
+  callId: string;
+  tool: string;
+  label: string;
+  params: Record<string, string>;
+  status: "running" | "ok" | "error" | "timeout";
+}
+
 /** Живое состояние ответа, который сейчас стримится (§7.4, §8.5). */
 export interface LiveAnswer {
+  tools: ToolStepView[];
+  files: FileEvent[];
   content: string;
   reasoning: string;
   reasoningStartedAt: number | null;
@@ -22,6 +33,8 @@ interface LiveState {
 }
 
 const EMPTY: LiveAnswer = {
+  tools: [],
+  files: [],
   content: "",
   reasoning: "",
   reasoningStartedAt: null,
@@ -87,6 +100,25 @@ export function useMessageStream(message: Message): void {
             prev.reasoningMs ??
             (prev.reasoningStartedAt ? Date.now() - prev.reasoningStartedAt : null),
         }));
+      },
+      onToolStart: ({ call_id: callId, tool, label, params }) => {
+        update(id, (prev) => ({
+          tools: [...prev.tools, { callId, tool, label, params, status: "running" }],
+        }));
+      },
+      onToolEnd: ({ call_id: callId, tool, label, status, params }) => {
+        update(id, (prev) => {
+          const step: ToolStepView = { callId, tool, label, params, status };
+          const exists = prev.tools.some((s) => s.callId === callId);
+          return {
+            tools: exists
+              ? prev.tools.map((s) => (s.callId === callId ? step : s))
+              : [...prev.tools, step],
+          };
+        });
+      },
+      onFile: (file) => {
+        update(id, (prev) => ({ files: [...prev.files, file] }));
       },
       onError: (error) => {
         update(id, () => ({ error }));

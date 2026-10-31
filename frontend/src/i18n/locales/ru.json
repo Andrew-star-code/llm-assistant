@@ -223,7 +223,22 @@
     "placeholder": "Спросите что-нибудь…",
     "send": "Отправить",
     "stop": "Остановить (Esc)",
-    "thinking": "Размышлять"
+    "thinking": "Размышлять",
+    "attach": "Приложить файлы",
+    "attachHint": "Приложить файлы: до {{count}} шт., до {{mb}} МБ каждый. Можно перетащить или вставить из буфера",
+    "dropHere": "Отпустите, чтобы приложить файлы",
+    "attachments": {
+      "uploading": "загрузка {{percent}}%",
+      "processing": "читаю…",
+      "ready": "готово",
+      "error": "ошибка: {{reason}}",
+      "unknownError": "не удалось загрузить",
+      "remove": "Убрать файл {{name}}",
+      "tooMany": "не больше {{max}} файлов в сообщении",
+      "tooLarge": "файл больше {{max}} МБ",
+      "unsupported": "формат не поддерживается",
+      "waiting": "Дождитесь, пока файлы будут прочитаны"
+    }
   },
   "message": {
     "reasoning": "Размышления",
@@ -275,5 +290,27 @@
     "title": "Поиск по чатам",
     "placeholder": "Поиск по названиям и сообщениям",
     "results": "Результаты поиска"
+  },
+  "files": {
+    "preview": "Просмотр",
+    "download": "Скачать",
+    "close": "Закрыть",
+    "previewError": "Не удалось показать файл — скачайте его",
+    "noPreview": "Для этого формата просмотр недоступен — скачайте файл"
+  },
+  "tools": {
+    "list_attachments": "Смотрю приложенные файлы",
+    "read_document": "Читаю {{name}}",
+    "get_document_outline": "Смотрю оглавление {{name}}",
+    "read_spreadsheet": "Читаю таблицу {{name}}",
+    "search_in_documents": "Ищу в документах: «{{query}}»",
+    "create_document": "Создаю документ {{name}}",
+    "create_spreadsheet": "Создаю таблицу {{name}}",
+    "create_presentation": "Создаю презентацию {{name}}",
+    "unknown": "Инструмент {{tool}}",
+    "status": {
+      "error": "ошибка",
+      "timeout": "не успел"
+    }
   }
 }

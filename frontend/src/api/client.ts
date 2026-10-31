@@ -16,7 +16,7 @@ export function readCookie(name: string): string | null {
 }
 
 /** CSRF-токен из cookie; если его ещё нет — сервер выдаёт его на GET /api/auth/csrf. */
-async function csrfToken(): Promise<string> {
+export async function csrfToken(): Promise<string> {
   const existing = readCookie(CSRF_COOKIE);
   if (existing) return existing;
   const response = await globalThis.fetch(new Request(`${window.location.origin}/api/auth/csrf`));
