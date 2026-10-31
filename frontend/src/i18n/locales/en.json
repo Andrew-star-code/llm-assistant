@@ -1,0 +1,41 @@
+{
+  "app": { "name": "AI Assistant" },
+  "common": { "comingSoon": "Coming in later stages" },
+  "sidebar": {
+    "label": "Sidebar",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "newChat": "New chat",
+    "emptyHistory": "Your chat history will appear here",
+    "admin": "Admin"
+  },
+  "chat": { "newChatTitle": "New chat" },
+  "home": {
+    "greeting": {
+      "morning": "Good morning!",
+      "day": "Good afternoon!",
+      "evening": "Good evening!",
+      "night": "Good night!"
+    },
+    "subtitle": "Corporate AI assistant: answers from company documents, files and data.",
+    "stagePlaceholder": "Application skeleton (stage 0). Sign-in, chat and scenarios come next."
+  },
+  "theme": {
+    "label": "Color theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "apiStatus": {
+    "loading": "Checking API…",
+    "ready": "API ready",
+    "degraded": "API: dependency unavailable",
+    "down": "API unavailable"
+  },
+  "admin": {
+    "title": "Admin",
+    "back": "Back to chat",
+    "stagePlaceholder": "Admin sections arrive in stages 1 and 6."
+  },
+  "notFound": { "title": "Page not found", "home": "Go home" }
+}
