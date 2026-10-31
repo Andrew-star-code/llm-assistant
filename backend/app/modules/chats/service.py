@@ -22,12 +22,14 @@ from app.modules.chats.schemas import (
     MessageOut,
     SearchFragment,
     SearchHit,
+    SourceOut,
     ToolStep,
 )
 from app.modules.feedback.models import Feedback
 from app.modules.files.models import File
 from app.modules.files.schemas import FileOut
 from app.modules.files.service import file_out
+from app.modules.rag.models import MessageSource
 from app.modules.tools.models import ToolCall
 
 # Маркеры подсветки в ts_headline: управляющие символы не встречаются в тексте пользователя.
@@ -63,6 +65,7 @@ def message_out(
     *,
     files: Sequence[FileOut] = (),
     tools: Sequence[ToolStep] = (),
+    sources: Sequence[SourceOut] = (),
 ) -> MessageOut:
     error = None
     if message.error:
@@ -92,6 +95,7 @@ def message_out(
         feedback=(FeedbackOut.model_validate(feedback, from_attributes=True) if feedback else None),
         files=list(files),
         tools=list(tools),
+        sources=list(sources),
     )
 
 
@@ -129,8 +133,24 @@ async def chat_messages(db: AsyncSession, chat_id: UUID, user_id: UUID) -> list[
         .order_by(ToolCall.iteration, ToolCall.created_at)
     ):
         tools.setdefault(call.message_id, []).append(tool_step(call))
+    sources: dict[UUID, list[SourceOut]] = {}
+    for src in await db.scalars(
+        select(MessageSource)
+        .join(Message, Message.id == MessageSource.message_id)
+        .where(Message.chat_id == chat_id)
+        .order_by(MessageSource.index)
+    ):
+        sources.setdefault(src.message_id, []).append(
+            SourceOut.model_validate(src, from_attributes=True)
+        )
     return [
-        message_out(m, f, files=files.get(m.id, ()), tools=tools.get(m.id, ()))
+        message_out(
+            m,
+            f,
+            files=files.get(m.id, ()),
+            tools=tools.get(m.id, ()),
+            sources=sources.get(m.id, ()),
+        )
         for m, f in rows.all()
     ]
 

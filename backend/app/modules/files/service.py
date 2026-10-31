@@ -82,7 +82,10 @@ async def accept_upload(
     *,
     owner_id: UUID,
     upload: UploadFile,
+    kind: str = "upload",
+    commit: bool = True,
 ) -> File:
+    """Проверки §9.3 и запись оригинала; ``kind=kb_document`` — документ базы знаний."""
     filename = (upload.filename or "файл").replace("\x00", "")[-255:]
     spool, size, sha256 = await _spool(upload, settings.max_file_mb * 1024 * 1024)
     try:
@@ -93,12 +96,12 @@ async def accept_upload(
         spool.close()
     file_id = uuid.uuid4()
     # Ключ — случайный: имя файла пользователя никогда не используется как путь (§15).
-    storage_key = f"uploads/{file_id}"
+    storage_key = f"{'kb' if kind == 'kb_document' else 'uploads'}/{file_id}"
     await storage.put(storage_key, data)
     row = File(
         id=file_id,
         owner_id=owner_id,
-        kind="upload",
+        kind=kind,
         filename=filename,
         mime=detected.mime,
         file_type=detected.file_type,
@@ -108,7 +111,10 @@ async def accept_upload(
         parse_status="pending",
     )
     db.add(row)
-    await db.commit()
+    if commit:
+        await db.commit()
+    else:
+        await db.flush()
     return row
 
 

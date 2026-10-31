@@ -76,6 +76,21 @@ class ToolStep(BaseModel):
     duration_ms: int
 
 
+class SourceOut(BaseModel):
+    """Источник ответа (§10.5): карточка и цель клика «открыть на странице»."""
+
+    index: int = Field(description="Номер для цитаты [n].")
+    kind: Literal["kb", "attachment"]
+    title: str
+    kb_name: str | None
+    document_id: UUID | None = Field(description="Документ базы знаний (для kind = kb).")
+    file_id: UUID | None
+    page: int | None
+    section: str | None
+    snippet: str
+    cited: bool = Field(description="Модель сослалась на этот номер в ответе.")
+
+
 class MessageOut(BaseModel):
     id: UUID
     chat_id: UUID
@@ -100,6 +115,7 @@ class MessageOut(BaseModel):
         default_factory=list, description="Вложения вопроса или файлы, созданные в ответе."
     )
     tools: list[ToolStep] = Field(default_factory=list)
+    sources: list[SourceOut] = Field(default_factory=list)
 
 
 class ChatDetail(ChatListItem):

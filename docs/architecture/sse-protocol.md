@@ -16,8 +16,11 @@
 - Если ответ всё ещё `streaming`, а исполнитель не продлевает `gen:alive:{message_id}`, сервер отдаёт
   `error` с кодом `interrupted` и `message.end` со статусом `interrupted`.
 - Скрытые инструменты (например, `report_incident`) событий не порождают.
-- Шаги инструментов и файлы ответа после завершения доступны и по REST: поля `tools` и `files`
+- Шаги инструментов, файлы и источники ответа после завершения доступны и по REST: поля `tools`,
+  `files` и `sources` (с признаком `cited` — модель сослалась на номер)
   сообщения в `GET /api/chats/{id}` — интерфейс строит из них ту же ленту после перезагрузки.
+- Авто-поиск по базам знаний (режим `auto`) показывается как шаг `search_knowledge_base` с
+  `call_id: rag-auto` (`tool.start` / `tool.end`, `params.query` — переформулированный запрос).
 
 | Событие | Данные | Когда |
 | --- | --- | --- |
@@ -26,7 +29,7 @@
 | `content.delta` | `text` | очередной кусок ответа |
 | `tool.start` | `call_id`, `tool`, `label` (i18n-ключ строки статуса, например `tools.read_document`), `params` (параметры строки, например `{"name": "Отчёт.docx"}`) | начат видимый инструмент |
 | `tool.end` | `call_id`, `tool`, `status` (`ok`, `error`, `timeout`), `label`, `params` | закончен видимый инструмент |
-| `sources` | карточки источников | после шагов RAG |
+| `sources` | `items`: **полный** текущий список карточек — `index` (номер для `[n]`), `kind` (`kb` / `attachment`), `title`, `kb_name`, `document_id`, `file_id`, `page`, `section`, `snippet`, `score`; клиент заменяет список, а не дописывает | после авто-поиска RAG и после каждого инструмента, нашедшего фрагменты |
 | `file` | `file_id`, `name`, `mime`, `size`, `preview` (есть PDF-превью) | создан файл (после `tool.end` его инструмента) |
 | `usage` | `prompt_tokens`, `completion_tokens`, `reasoning_tokens` | в конце |
 | `limits` | остатки по метрикам пользователя | в конце |

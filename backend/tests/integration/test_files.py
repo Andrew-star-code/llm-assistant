@@ -170,17 +170,28 @@ async def test_large_document_outline_and_read_tool(
     file = await upload_ready(client, "Отчёт.docx", samples.docx_pages(30, needle_page=25))
     chat_id = await new_chat(client)
 
-    # Без инструмента ответа в промпте нет.
+    # Целиком документ в промпт не попал, но авто-RAG нашёл фрагмент во вложении (гибрид + реранк).
     events = await ask(
         client, chat_id, "[[scenario:find]] «Кодовое слово»", attachment_ids=[file["id"]]
     )
-    assert text_of(events) == "В документах нет «Кодовое слово»."
+    assert text_of(events) == f"Нашёл в документе: {samples.NEEDLE} [1]"
+    [sources] = [e for e in events if e.event == "sources"]
+    card = sources.data["items"][0]
+    assert card["kind"] == "attachment" and card["file_id"] == file["id"]
+    assert card["title"] == "Отчёт.docx" and card["page"] is not None
 
     events = await ask(client, chat_id, "[[scenario:tool:read_document]] стр. 25 «Кодовое слово»")
     names = [e.event for e in events]
     assert names.index("tool.start") < names.index("tool.end") < names.index("content.delta")
-    start = next(e for e in events if e.event == "tool.start")
-    end = next(e for e in events if e.event == "tool.end")
+    # Первый шаг — авто-поиск по базам и вложениям (§8.3), затем инструмент модели.
+    assert [e.data["tool"] for e in events if e.event == "tool.end"] == [
+        "search_knowledge_base",
+        "read_document",
+    ]
+    start = next(
+        e for e in events if e.event == "tool.start" and e.data["tool"] != "search_knowledge_base"
+    )
+    end = next(e for e in events if e.event == "tool.end" and e.data["tool"] == "read_document")
     assert start.data["tool"] == "read_document" and start.data["label"] == "tools.read_document"
     assert start.data["params"] == {"name": "Отчёт.docx"}
     assert end.data["status"] == "ok" and end.data["params"] == {"name": "Отчёт.docx"}
@@ -189,19 +200,31 @@ async def test_large_document_outline_and_read_tool(
     # Шаги видны в истории сообщения (§7.4) и сохранены в tool_calls и трассировке.
     detail = (await client.get(f"/api/chats/{chat_id}")).json()
     answer = detail["messages"][-1]
-    [step] = answer["tools"]
+    auto, step = answer["tools"]
+    assert (
+        auto["tool"] == "search_knowledge_base" and auto["label"] == "tools.search_knowledge_base"
+    )
     assert step["tool"] == "read_document" and step["status"] == "ok"
     async with app.state.db_sessions() as db:
         row = await db.get(Message, answer["id"])
         assert row is not None and row.trace is not None
         assert row.trace["attachments"]["mode"] == "outline"
-        assert row.trace["tools"][0]["arguments"]["page_from"] == 25
-        calls = (await db.scalars(select(ToolCall).where(ToolCall.message_id == row.id))).all()
-        assert [c.tool for c in calls] == ["read_document"] and calls[0].iteration == 1
+        assert row.trace["tools"][1]["arguments"]["page_from"] == 25
+        assert row.trace["rag"]["stages"] == {"dense": "ok", "bm25": "ok", "rerank": "ok"}
+        calls = (
+            await db.scalars(
+                select(ToolCall).where(ToolCall.message_id == row.id).order_by(ToolCall.iteration)
+            )
+        ).all()
+        assert [(c.tool, c.iteration) for c in calls] == [
+            ("search_knowledge_base", 0),
+            ("read_document", 1),
+        ]
 
     # Поиск по документу — через Qdrant, только по вложениям этого чата.
     events = await ask(client, chat_id, "[[scenario:tool:search_in_documents]] «Кодовое слово»")
-    assert text_of(events) == f"Готово. Результат инструмента: {samples.NEEDLE}"
+    # Тот же фрагмент, что нашёл авто-поиск, — тот же номер цитаты.
+    assert text_of(events) == f"Готово. Результат инструмента: {samples.NEEDLE} [1]"
 
 
 async def test_parallel_tools_and_iteration_limit(

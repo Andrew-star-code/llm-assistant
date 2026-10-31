@@ -34,6 +34,9 @@ class ToolOutcome:
     files: list[dict[str, Any]] = field(default_factory=list)
     data: dict[str, Any] | None = None
     iteration: int = 0  # номер шага цикла инструментов, заполняет генерация
+    sources: list[dict[str, Any]] = field(
+        default_factory=list
+    )  # номер шага цикла инструментов, заполняет генерация
 
 
 def truncate(text: str, limit: int) -> str:
@@ -107,4 +110,5 @@ async def execute(
         label_params=params,
         files=result.files,
         data=result.data,
+        sources=result.sources,
     )

@@ -521,6 +521,280 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/kb/personal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Personal */
+    get: operations["getPersonalKb"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/kb/personal/documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload Personal
+     * @description Документ в личную базу: проверки, квота, дедупликация; индексация — в воркере.
+     */
+    post: operations["uploadPersonalDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/kb/personal/documents/{document_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Personal */
+    delete: operations["deletePersonalDocument"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/kb/personal/documents/{document_id}/reindex": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reindex Personal */
+    post: operations["reindexPersonalDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/kb/documents/{document_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Document */
+    get: operations["getKbDocument"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/kb/documents/{document_id}/content": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Document Content
+     * @description Оригинал документа-источника; права на базу проверяются при каждом запросе.
+     */
+    get: operations["downloadKbDocument"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/kb/documents/{document_id}/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Document Preview */
+    get: operations["previewKbDocument"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/kb": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Bases */
+    get: operations["adminListKb"];
+    put?: never;
+    /** Create Base */
+    post: operations["adminCreateKb"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/kb/{kb_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete Base
+     * @description База и все её документы пропадают из поиска сразу (точки удаляются из Qdrant).
+     */
+    delete: operations["adminDeleteKb"];
+    options?: never;
+    head?: never;
+    /** Update Base */
+    patch: operations["adminUpdateKb"];
+    trace?: never;
+  };
+  "/api/admin/kb/{kb_id}/documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Documents */
+    get: operations["adminKbDocuments"];
+    put?: never;
+    /** Upload Document */
+    post: operations["adminUploadKbDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/kb/{kb_id}/documents/{document_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Kb Document */
+    delete: operations["adminDeleteKbDocument"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/kb/{kb_id}/documents/{document_id}/reindex": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reindex Document */
+    post: operations["adminReindexKbDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/kb/import-folders": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Import Folders
+     * @description Папки верхнего уровня в ``kb.import_root`` — что можно импортировать.
+     */
+    get: operations["adminImportFolders"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/kb/{kb_id}/imports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Imports */
+    get: operations["adminKbImports"];
+    put?: never;
+    /**
+     * Start Import
+     * @description Массовый импорт идёт фоном (§10.3); прогресс — ``GET …/imports``.
+     */
+    post: operations["adminStartImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/incidents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Incidents */
+    get: operations["adminListIncidents"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/users": {
     parameters: {
       query?: never;
@@ -786,8 +1060,18 @@ export interface components {
        */
       until?: string | null;
     };
+    /** Body_adminUploadKbDocument */
+    Body_adminUploadKbDocument: {
+      /** File */
+      file: string;
+    };
     /** Body_uploadFile */
     Body_uploadFile: {
+      /** File */
+      file: string;
+    };
+    /** Body_uploadPersonalDocument */
+    Body_uploadPersonalDocument: {
       /** File */
       file: string;
     };
@@ -962,6 +1246,49 @@ export interface components {
         [key: string]: string | null;
       };
     };
+    /** DocumentOut */
+    DocumentOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kb Id
+       * Format: uuid
+       */
+      kb_id: string;
+      /** Title */
+      title: string;
+      /** Filename */
+      filename: string;
+      /** File Type */
+      file_type: string;
+      /** Size */
+      size: number;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "queued" | "processing" | "ready" | "error";
+      /** Error */
+      error: string | null;
+      /** Chunks */
+      chunks: number;
+      /** Pages */
+      pages: number | null;
+      /** Version */
+      version: number;
+      /** Has Preview */
+      has_preview: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Indexed At */
+      indexed_at: string | null;
+    };
     /** FeedbackIn */
     FeedbackIn: {
       /**
@@ -1078,6 +1405,150 @@ export interface components {
        * @constant
        */
       status: "ok";
+    };
+    /** ImportFolder */
+    ImportFolder: {
+      /** Path */
+      path: string;
+      /** Files */
+      files: number;
+    };
+    /** ImportIn */
+    ImportIn: {
+      /**
+       * Path
+       * @description Папка относительно kb.import_root.
+       */
+      path: string;
+    };
+    /** ImportOut */
+    ImportOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kb Id
+       * Format: uuid
+       */
+      kb_id: string;
+      /** Path */
+      path: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "scanning" | "running" | "done" | "error";
+      /** Total */
+      total: number;
+      /** Skipped */
+      skipped: number;
+      documents: components["schemas"]["StatusCounts"];
+      /** Error */
+      error: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Finished At */
+      finished_at: string | null;
+    };
+    /** IncidentOut */
+    IncidentOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Type */
+      type: string;
+      /** Severity */
+      severity: string;
+      /** Status */
+      status: string;
+      /** Title */
+      title: string;
+      /** Occurrences */
+      occurrences: number;
+      /**
+       * First Seen
+       * Format: date-time
+       */
+      first_seen: string;
+      /**
+       * Last Seen
+       * Format: date-time
+       */
+      last_seen: string;
+      /** User Id */
+      user_id: string | null;
+      /** Chat Id */
+      chat_id: string | null;
+      /** Message Id */
+      message_id: string | null;
+      /** Payload */
+      payload: {
+        [key: string]: unknown;
+      } | null;
+    };
+    /** KbIn */
+    KbIn: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description?: string | null;
+      /**
+       * Level
+       * @enum {string}
+       */
+      level: "global" | "role";
+      /** Role Ids */
+      role_ids?: string[];
+    };
+    /** KbOut */
+    KbOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description: string | null;
+      /**
+       * Level
+       * @enum {string}
+       */
+      level: "global" | "role" | "personal";
+      /** Roles */
+      roles: components["schemas"]["RoleRef"][];
+      documents: components["schemas"]["StatusCounts"];
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Can Edit
+       * @description Можно менять саму базу (название, роли, удаление).
+       */
+      can_edit: boolean;
+    };
+    /** KbUpdate */
+    KbUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Description */
+      description?: string | null;
+      /** Role Ids */
+      role_ids?: string[] | null;
     };
     /** LoginEventOut */
     LoginEventOut: {
@@ -1224,6 +1695,8 @@ export interface components {
       files?: components["schemas"]["FileOut"][];
       /** Tools */
       tools?: components["schemas"]["ToolStep"][];
+      /** Sources */
+      sources?: components["schemas"]["SourceOut"][];
     };
     /** Notice */
     Notice: {
@@ -1259,6 +1732,19 @@ export interface components {
       items: components["schemas"]["UserListItem"][];
       /** Next Cursor */
       next_cursor?: string | null;
+    };
+    /** PersonalKbOut */
+    PersonalKbOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      quota: components["schemas"]["QuotaOut"];
+      /** Documents */
+      documents: components["schemas"]["DocumentOut"][];
     };
     /** Profile */
     Profile: {
@@ -1333,6 +1819,17 @@ export interface components {
       /** Dev Users */
       dev_users?: components["schemas"]["DevUserOut"][];
     };
+    /** QuotaOut */
+    QuotaOut: {
+      /** Max Documents */
+      max_documents: number;
+      /** Max Bytes */
+      max_bytes: number;
+      /** Used Documents */
+      used_documents: number;
+      /** Used Bytes */
+      used_bytes: number;
+    };
     /** ReadinessResponse */
     ReadinessResponse: {
       /**
@@ -1385,6 +1882,18 @@ export interface components {
       kind: string;
       /** Source */
       source: string;
+    };
+    /** RoleRef */
+    RoleRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
     };
     /** RoleSpecOut */
     RoleSpecOut: {
@@ -1487,6 +1996,67 @@ export interface components {
       provider: string;
       /** Active */
       active: boolean;
+    };
+    /**
+     * SourceOut
+     * @description Источник ответа (§10.5): карточка и цель клика «открыть на странице».
+     */
+    SourceOut: {
+      /**
+       * Index
+       * @description Номер для цитаты [n].
+       */
+      index: number;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "kb" | "attachment";
+      /** Title */
+      title: string;
+      /** Kb Name */
+      kb_name: string | null;
+      /**
+       * Document Id
+       * @description Документ базы знаний (для kind = kb).
+       */
+      document_id: string | null;
+      /** File Id */
+      file_id: string | null;
+      /** Page */
+      page: number | null;
+      /** Section */
+      section: string | null;
+      /** Snippet */
+      snippet: string;
+      /**
+       * Cited
+       * @description Модель сослалась на этот номер в ответе.
+       */
+      cited: boolean;
+    };
+    /** StatusCounts */
+    StatusCounts: {
+      /**
+       * Queued
+       * @default 0
+       */
+      queued: number;
+      /**
+       * Processing
+       * @default 0
+       */
+      processing: number;
+      /**
+       * Ready
+       * @default 0
+       */
+      ready: number;
+      /**
+       * Error
+       * @default 0
+       */
+      error: number;
     };
     /** StepOut */
     StepOut: {
@@ -2599,6 +3169,588 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getPersonalKb: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PersonalKbOut"];
+        };
+      };
+    };
+  };
+  uploadPersonalDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_uploadPersonalDocument"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  deletePersonalDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  reindexPersonalDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getKbDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  downloadKbDocument: {
+    parameters: {
+      query?: {
+        download?: boolean;
+      };
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  previewKbDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": unknown;
+        };
+      };
+      /** @description Превью нет */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListKb: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbOut"][];
+        };
+      };
+    };
+  };
+  adminCreateKb: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["KbIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDeleteKb: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kb_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUpdateKb: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kb_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["KbUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminKbDocuments: {
+    parameters: {
+      query?: {
+        status?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        kb_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUploadKbDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kb_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_adminUploadKbDocument"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDeleteKbDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kb_id: string;
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminReindexKbDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kb_id: string;
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminImportFolders: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportFolder"][];
+        };
+      };
+    };
+  };
+  adminKbImports: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kb_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminStartImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kb_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImportIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListIncidents: {
+    parameters: {
+      query?: {
+        status?: string | null;
+        type?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentOut"][];
+        };
       };
       /** @description Validation Error */
       422: {

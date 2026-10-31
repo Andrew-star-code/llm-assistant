@@ -98,6 +98,35 @@
 | `worker.broker_db` | int | 1 | `APP_WORKER__BROKER_DB` | Номер БД Redis для брокера Celery. |
 | `worker.task_timeout_seconds` | int | 300 | `APP_WORKER__TASK_TIMEOUT_SECONDS` | Сколько api ждёт задачу воркера (генерация файла), с. |
 | `worker.eager` | bool | false | `APP_WORKER__EAGER` | Выполнять задачи в процессе api (только тесты). |
+| `rag.mode` | auto \| tool \| off | `auto` | `APP_RAG__MODE` | Режим RAG по умолчанию (дальше — из сценария, этап 5). |
+| `rag.search.prefetch.dense` | int | 40 | `APP_RAG__SEARCH__PREFETCH__DENSE` | Кандидатов из векторного поиска в каждой коллекции. |
+| `rag.search.prefetch.bm25` | int | 40 | `APP_RAG__SEARCH__PREFETCH__BM25` | Кандидатов из BM25 в каждой коллекции. |
+| `rag.search.fusion` | rrf \| dbsf | `rrf` | `APP_RAG__SEARCH__FUSION` | Слияние списков dense и BM25. |
+| `rag.search.rrf_k` | int | 60 | `APP_RAG__SEARCH__RRF_K` | Константа RRF: 1 / (k + ранг). |
+| `rag.search.bm25.provider` | qdrant | `qdrant` | `APP_RAG__SEARCH__BM25__PROVIDER` | qdrant — BM25 считает сам Qdrant (≥ 1.15.3). |
+| `rag.search.bm25.model` | str | `qdrant/bm25` | `APP_RAG__SEARCH__BM25__MODEL` | Модель BM25 в Qdrant. |
+| `rag.search.bm25.language` | str | `russian` | `APP_RAG__SEARCH__BM25__LANGUAGE` | Язык стемминга и стоп-слов. |
+| `rag.search.bm25.avg_len` | float | 400 | `APP_RAG__SEARCH__BM25__AVG_LEN` | Средняя длина чанка в словах (подбирается на выборке и eval). |
+| `rag.search.rerank.enabled` | bool | true | `APP_RAG__SEARCH__RERANK__ENABLED` | Выключать только в eval и при отладке (§10.4). |
+| `rag.search.rerank.max_candidates` | int | 60 | `APP_RAG__SEARCH__RERANK__MAX_CANDIDATES` | Сколько лучших по RRF уходит в реранкер. |
+| `rag.search.rerank.score_threshold` | float | 0.2 | `APP_RAG__SEARCH__RERANK__SCORE_THRESHOLD` | Отсечение по баллу реранкера. |
+| `rag.search.rerank.timeout_s` | float | 3 | `APP_RAG__SEARCH__RERANK__TIMEOUT_S` | Ждём реранкер не дольше, с. |
+| `rag.search.max_per_document` | int | 3 | `APP_RAG__SEARCH__MAX_PER_DOCUMENT` | Не больше фрагментов с одного документа. |
+| `rag.search.final_k` | int | 8 | `APP_RAG__SEARCH__FINAL_K` | Итоговое число фрагментов. |
+| `rag.search.fallback_k` | int | 6 | `APP_RAG__SEARCH__FALLBACK_K` | Фрагментов без реранкера (порядок RRF). |
+| `rag.search.neighbors` | int | 1 | `APP_RAG__SEARCH__NEIGHBORS` | Соседних чанков с каждой стороны. |
+| `rag.search.level_boost` | dict[str, float] | {} | `APP_RAG__SEARCH__LEVEL_BOOST` | Бонус к баллу реранкера по уровню, например personal. |
+| `rag.search.rewrite` | bool | true | `APP_RAG__SEARCH__REWRITE` | Переформулировать запрос служебной моделью. |
+| `rag.search.rewrite_timeout_s` | float | 5 | `APP_RAG__SEARCH__REWRITE_TIMEOUT_S` | Тайм-аут переформулировки, с. |
+| `rag.search.incident_throttle_s` | int | 600 | `APP_RAG__SEARCH__INCIDENT_THROTTLE_S` | Инцидент о пропущенной стадии поиска — не чаще, с. |
+| `rag.chunking.target_tokens` | int | 600 | `APP_RAG__CHUNKING__TARGET_TOKENS` | Целевой размер чанка, токенов. |
+| `rag.chunking.max_tokens` | int | 800 | `APP_RAG__CHUNKING__MAX_TOKENS` | Жёсткий потолок чанка, токенов. |
+| `rag.chunking.min_tokens` | int | 400 | `APP_RAG__CHUNKING__MIN_TOKENS` | Мельче — склеивается с соседом раздела. |
+| `rag.chunking.overlap` | float | 0.12 | `APP_RAG__CHUNKING__OVERLAP` | Перекрытие соседних чанков, доля. |
+| `rag.context_share` | float | 0.25 | `APP_RAG__CONTEXT_SHARE` | Доля бюджета контекста под фрагменты RAG. |
+| `kb.personal_quota.max_documents` | int | 100 | `APP_KB__PERSONAL_QUOTA__MAX_DOCUMENTS` | Документов в личной базе. |
+| `kb.personal_quota.max_mb` | int | 500 | `APP_KB__PERSONAL_QUOTA__MAX_MB` | Объём личной базы, МБ. |
+| `kb.import_root` | Path | `/srv/import` | `APP_KB__IMPORT_ROOT` | Корень папок для массового импорта; путь импорта не может выйти за него. |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`

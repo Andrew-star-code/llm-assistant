@@ -297,10 +297,11 @@ def fake_llm_url() -> Iterator[str]:
 
 
 def chat_settings(infra: Infra, tmp_path: Path, fake_llm_url: str, **overrides: Any) -> Settings:
-    models = {
+    models: dict[str, Any] = {
         role: {"base_url": fake_llm_url, "model": f"fake-{role}"}
         for role in ("chat", "utility", "guard", "rerank", "embed")
     }
+    models.update(overrides.pop("models", {}))  # подмена отдельных ролей, например rerank
     return make_settings(
         infra,
         tmp_path,

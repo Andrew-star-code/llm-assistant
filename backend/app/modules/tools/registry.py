@@ -35,6 +35,7 @@ def available_tools(
     scenario: Iterable[str] | None,
     permissions: frozenset[str],
     has_attachments: bool,
+    has_knowledge: bool = False,
 ) -> list[Tool]:
     tools = all_tools()
     names = set(tools)
@@ -48,6 +49,8 @@ def available_tools(
         if not tool.required_permissions <= permissions:
             continue
         if tool.needs_attachments and not has_attachments:
+            continue
+        if tool.needs_knowledge and not has_knowledge:
             continue
         result.append(tool)
     return result

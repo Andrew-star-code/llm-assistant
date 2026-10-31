@@ -100,6 +100,18 @@ def require(*perms: Perm) -> Callable[..., Awaitable[CurrentUser]]:
     return dependency
 
 
+def require_any(*perms: Perm) -> Callable[..., Awaitable[CurrentUser]]:
+    """Как ``require``, но достаточно одного из прав (например, все базы или базы своих ролей)."""
+
+    async def dependency(user: CurrentUserDep) -> CurrentUser:
+        if not user.has(Perm.ADMIN_ACCESS) or not any(user.has(p) for p in perms):
+            raise ForbiddenError("Недостаточно прав")
+        return user
+
+    dependency.required_permissions = frozenset(p.value for p in perms)  # type: ignore[attr-defined]
+    return dependency
+
+
 async def verify_csrf(
     request: Request, session: Annotated[SessionData | None, Depends(optional_session)]
 ) -> None:

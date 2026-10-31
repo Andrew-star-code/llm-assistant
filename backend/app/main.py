@@ -38,6 +38,9 @@ from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.router import router as completions_router
 from app.modules.feedback.router import router as feedback_router
 from app.modules.files.router import router as files_router
+from app.modules.incidents.router import router as incidents_router
+from app.modules.kb.admin_router import router as kb_admin_router
+from app.modules.kb.router import router as kb_router
 from app.modules.llm.registry import ModelRegistry
 from app.modules.rbac.service import ensure_system_rbac
 from app.modules.security.bruteforce import BruteforceGuard
@@ -185,6 +188,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(completions_router)
     api.include_router(feedback_router)
     api.include_router(files_router)
+    api.include_router(kb_router)
+    api.include_router(kb_admin_router)
+    api.include_router(incidents_router)
     api.include_router(admin_router)
     app.include_router(api)
 

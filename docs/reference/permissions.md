@@ -17,9 +17,12 @@
 | `admin.logins.view` | Журнал входов | 1 |
 | `admin.audit.view` | Журнал аудита | 1 |
 | `admin.ad.diagnostics` | Диагностика AD | 1 |
+| `admin.kb.manage` | Все базы знаний: создание, уровень и роли, документы, импорт из папки, удаление | 4 |
+| `admin.kb.manage_roles` | Ролевые базы тех ролей, что есть у самого пользователя (документы, импорт); создавать базы и менять роли нельзя | 4 |
+| `admin.incidents.view` | Список инцидентов (минимум; полностью — этап 7) | 4 |
 
 Запланированы по §13.1: `admin.chats.view`, `admin.chats.export`, `admin.chats.purge` (этап 6),
-`admin.kb.manage` (этап 4), `admin.limits.manage` (этап 8), `admin.incidents.*` (этап 7),
+`admin.limits.manage` (этап 8), остальные `admin.incidents.*` (этап 7),
 `admin.scenarios.manage` (этап 5), `admin.settings.manage` (этап 6).
 
 ## Системные роли
@@ -27,8 +30,11 @@
 | Роль | Права по умолчанию |
 | --- | --- |
 | `superadmin` | Все права всегда, независимо от `role_permissions` |
-| `admin` | Все, кроме `admin.admins.manage` |
-| `kb_manager` | `admin.access`; базы знаний назначенных ролей — этап 4 |
+| `admin` | Все, кроме `admin.admins.manage` и `admin.kb.manage_roles` (у админа и так все базы) |
+| `kb_manager` | `admin.access`, `admin.kb.manage_roles` |
+
+Новое право, появившееся в коде после установки, при старте один раз выдаётся системным ролям,
+в набор которых оно входит по умолчанию; дальше состав ролей меняется только в админке.
 
 Первые суперадминистраторы — `auth.bootstrap_admins` в конфиге или
 `python -m app.cli create-admin --login <логин>`.

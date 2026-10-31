@@ -8,7 +8,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from app.modules.ingestion import index
 from app.modules.ingestion.parsers import decode_text, markdown_table, split_pages
 from app.modules.tools.base import NoArgs, Tool, ToolContext, ToolError, ToolFile, ToolResult
 from app.modules.tools.registry import register_tool
@@ -215,7 +214,8 @@ class SearchArgs(BaseModel):
 class SearchInDocuments(Tool):
     name = "search_in_documents"
     description = (
-        "Смысловой поиск по вложениям чата: возвращает подходящие фрагменты с номерами страниц. "
+        "Поиск по вложениям чата (по смыслу и точным словам, кодам, номерам): возвращает "
+        "фрагменты с номерами страниц и номерами для ссылок [n]. "
         "Используй для больших документов, чтобы найти нужное место, затем при необходимости — "
         "read_document."
     )
@@ -228,19 +228,19 @@ class SearchInDocuments(Tool):
         return {"query": args.query}
 
     async def run(self, ctx: ToolContext, args: Any) -> ToolResult:
+        from app.modules.rag.search import Scope
+        from app.modules.rag.service import run_search
+        from app.modules.tools.builtin.knowledge import render_fragments
+
         files = [resolve_file(ctx, args.file)] if args.file else list(ctx.attachments)
-        names = {str(f.id): f.filename for f in files}
-        client = index.qdrant_client(ctx.services.settings)
-        try:
-            hits = await index.search(
-                client, ctx.services.models, query=args.query, file_ids=[f.id for f in files]
-            )
-        finally:
-            await client.close()
-        if not hits:
-            return ToolResult("Ничего не найдено во вложениях.")
-        parts = [
-            f"[{i}] «{names.get(h.file_id, '?')}», стр. {h.page}:\n{h.text}"
-            for i, h in enumerate(hits, start=1)
-        ]
-        return ToolResult("\n\n".join(parts), data={"hits": len(hits)})
+        # Только вложения этого чата: список строит сервер, модель лишь выбирает из него.
+        scope = Scope(attachment_ids=tuple(f.id for f in files))
+        result = await run_search(
+            ctx.services.search(), scope, query=args.query, user_id=ctx.user_id,
+            chat_id=ctx.chat_id, message_id=ctx.message_id,
+        )  # fmt: skip
+        if not result.fragments:
+            return ToolResult("Ничего не найдено во вложениях.", data={"trace": result.trace})
+        rendered = render_fragments(ctx, result.fragments)
+        rendered.data = {"trace": result.trace}
+        return rendered

@@ -22,6 +22,7 @@ services:
       - ../../config:/srv/config:ro
       - mock-ad-export:/run/mock-ad:ro
       - api-storage:/srv/storage
+      - ${KB_IMPORT_DIR:-./import}:/srv/import:ro
     secrets:
       - source: ldap_bind_password
         target: ldap_bind_password
@@ -45,6 +46,22 @@ services:
       - ../../backend/app:/srv/backend/app:ro
       - ../../config:/srv/config:ro
       - api-storage:/srv/storage
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  worker-kb:
+    command: ["watchfiles", "--filter", "python",
+              "celery -A app.workers.celery_app worker -Q kb -c 2 --without-gossip --without-mingle -n kb@%h",
+              "/srv/backend/app"]
+    environment:
+      APP_ENV: dev
+    env_file:
+      - path: ./api.local.env
+        required: false
+    volumes:
+      - ../../backend/app:/srv/backend/app:ro
+      - ../../config:/srv/config:ro
+      - api-storage:/srv/storage
+      - ${KB_IMPORT_DIR:-./import}:/srv/import:ro
     extra_hosts: ["host.docker.internal:host-gateway"]
 
   migrate:

@@ -12,11 +12,14 @@ from typing import Any, ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.core.storage import Storage
 from app.modules.llm.registry import ModelRegistry
+from app.modules.rag.search import Scope
+from app.modules.rag.service import SearchContext, SourceBook
 from app.workers.dispatch import Dispatcher
 
 
@@ -41,6 +44,10 @@ class Services:
     storage: Storage
     models: ModelRegistry
     dispatcher: Dispatcher
+    redis: Redis | None = None
+
+    def search(self) -> SearchContext:
+        return SearchContext(self.settings, self.models, self.sessions, self.redis)
 
 
 @dataclass(frozen=True)
@@ -51,6 +58,8 @@ class ToolContext:
     message_id: UUID
     attachments: tuple[ToolFile, ...]
     services: Services
+    kb_scope: Scope = field(default_factory=Scope)  # базы, доступные пользователю (§10.1)
+    sources: SourceBook = field(default_factory=SourceBook)  # нумерация цитат [n] ответа
 
 
 @dataclass
@@ -74,6 +83,7 @@ class Tool(ABC):
     timeout_s: ClassVar[int] = 60
     required_permissions: ClassVar[frozenset[str]] = frozenset()
     needs_attachments: ClassVar[bool] = False  # без вложений в чате инструмент не предлагается
+    needs_knowledge: ClassVar[bool] = False  # без доступных баз знаний не предлагается
 
     @abstractmethod
     async def run(self, ctx: ToolContext, args: Any) -> ToolResult: ...

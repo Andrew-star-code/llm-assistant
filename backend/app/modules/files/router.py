@@ -12,8 +12,10 @@ from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.deps import DbDep, StorageDep
 from app.core.errors import AppError, NotFoundError
+from app.core.storage import Storage
 from app.modules.auth.deps import CurrentUserDep
 from app.modules.files import service
+from app.modules.files.models import File
 from app.modules.files.schemas import FileLimits, FileOut
 from app.modules.files.sniff import ODF, OLE2, OOXML, TEXT_EXTENSIONS, UploadRejected
 from app.workers.dispatch import Dispatcher
@@ -31,6 +33,31 @@ INLINE_HEADERS = {**NOSNIFF, "Content-Security-Policy": "sandbox"}
 def _disposition(kind: str, filename: str) -> str:
     ascii_name = filename.encode("ascii", "replace").decode().replace('"', "")
     return f"{kind}; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+
+
+async def content_response(row: File, storage: Storage, *, download: bool) -> Response:
+    """Отдача оригинала; права проверяет вызывающий код (файлы чата, документы БЗ)."""
+    data = await storage.get(row.storage_key)
+    if data is None:
+        raise NotFoundError("Файл не найден")
+    if download:
+        headers = {"Content-Disposition": _disposition("attachment", row.filename), **NOSNIFF}
+        return Response(data, media_type=row.mime, headers=headers)
+    media = SAFE_INLINE.get(row.file_type, "text/plain; charset=utf-8")
+    headers = {"Content-Disposition": _disposition("inline", row.filename), **INLINE_HEADERS}
+    return Response(data, media_type=media, headers=headers)
+
+
+async def preview_response(row: File, storage: Storage) -> Response:
+    key = row.storage_key if row.file_type == "pdf" else row.preview_key
+    data = await storage.get(key) if key else None
+    if data is None:
+        raise NotFoundError("Превью нет")
+    headers = {
+        "Content-Disposition": _disposition("inline", f"{row.filename}.pdf"),
+        **INLINE_HEADERS,
+    }
+    return Response(data, media_type="application/pdf", headers=headers)
 
 
 @router.get("/limits", response_model=FileLimits, operation_id="getFileLimits")
@@ -83,15 +110,7 @@ async def content(
 ) -> Response:
     """Оригинал. ``download=false`` — показать в браузере (только PDF и текст как text/plain)."""
     row = await service.get_file(db, current.id, file_id)
-    data = await storage.get(row.storage_key)
-    if data is None:
-        raise NotFoundError("Файл не найден")
-    if download:
-        headers = {"Content-Disposition": _disposition("attachment", row.filename), **NOSNIFF}
-        return Response(data, media_type=row.mime, headers=headers)
-    media = SAFE_INLINE.get(row.file_type, "text/plain; charset=utf-8")
-    headers = {"Content-Disposition": _disposition("inline", row.filename), **INLINE_HEADERS}
-    return Response(data, media_type=media, headers=headers)
+    return await content_response(row, storage, download=download)
 
 
 @router.get(
@@ -105,18 +124,7 @@ async def preview(
 ) -> Response:
     """PDF-превью (§7.7): PDF — сам файл, Office — PDF, подготовленный воркером в LibreOffice."""
     row = await service.get_file(db, current.id, file_id)
-    key = row.storage_key if row.file_type == "pdf" else row.preview_key
-    data = await storage.get(key) if key else None
-    if data is None:
-        raise NotFoundError("Превью нет")
-    return Response(
-        data,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": _disposition("inline", f"{row.filename}.pdf"),
-            **INLINE_HEADERS,
-        },
-    )
+    return await preview_response(row, storage)
 
 
 @router.delete("/{file_id}", status_code=204, operation_id="deleteFile")

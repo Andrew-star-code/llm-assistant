@@ -15,7 +15,11 @@
 Этап 3:
   worker check — самопроверка образа воркера: pandoc, LibreOffice, Tesseract
 
-Дальше появятся (§10.3): ``kb import``, ``purge``.
+Этап 4:
+  kb list                       — общие и ролевые базы знаний с документами по статусам
+  kb import --kb <код> <папка>  — массовый импорт из папки внутри kb.import_root
+
+Дальше появятся: ``purge``.
 """
 
 from __future__ import annotations
@@ -110,6 +114,17 @@ def cmd_worker(_: argparse.Namespace) -> int:
     return 1 if settings is None else cmd_worker_check(settings)
 
 
+def cmd_kb(args: argparse.Namespace) -> int:
+    from app.cli import kb
+
+    settings = _settings_or_exit()
+    if settings is None:
+        return 1
+    if args.kb_command == "list":
+        return kb.cmd_kb_list(settings)
+    return kb.cmd_kb_import(settings, args.kb, args.folder)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -151,6 +166,14 @@ def build_parser() -> argparse.ArgumentParser:
     worker_sub.add_parser("check", help="Проверить pandoc, LibreOffice, Tesseract").set_defaults(
         func=cmd_worker
     )
+
+    kb = sub.add_parser("kb", help="Базы знаний")
+    kb_sub = kb.add_subparsers(dest="kb_command", required=True)
+    kb_sub.add_parser("list", help="Список баз").set_defaults(func=cmd_kb)
+    kb_import = kb_sub.add_parser("import", help="Массовый импорт из папки")
+    kb_import.add_argument("--kb", required=True, help="Код базы, например regulations")
+    kb_import.add_argument("folder", help="Папка внутри kb.import_root (или абсолютный путь в нём)")
+    kb_import.set_defaults(func=cmd_kb)
     return parser
 
 

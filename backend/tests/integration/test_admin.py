@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from pathlib import Path
 from typing import Any
@@ -41,7 +42,11 @@ async def test_bootstrap_admin_sees_admin_and_ordinary_user_gets_403(
 
 
 def _admin_routes() -> list[APIRoute]:
-    return [r for r in admin_router.routes if isinstance(r, APIRoute)]
+    from app.modules.incidents.router import router as incidents_router
+    from app.modules.kb.admin_router import router as kb_admin_router
+
+    routers = (admin_router, kb_admin_router, incidents_router)
+    return [r for router in routers for r in router.routes if isinstance(r, APIRoute)]
 
 
 async def test_every_admin_endpoint_requires_permission(
@@ -61,7 +66,7 @@ async def test_every_admin_endpoint_requires_permission(
     await user.login("petrov")
     dummy = str(uuid.uuid4())
     for route in routes:
-        path = "/api" + route.path.replace("{user_id}", dummy).replace("{session_id}", dummy)
+        path = "/api" + re.sub(r"\{[a-z_]+\}", dummy, route.path)
         for method in route.methods or set():
             body = {"reason": "x", "role_ids": [], "login": "x"}
             response = await user.request(method, path, json=body)

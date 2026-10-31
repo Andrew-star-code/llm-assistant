@@ -22,6 +22,9 @@ class Perm(StrEnum):
     LOGINS_VIEW = "admin.logins.view"
     AUDIT_VIEW = "admin.audit.view"
     AD_DIAGNOSTICS = "admin.ad.diagnostics"
+    KB_MANAGE = "admin.kb.manage"
+    KB_MANAGE_ROLES = "admin.kb.manage_roles"
+    INCIDENTS_VIEW = "admin.incidents.view"
 
 
 PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
@@ -34,6 +37,9 @@ PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
     Perm.LOGINS_VIEW: "Просмотр журнала входов",
     Perm.AUDIT_VIEW: "Просмотр журнала аудита",
     Perm.AD_DIAGNOSTICS: "Диагностика подключения к AD",
+    Perm.KB_MANAGE: "Все базы знаний: создание, роли, документы, импорт, удаление",
+    Perm.KB_MANAGE_ROLES: "Ролевые базы знаний тех ролей, что есть у самого менеджера",
+    Perm.INCIDENTS_VIEW: "Просмотр инцидентов",
 }
 
 SUPERADMIN = "superadmin"
@@ -61,13 +67,12 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         ADMIN,
         "Администратор",
         "Пользователи, переписка, входы, инциденты, лимиты, базы знаний, сценарии, модели",
-        frozenset(Perm) - {Perm.ADMINS_MANAGE},
+        frozenset(Perm) - {Perm.ADMINS_MANAGE, Perm.KB_MANAGE_ROLES},
     ),
     SystemRole(
         KB_MANAGER,
         "Менеджер баз знаний",
         "Только базы знаний назначенных ролей",
-        # TODO(stage-4): право admin.kb.manage с областью «роли, назначенные менеджеру».
-        frozenset({Perm.ADMIN_ACCESS}),
+        frozenset({Perm.ADMIN_ACCESS, Perm.KB_MANAGE_ROLES}),
     ),
 )

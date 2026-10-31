@@ -22,7 +22,6 @@ from app.modules.files.generate import (
 )
 from app.modules.files.sniff import Limits, UploadRejected, detect
 from app.modules.ingestion.convert import soffice_binary, tesseract_available
-from app.modules.ingestion.index import chunk_pages
 from app.modules.ingestion.parsers import ParsedDocument, ParseError, parse_file, split_pages
 from tests import samples
 
@@ -184,11 +183,19 @@ def test_legacy_doc_via_libreoffice(tmp_path: Path) -> None:
     assert samples.NEEDLE in "\n".join(parsed.pages)
 
 
-def test_chunks_have_document_and_page_prefix() -> None:
-    chunks = chunk_pages(["а" * 3000, "Короткая страница"], title="Отчёт")
-    assert chunks[0].text.startswith("Документ: Отчёт / стр. 1\n")
-    assert chunks[-1].page == 2 and "Короткая страница" in chunks[-1].text
-    assert all(len(c.text) <= 1200 + 40 for c in chunks)
+def test_chunks_have_document_and_page_prefix(tmp_path: Path) -> None:
+    from app.core.config import ChunkingSettings
+    from app.modules.ingestion.chunking import chunk_pages
+    from app.modules.llm.tokens import TokenCounter
+
+    count = TokenCounter(None).count
+    parsed = _parse(tmp_path, "a.docx", samples.docx_pages(30, needle_page=25))
+    chunks = chunk_pages(parsed.pages, title="Отчёт", settings=ChunkingSettings(), count=count)
+    assert chunks[0].text.startswith("Документ: Отчёт\nРаздел: Раздел 1\n")
+    assert all(count(c.text) <= ChunkingSettings().max_tokens for c in chunks)
+    with_needle = [c for c in chunks if samples.NEEDLE in c.body]
+    assert with_needle and with_needle[0].page_from <= 25 <= with_needle[0].page_to
+    assert [c.index for c in chunks] == list(range(len(chunks)))
 
 
 # ------------------------------------------------------------------ генерация

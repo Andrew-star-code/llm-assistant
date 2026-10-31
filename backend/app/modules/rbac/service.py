@@ -32,11 +32,15 @@ class AssignedRole:
 
 
 async def ensure_system_rbac(db: AsyncSession) -> None:
-    """Создаёт недостающие права и системные роли. Существующие наборы прав ролей не трогает."""
+    """Создаёт недостающие права и системные роли. Существующие наборы прав ролей не трогает.
+
+    Новое право (появилось в коде после установки) один раз выдаётся системным ролям, в набор
+    которых оно входит по умолчанию, — иначе у существующих админов не было бы новых разделов.
+    """
     existing_perms = set((await db.scalars(select(Permission.code))).all())
-    for perm, description in PERMISSION_DESCRIPTIONS.items():
-        if perm.value not in existing_perms:
-            db.add(Permission(code=perm.value, description=description))
+    new_perms = {p for p in PERMISSION_DESCRIPTIONS if p.value not in existing_perms}
+    for perm in new_perms:
+        db.add(Permission(code=perm.value, description=PERMISSION_DESCRIPTIONS[perm]))
     await db.flush()
 
     for spec in SYSTEM_ROLES:
@@ -46,6 +50,9 @@ async def ensure_system_rbac(db: AsyncSession) -> None:
             db.add(role)
             await db.flush()
             for perm in spec.permissions:
+                db.add(RolePermission(role_id=role.id, permission_code=perm.value))
+        elif existing_perms:
+            for perm in spec.permissions & new_perms:
                 db.add(RolePermission(role_id=role.id, permission_code=perm.value))
     await db.commit()
 

@@ -7,6 +7,18 @@
 | --- | --- | --- | --- | --- |
 | POST | `/api/admin/ad/diagnostics` | `adminAdDiagnostics` | Ad Diagnostics | 200, 422 |
 | GET | `/api/admin/audit` | `adminListAudit` | List Audit | 200, 422 |
+| GET | `/api/admin/incidents` | `adminListIncidents` | List Incidents | 200, 422 |
+| GET | `/api/admin/kb` | `adminListKb` | List Bases | 200 |
+| POST | `/api/admin/kb` | `adminCreateKb` | Create Base | 201, 422 |
+| GET | `/api/admin/kb/import-folders` | `adminImportFolders` | Import Folders | 200 |
+| PATCH | `/api/admin/kb/{kb_id}` | `adminUpdateKb` | Update Base | 200, 422 |
+| DELETE | `/api/admin/kb/{kb_id}` | `adminDeleteKb` | Delete Base | 204, 422 |
+| GET | `/api/admin/kb/{kb_id}/documents` | `adminKbDocuments` | List Documents | 200, 422 |
+| POST | `/api/admin/kb/{kb_id}/documents` | `adminUploadKbDocument` | Upload Document | 201, 422 |
+| DELETE | `/api/admin/kb/{kb_id}/documents/{document_id}` | `adminDeleteKbDocument` | Delete Kb Document | 204, 422 |
+| POST | `/api/admin/kb/{kb_id}/documents/{document_id}/reindex` | `adminReindexKbDocument` | Reindex Document | 200, 422 |
+| GET | `/api/admin/kb/{kb_id}/imports` | `adminKbImports` | List Imports | 200, 422 |
+| POST | `/api/admin/kb/{kb_id}/imports` | `adminStartImport` | Start Import | 202, 422 |
 | GET | `/api/admin/logins` | `adminListLogins` | List Logins | 200, 422 |
 | GET | `/api/admin/roles` | `adminListRoles` | List Roles | 200 |
 | DELETE | `/api/admin/sessions/{session_id}` | `adminRevokeSession` | Revoke Session | 204, 422 |
@@ -40,6 +52,13 @@
 | POST | `/api/folders` | `createFolder` | Create Folder | 201, 422 |
 | PATCH | `/api/folders/{folder_id}` | `updateFolder` | Update Folder | 200, 422 |
 | DELETE | `/api/folders/{folder_id}` | `deleteFolder` | Delete Folder | 204, 422 |
+| GET | `/api/kb/documents/{document_id}` | `getKbDocument` | Document | 200, 422 |
+| GET | `/api/kb/documents/{document_id}/content` | `downloadKbDocument` | Document Content | 200, 422 |
+| GET | `/api/kb/documents/{document_id}/preview` | `previewKbDocument` | Document Preview | 200, 404, 422 |
+| GET | `/api/kb/personal` | `getPersonalKb` | Personal | 200 |
+| POST | `/api/kb/personal/documents` | `uploadPersonalDocument` | Upload Personal | 201, 422 |
+| DELETE | `/api/kb/personal/documents/{document_id}` | `deletePersonalDocument` | Delete Personal | 204, 422 |
+| POST | `/api/kb/personal/documents/{document_id}/reindex` | `reindexPersonalDocument` | Reindex Personal | 200, 422 |
 | PUT | `/api/messages/{message_id}/feedback` | `setFeedback` | Set Feedback | 200, 422 |
 | DELETE | `/api/messages/{message_id}/feedback` | `clearFeedback` | Clear Feedback | 204, 422 |
 | POST | `/api/messages/{message_id}/regenerate` | `regenerateMessage` | Regenerate | 202, 422 |

@@ -10,7 +10,7 @@ import asyncio
 from typing import Any
 
 from app.core.config import Settings
-from app.workers import jobs
+from app.workers import jobs, kb_jobs
 
 
 class TaskTimeout(Exception):  # noqa: N818
@@ -34,6 +34,31 @@ class Dispatcher:
             await asyncio.to_thread(asyncio.run, jobs.parse_job(file_id, self.settings))
             return
         await asyncio.to_thread(self._client().send_task, "files.parse", args=[file_id])
+
+    async def index_document(self, document_id: str) -> None:
+        """Индексация документа базы знаний (очередь ``kb``)."""
+        if self.settings.worker.eager:
+            await asyncio.to_thread(
+                asyncio.run, kb_jobs.index_document_job(document_id, self.settings)
+            )
+            return
+        await asyncio.to_thread(
+            self._client().send_task, "kb.index", args=[document_id], queue="kb"
+        )
+
+    async def import_folder(self, import_id: str) -> None:
+        """Массовый импорт из папки; в eager-режиме документы индексируются сразу же."""
+        if self.settings.worker.eager:
+            settings = self.settings
+
+            async def inline(document_id: str) -> None:
+                await kb_jobs.index_document_job(document_id, settings)
+
+            await asyncio.to_thread(
+                asyncio.run, kb_jobs.import_job(import_id, self.settings, inline)
+            )
+            return
+        await asyncio.to_thread(self._client().send_task, "kb.import", args=[import_id], queue="kb")
 
     async def generate(self, spec: dict[str, Any]) -> dict[str, Any]:
         """Генерация файла в воркере (pandoc, LibreOffice); ждём результат."""

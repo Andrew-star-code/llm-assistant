@@ -1,8 +1,8 @@
 """Работа воркера (§9.3, §9.4): async-функции, которые вызывают задачи Celery и тесты.
 
 * ``parse_job`` — разбор вложения: статус ``processing`` → Markdown с маркерами страниц и
-  оглавление в хранилище → чанки в Qdrant для ``search_in_documents`` → ``ready`` или ``error``
-  с понятной причиной (её видит пользователь в чипе файла).
+  оглавление в хранилище → чанки (dense + BM25) в ``attachment_chunks`` для ``search_in_documents``
+  → ``ready`` или ``error`` с понятной причиной (её видит пользователь в чипе файла).
 * ``generate_job`` — создание файла по запросу модели и PDF-превью для Office-форматов.
 """
 
@@ -36,9 +36,12 @@ from app.modules.files.generate import (
     preview_pdf,
 )
 from app.modules.files.models import File
-from app.modules.ingestion.index import index_file, qdrant_client
-from app.modules.ingestion.parsers import ParseError, parse_file
+from app.modules.ingestion.chunking import Chunk, chunk_pages
+from app.modules.ingestion.parsers import ParsedDocument, ParseError, parse_file
 from app.modules.llm.registry import ModelRegistry
+from app.modules.llm.tokens import TokenCounter
+from app.modules.rag.store import ATTACHMENT_COLLECTION, EMBED_ROLE, DocumentRef, qdrant_client
+from app.modules.rag.store import write_document as write_chunks
 
 log = structlog.stdlib.get_logger("app.worker")
 
@@ -75,6 +78,35 @@ async def _set_status(
             await db.commit()
 
 
+async def parse_bytes(data: bytes, file_type: str, settings: Settings) -> ParsedDocument:
+    """Разбор в отдельном потоке с тайм-аутом (ParseError — понятная причина для пользователя)."""
+    with tempfile.TemporaryDirectory(prefix="parse-") as tmp:
+        source = Path(tmp) / f"source.{file_type}"
+        source.write_bytes(data)
+        return await asyncio.wait_for(
+            asyncio.to_thread(parse_file, source, file_type, settings.files),
+            timeout=settings.files.parse_timeout_seconds,
+        )
+
+
+def make_chunks(parsed: ParsedDocument, title: str, settings: Settings) -> list[Chunk]:
+    endpoint = settings.models.get(EMBED_ROLE)
+    counter = TokenCounter(endpoint.tokenizer if endpoint else None)
+    return chunk_pages(
+        parsed.pages, title=title, settings=settings.rag.chunking, count=counter.count
+    )
+
+
+async def index_chunks(ref: DocumentRef, chunks: list[Chunk], settings: Settings) -> int:
+    registry = ModelRegistry(settings)
+    client = qdrant_client(settings)
+    try:
+        return await write_chunks(client, registry, ref, chunks, settings.rag.search.bm25)
+    finally:
+        await client.close()
+        await registry.close()
+
+
 async def parse_job(file_id: str, settings: Settings) -> None:
     async with worker_context(settings) as ctx:
         async with ctx.sessions() as db:
@@ -94,13 +126,7 @@ async def parse_job(file_id: str, settings: Settings) -> None:
             await _set_status(ctx, file_id, "error", "файл не найден в хранилище")
             return
         try:
-            with tempfile.TemporaryDirectory(prefix="parse-") as tmp:
-                source = Path(tmp) / f"source.{file_type}"
-                source.write_bytes(data)
-                parsed = await asyncio.wait_for(
-                    asyncio.to_thread(parse_file, source, file_type, settings.files),
-                    timeout=settings.files.parse_timeout_seconds,
-                )
+            parsed = await parse_bytes(data, file_type, settings)
         except ParseError as exc:
             await _set_status(ctx, file_id, "error", str(exc))
             return
@@ -116,24 +142,18 @@ async def parse_job(file_id: str, settings: Settings) -> None:
         text_key = f"texts/{file_id}"
         await ctx.storage.put(text_key, markdown.encode("utf-8"))
         outline = parsed.outline()
-        registry = ModelRegistry(settings)
-        client = qdrant_client(settings)
+        ref = DocumentRef(
+            collection=ATTACHMENT_COLLECTION, document_id=uuid.UUID(file_id), version=1,
+            title=filename, level="attachment", owner_id=owner_id, file_id=uuid.UUID(file_id),
+        )  # fmt: skip
         try:
-            outline["search_chunks"] = await index_file(
-                client,
-                registry,
-                file_id=uuid.UUID(file_id),
-                owner_id=owner_id,
-                title=filename,
-                pages=parsed.pages,
+            outline["search_chunks"] = await index_chunks(
+                ref, make_chunks(parsed, filename, settings), settings
             )
         except Exception as exc:
             # Без индекса документ всё равно читается целиком и инструментами чтения.
             log.warning("worker.index_failed", file_id=file_id, error=str(exc)[:300])
             outline["warnings"].append("поиск по документу недоступен")
-        finally:
-            await client.close()
-            await registry.close()
 
         async with ctx.sessions() as db:
             row = await db.get(File, uuid.UUID(file_id))

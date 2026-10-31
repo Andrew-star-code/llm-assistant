@@ -6,6 +6,9 @@ from app.modules.auth.models import UserSession
 from app.modules.chats.models import Chat, Folder, Message
 from app.modules.feedback.models import Feedback
 from app.modules.files.models import File
+from app.modules.incidents.models import Incident
+from app.modules.kb.models import KbDocument, KbImport, KbRole, KnowledgeBase
+from app.modules.rag.models import MessageSource
 from app.modules.rbac.models import Permission, Role, RolePermission, UserRole
 from app.modules.security.models import LoginEvent
 from app.modules.tools.models import ToolCall
@@ -18,8 +21,14 @@ __all__ = [
     "Feedback",
     "File",
     "Folder",
+    "Incident",
+    "KbDocument",
+    "KbImport",
+    "KbRole",
+    "KnowledgeBase",
     "LoginEvent",
     "Message",
+    "MessageSource",
     "Permission",
     "Role",
     "RolePermission",

@@ -11,6 +11,7 @@ SSE-эндпоинт читает их с позиции ``Last-Event-ID``, по
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -75,18 +76,22 @@ class EventWriter:
         self._pending: list[str] = []
         self._pending_chars = 0
         self._last_flush = time.monotonic()
+        self._lock = asyncio.Lock()
 
     async def emit(self, event: EventType, data: dict[str, Any]) -> None:
         await self.flush()
         await self._add(event, data)
 
     async def _add(self, event: str, data: dict[str, Any]) -> None:
-        self.seq += 1
-        await self.redis.xadd(
-            self.key,
-            {"event": event, "data": json.dumps(data, ensure_ascii=False)},
-            id=f"0-{self.seq}",
-        )
+        # Параллельные инструменты пишут события одновременно: номер и запись — под замком,
+        # иначе XADD с меньшим id после большего отклоняется Redis.
+        async with self._lock:
+            self.seq += 1
+            await self.redis.xadd(
+                self.key,
+                {"event": event, "data": json.dumps(data, ensure_ascii=False)},
+                id=f"0-{self.seq}",
+            )
 
     async def delta(self, kind: Literal["reasoning", "content"], text: str) -> None:
         if self._pending_kind not in (None, kind):

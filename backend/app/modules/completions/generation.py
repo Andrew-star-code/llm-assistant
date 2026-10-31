@@ -35,6 +35,7 @@ from app.modules.chats.models import Chat, Message
 from app.modules.chats.service import branch
 from app.modules.completions.attachments import build_attachments
 from app.modules.completions.prompt import (
+    DEFAULT_CONTEXT,
     PromptRenderer,
     PromptUser,
     Turn,
@@ -52,6 +53,18 @@ from app.modules.files.service import chat_files
 from app.modules.llm.registry import ModelRegistry
 from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_stream
 from app.modules.llm.tokens import TokenCounter
+from app.modules.rag.models import MessageSource
+from app.modules.rag.search import Fragment
+from app.modules.rag.service import (
+    SourceBook,
+    build_scope,
+    cited_indexes,
+    fragments_context,
+    rewrite_query,
+    run_search,
+    source_card,
+)
+from app.modules.rag.service import Turn as RagTurn
 from app.modules.rbac import service as rbac
 from app.modules.tools.base import Services, ToolContext
 from app.modules.tools.executor import ToolOutcome, execute, preview_label_params
@@ -83,6 +96,7 @@ class GenerationResult:
     error: dict[str, Any] | None = None
     tools: list[ToolOutcome] = field(default_factory=list)
     files: list[dict[str, Any]] = field(default_factory=list)
+    book: SourceBook | None = None
 
     def add_usage(self, usage: Usage) -> None:
         if self.usage is None:
@@ -164,6 +178,7 @@ class GenerationManager:
             storage=storage,
             models=registry,
             dispatcher=dispatcher,
+            redis=redis,
         )
         self.tasks: dict[UUID, asyncio.Task[None]] = {}
 
@@ -269,20 +284,20 @@ class GenerationManager:
                     endpoint=plan.endpoint,
                     counter=counter,
                 )
-                system = system_prompt(self.renderer, self.settings, prompt_user, utcnow())
-                if attachments.text:
-                    system = f"{system}\n\n{attachments.text}"
-                prompt = build_messages(
-                    system=system,
-                    history=history,
-                    message=question,
-                    endpoint=plan.endpoint,
-                    counter=counter,
-                )
+                base_system = system_prompt(self.renderer, self.settings, prompt_user, utcnow())
                 roles = await rbac.user_roles(db, user.id)
                 permissions = rbac.effective_permissions(
                     roles, await rbac.permissions_for_roles(db, (r.role.id for r in roles))
                 )
+                # TODO(stage-5): режим RAG и базы знаний — из сценария чата.
+                rag_mode = self.settings.rag.mode
+                # Вложения ищутся вместе с базами, когда в промпте только их оглавление (§10.4).
+                scope = await build_scope(
+                    db, user.id, (r.role.id for r in roles),
+                    attachment_ids=[f.id for f in attachments.files]
+                    if attachments.mode == "outline" else (),
+                )  # fmt: skip
+                has_kb = bool(scope.kb_ids or scope.personal_kb_ids)
                 # TODO(stage-5): список инструментов сценария вместо None.
                 tools = (
                     available_tools(
@@ -290,10 +305,13 @@ class GenerationManager:
                         scenario=None,
                         permissions=permissions,
                         has_attachments=bool(attachments.files),
+                        has_knowledge=has_kb and rag_mode != "off",
                     )
                     if plan.endpoint.supports_tools
                     else []
                 )
+                book = SourceBook()
+                result.book = book
                 context = ToolContext(
                     user_id=user.id,
                     permissions=permissions,
@@ -301,24 +319,14 @@ class GenerationManager:
                     message_id=message_id,
                     attachments=attachments.files,
                     services=self.services,
+                    kb_scope=scope,
+                    sources=book,
                 )
                 chat_id, parent_id = chat.id, message.parent_id
                 message.model = plan.endpoint.model
                 message.thinking = plan.thinking
                 await db.commit()
 
-            trace = {
-                "model_role": plan.role,
-                "model": plan.endpoint.model,
-                "thinking": plan.thinking,
-                **prompt.trace(),
-                "attachments": {
-                    "mode": attachments.mode,
-                    "files": len(attachments.files),
-                    "tokens": attachments.tokens,
-                },
-                "tools_offered": [t.name for t in tools],
-            }
             await writer.emit(
                 "message.start",
                 {
@@ -330,6 +338,39 @@ class GenerationManager:
                     "protocol_version": PROTOCOL_VERSION,
                 },
             )
+            knowledge: str | None = None
+            rag_trace: dict[str, Any] | None = None
+            if rag_mode == "auto" and not scope.empty:
+                knowledge, rag_trace = await self._auto_rag(
+                    context, writer, result, question=question, history=history,
+                    budget=int(
+                        (plan.endpoint.context_length or DEFAULT_CONTEXT)
+                        * self.settings.rag.context_share
+                    ),
+                    counter=counter,
+                )  # fmt: skip
+            system = "\n\n".join(x for x in (base_system, knowledge, attachments.text) if x)
+            prompt = build_messages(
+                system=system,
+                history=history,
+                message=question,
+                endpoint=plan.endpoint,
+                counter=counter,
+            )
+            trace = {
+                "model_role": plan.role,
+                "model": plan.endpoint.model,
+                "thinking": plan.thinking,
+                **prompt.trace(),
+                "rag_mode": rag_mode,
+                **({"rag": rag_trace} if rag_trace else {}),
+                "attachments": {
+                    "mode": attachments.mode,
+                    "files": len(attachments.files),
+                    "tokens": attachments.tokens,
+                },
+                "tools_offered": [t.name for t in tools],
+            }
             await self._loop(
                 message_id,
                 plan.role,
@@ -429,6 +470,84 @@ class GenerationManager:
         await writer.delta("content", MAX_ITERATIONS_NOTE)
         result.finish_reason = "max_iterations"
 
+    async def _auto_rag(
+        self,
+        context: ToolContext,
+        writer: EventWriter,
+        result: GenerationResult,
+        *,
+        question: str,
+        history: list[Turn],
+        budget: int,
+        counter: TokenCounter,
+    ) -> tuple[str | None, dict[str, Any]]:
+        """Режим ``auto`` (§8.3): переформулировка → гибридный поиск → фрагменты в промпт.
+
+        Для пользователя это шаг «Ищу в базах знаний…» — как вызов инструмента, и в истории тоже.
+        """
+        started = time.monotonic()
+        call_id, tool, label = "rag-auto", "search_knowledge_base", "tools.search_knowledge_base"
+        rewritten = await rewrite_query(
+            self.registry, self.renderer, self.settings, question,
+            [RagTurn(t.role, t.content) for t in history],
+        )  # fmt: skip
+        params = {"query": rewritten}
+        await writer.emit(
+            "tool.start", {"call_id": call_id, "tool": tool, "label": label, "params": params}
+        )
+        status = "ok"
+        trace: dict[str, Any] = {"rewritten": rewritten}
+        fragments: list[Fragment] = []
+        try:
+            # BM25 получает и исходный текст: точные коды не потеряются при переформулировке.
+            bm25_query = rewritten if rewritten == question else f"{rewritten}\n{question}"
+            found = await run_search(
+                self.services.search(), context.kb_scope, query=rewritten, bm25_query=bm25_query,
+                user_id=context.user_id, chat_id=context.chat_id, message_id=context.message_id,
+            )  # fmt: skip
+            fragments = found.fragments
+            trace.update(found.trace)
+        except Exception as exc:
+            log.exception("completions.rag_failed", message_id=str(context.message_id))
+            status = "error"
+            trace["error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
+        # Бюджет фрагментов (§8.3): лишние — с конца списка, они наименее релевантны.
+        kept: list[Fragment] = []
+        used = 0
+        for fragment in fragments:
+            cost = counter.count(fragment.text)
+            if kept and used + cost > budget:
+                break
+            kept.append(fragment)
+            used += cost
+        numbered = context.sources.add(kept)
+        trace["fragments"] = len(numbered)
+        trace["tokens"] = used
+        knowledge = (
+            self.renderer.render("system/knowledge.md.j2", fragments=fragments_context(numbered))
+            if status == "ok"
+            else None
+        )
+        await writer.emit(
+            "tool.end",
+            {"call_id": call_id, "tool": tool, "label": label, "status": status, "params": params},
+        )
+        if numbered:
+            await self._emit_sources(writer, context.sources)
+        result.tools.append(
+            ToolOutcome(
+                call_id=call_id, tool=tool, arguments={"query": rewritten, "mode": "auto"},
+                content=f"фрагментов: {len(numbered)}", status=status,
+                duration_ms=int((time.monotonic() - started) * 1000), visibility="visible",
+                label=label, label_params=params, iteration=0,
+            )
+        )  # fmt: skip
+        return knowledge, trace
+
+    async def _emit_sources(self, writer: EventWriter, book: SourceBook) -> None:
+        # Каждый раз — полный список: клиент заменяет карточки, а не дописывает.
+        await writer.emit("sources", {"items": [source_card(f) for f in book.fragments]})
+
     async def _run_tool(
         self, context: ToolContext, call: PendingCall, writer: EventWriter, allowed: set[str]
     ) -> ToolOutcome:
@@ -466,6 +585,8 @@ class GenerationManager:
                     "params": outcome.label_params,
                 },
             )
+            if outcome.sources:
+                await self._emit_sources(writer, context.sources)
             for file in outcome.files:
                 await writer.emit(
                     "file",
@@ -633,6 +754,24 @@ class GenerationManager:
                                     label_params=outcome.label_params or None,
                                 )
                             )
+                    if result.book and result.book.fragments:
+                        cited = cited_indexes(message.content)
+                        trace["sources"] = {
+                            "offered": len(result.book.fragments),
+                            "cited": sorted(cited),
+                        }
+                        for f in result.book.fragments:
+                            db.add(
+                                MessageSource(
+                                    message_id=message_id, index=f.index, kind=f.kind,
+                                    kb_id=UUID(f.kb_id) if f.kb_id else None,
+                                    document_id=UUID(f.document_id) if f.kind == "kb" else None,
+                                    file_id=UUID(f.file_id) if f.file_id else None,
+                                    chunk_id=f.chunk_id, title=f.title[:255], kb_name=f.kb_name,
+                                    page=f.page, section=f.section, snippet=f.snippet,
+                                    score=f.score, cited=f.index in cited,
+                                )
+                            )  # fmt: skip
                     message.trace = {**(message.trace or {}), **trace}
                     if usage:
                         message.prompt_tokens = usage.prompt_tokens

@@ -364,6 +364,88 @@ class WorkerSettings(_Section):
     eager: bool = Field(False, description="Выполнять задачи в процессе api (только тесты).")
 
 
+class Bm25Settings(_Section):
+    """BM25 одинаков при записи и поиске (§10.2); после смены — пересчитать BM25-векторы."""
+
+    provider: Literal["qdrant"] = Field(
+        "qdrant",
+        # TODO(stage-10): fastembed как запасной провайдер (§10.2), если серверный не подойдёт.
+        description="qdrant — BM25 считает сам Qdrant (≥ 1.15.3).",
+    )
+    model: str = Field("qdrant/bm25", description="Модель BM25 в Qdrant.")
+    language: str = Field("russian", description="Язык стемминга и стоп-слов.")
+    avg_len: float = Field(
+        400, gt=0, description="Средняя длина чанка в словах (подбирается на выборке и eval)."
+    )
+
+
+class RerankSettings(_Section):
+    enabled: bool = Field(True, description="Выключать только в eval и при отладке (§10.4).")
+    max_candidates: int = Field(60, gt=0, description="Сколько лучших по RRF уходит в реранкер.")
+    score_threshold: float = Field(0.2, ge=0, le=1, description="Отсечение по баллу реранкера.")
+    timeout_s: float = Field(3, gt=0, description="Ждём реранкер не дольше, с.")
+
+
+class PrefetchSettings(_Section):
+    dense: int = Field(40, gt=0, description="Кандидатов из векторного поиска в каждой коллекции.")
+    bm25: int = Field(40, gt=0, description="Кандидатов из BM25 в каждой коллекции.")
+
+
+class SearchSettings(_Section):
+    """Гибридный поиск с реранкером (§10.4). Значения подбираются на eval/rag."""
+
+    prefetch: PrefetchSettings = Field(default_factory=PrefetchSettings)
+    fusion: Literal["rrf", "dbsf"] = Field("rrf", description="Слияние списков dense и BM25.")
+    rrf_k: int = Field(60, gt=0, description="Константа RRF: 1 / (k + ранг).")
+    bm25: Bm25Settings = Field(default_factory=Bm25Settings)
+    rerank: RerankSettings = Field(default_factory=RerankSettings)
+    max_per_document: int = Field(3, gt=0, description="Не больше фрагментов с одного документа.")
+    final_k: int = Field(8, gt=0, description="Итоговое число фрагментов.")
+    fallback_k: int = Field(6, gt=0, description="Фрагментов без реранкера (порядок RRF).")
+    neighbors: int = Field(1, ge=0, description="Соседних чанков с каждой стороны.")
+    level_boost: dict[str, float] = Field(
+        default_factory=dict, description="Бонус к баллу реранкера по уровню, например personal."
+    )
+    rewrite: bool = Field(True, description="Переформулировать запрос служебной моделью.")
+    rewrite_timeout_s: float = Field(5, gt=0, description="Тайм-аут переформулировки, с.")
+    incident_throttle_s: int = Field(
+        600, ge=0, description="Инцидент о пропущенной стадии поиска — не чаще, с."
+    )
+
+
+class ChunkingSettings(_Section):
+    """Чанкинг по структуре (§10.3)."""
+
+    target_tokens: int = Field(600, gt=0, description="Целевой размер чанка, токенов.")
+    max_tokens: int = Field(800, gt=0, description="Жёсткий потолок чанка, токенов.")
+    min_tokens: int = Field(400, gt=0, description="Мельче — склеивается с соседом раздела.")
+    overlap: float = Field(0.12, ge=0, lt=0.5, description="Перекрытие соседних чанков, доля.")
+
+
+class RagSettings(_Section):
+    mode: Literal["auto", "tool", "off"] = Field(
+        "auto", description="Режим RAG по умолчанию (дальше — из сценария, этап 5)."
+    )
+    search: SearchSettings = Field(default_factory=SearchSettings)
+    chunking: ChunkingSettings = Field(default_factory=ChunkingSettings)
+    context_share: float = Field(
+        0.25, gt=0, lt=1, description="Доля бюджета контекста под фрагменты RAG."
+    )
+
+
+class PersonalQuota(_Section):
+    max_documents: int = Field(100, gt=0, description="Документов в личной базе.")
+    max_mb: int = Field(500, gt=0, description="Объём личной базы, МБ.")
+
+
+class KbSettings(_Section):
+    personal_quota: PersonalQuota = Field(default_factory=PersonalQuota)
+    import_root: Path = Field(
+        Path("/srv/import"),
+        description="Корень папок для массового импорта; путь импорта не может выйти за него.",
+    )
+
+
 class StorageSettings(_Section):
     root: Path = Field(
         Path("/srv/storage"), description="Каталог тома с файлами (фото, загрузки, документы)."
@@ -407,6 +489,8 @@ class Settings(BaseSettings):
     files: FilesSettings = Field(default_factory=FilesSettings)
     tools: ToolsSettings = Field(default_factory=ToolsSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
+    rag: RagSettings = Field(default_factory=RagSettings)
+    kb: KbSettings = Field(default_factory=KbSettings)
     models: dict[str, ModelEndpoint] = Field(
         default_factory=dict, description="Реестр моделей по ролям (config/models.yaml)."
     )

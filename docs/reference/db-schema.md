@@ -89,6 +89,84 @@
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 
+## `incidents`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `type` | VARCHAR(64) | not null | index |
+| `severity` | VARCHAR(16) | not null |  |
+| `status` | VARCHAR(16) | not null | index |
+| `fingerprint` | VARCHAR(128) | not null | index |
+| `title` | VARCHAR(300) | not null |  |
+| `user_id` | UUID | null | → users.id, index |
+| `chat_id` | UUID | null | → chats.id, index |
+| `message_id` | UUID | null | → messages.id, index |
+| `payload` | JSONB | null |  |
+| `occurrences` | INTEGER | not null |  |
+| `first_seen` | TIMESTAMP WITH TIME ZONE | not null |  |
+| `last_seen` | TIMESTAMP WITH TIME ZONE | not null | index |
+| `assigned_to` | UUID | null | → users.id |
+| `resolution` | TEXT | null |  |
+| `id` | UUID | not null | PK |
+
+## `kb_documents`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `kb_id` | UUID | not null | → knowledge_bases.id, index |
+| `file_id` | UUID | not null | → files.id, index |
+| `title` | VARCHAR(255) | not null |  |
+| `status` | VARCHAR(16) | not null | index |
+| `error` | TEXT | null |  |
+| `chunks` | INTEGER | not null |  |
+| `version` | INTEGER | not null |  |
+| `sha256` | VARCHAR(64) | not null | index |
+| `import_id` | UUID | null | → kb_imports.id, index |
+| `source_path` | TEXT | null |  |
+| `uploaded_by` | UUID | null | → users.id, index |
+| `indexed_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `deleted_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `kb_imports`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `kb_id` | UUID | not null | → knowledge_bases.id, index |
+| `path` | TEXT | not null |  |
+| `status` | VARCHAR(16) | not null |  |
+| `total` | INTEGER | not null |  |
+| `skipped` | INTEGER | not null |  |
+| `error` | TEXT | null |  |
+| `created_by` | UUID | null | → users.id |
+| `finished_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `kb_roles`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `kb_id` | UUID | not null | PK, → knowledge_bases.id |
+| `role_id` | UUID | not null | PK, → roles.id, index |
+
+## `knowledge_bases`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `code` | VARCHAR(100) | not null | unique |
+| `name` | VARCHAR(200) | not null |  |
+| `description` | TEXT | null |  |
+| `level` | VARCHAR(16) | not null | index |
+| `owner_id` | UUID | null | → users.id, index |
+| `embed_model` | VARCHAR(200) | not null |  |
+| `chunking` | JSONB | null |  |
+| `created_by` | UUID | null | → users.id |
+| `deleted_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
 ## `login_events`
 
 | Колонка | Тип | NULL | Ключи и индексы |
@@ -104,6 +182,26 @@
 | `risk_flags` | JSONB | not null |  |
 | `details` | JSONB | not null |  |
 | `reviewed_by` | UUID | null | → users.id, index |
+| `id` | UUID | not null | PK |
+
+## `message_sources`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `message_id` | UUID | not null | → messages.id, index |
+| `index` | INTEGER | not null |  |
+| `kind` | VARCHAR(16) | not null |  |
+| `kb_id` | UUID | null | → knowledge_bases.id, index |
+| `document_id` | UUID | null | → kb_documents.id, index |
+| `file_id` | UUID | null | → files.id, index |
+| `chunk_id` | VARCHAR(64) | not null |  |
+| `title` | VARCHAR(255) | not null |  |
+| `kb_name` | VARCHAR(200) | null |  |
+| `page` | INTEGER | null |  |
+| `section` | TEXT | null |  |
+| `snippet` | TEXT | not null |  |
+| `score` | FLOAT | null |  |
+| `cited` | BOOLEAN | not null |  |
 | `id` | UUID | not null | PK |
 
 ## `messages`

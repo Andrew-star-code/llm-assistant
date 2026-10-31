@@ -36,3 +36,7 @@ storage/
 !.vscode/extensions.json
 .DS_Store
 *.swp
+
+# Документы для массового импорта в базы знаний на дев-стенде
+deploy/compose/import/*
+!deploy/compose/import/.gitkeep
