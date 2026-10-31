@@ -245,6 +245,9 @@ def tool_scenario(
 def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     messages: list[dict[str, Any]] = body.get("messages") or []
     user_text = last_user_text(messages)
+    if TITLE_REQUEST in user_text and "[[scenario:title]]" not in user_text:
+        # Служебный запрос заголовка: первые слова сообщения без маркера сценария.
+        return Scenario("title", [Step("content", title_from(user_text))])
     if REWRITE_REQUEST in user_text:
         # Переформулировка для RAG: сообщение пользователя без маркера сценария, как есть.
         source = TITLE_SOURCE.search(user_text)
@@ -255,8 +258,6 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     name = match.group(1) if match else ("thinking" if thinking else "default")
     clean = SCENARIO_MARKER.sub("", user_text).strip()
     last = messages[-1] if messages else {}
-    if not match and TITLE_REQUEST in user_text:
-        return Scenario("title", [Step("content", title_from(user_text))])
     address = address_of(messages)
 
     def greet(text: str) -> str:
