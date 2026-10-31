@@ -13,7 +13,7 @@ RAG по базам знаний трёх уровней, инструмента
 | Команда | Что делает |
 | --- | --- |
 | `make install` | Зависимости (uv, pnpm) и pre-commit-хуки |
-| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, fake-llm, embed, api, frontend |
+| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, fake-llm, embed, api, worker, frontend |
 | `make dev-down` / `make dev-reset` | Остановить стенд / остановить и удалить данные |
 | `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → сборка образов |
 | `make test` | Unit- и интеграционные тесты (pytest, Vitest; нужен Docker: testcontainers и mock-AD) |
@@ -21,6 +21,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make lint` / `make fmt` | Линтеры (ruff, eslint, prettier) / автоформат |
 | `make typecheck` | mypy strict, tsc |
 | `make e2e` | Playwright против работающего api (сначала `make dev-up`) |
+| `make test-worker` | Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (`worker check`) |
 | `make gen-api` | OpenAPI → `frontend/src/api/` + `docs/reference/api.md` (после любого изменения API) |
 | `make migrate` | Миграции Alembic |
 | `make docs-config` | `docs/reference/config.md` из Pydantic-настроек (после изменения конфига) |
@@ -29,7 +30,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make deploy` | Выкатка на сервер — этап 10 |
 
 CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `openapi`, `api-docs`, `db-docs`,
-`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`; дальше — `kb import`.
+`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`; дальше — `kb import`.
 В дев-стенде: `docker compose … exec api python -m app.cli …`.
 
 Вход на дев-стенде: провайдер dev — кнопки на странице входа (seed из `config/app.dev.yaml`);
@@ -46,19 +47,20 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 │   ├── main.py                     # сборка FastAPI-приложения
 │   ├── core/                       # config, logging, db, redis, qdrant, errors, health, request_context
 │   ├── modules/<модуль>/           # бизнес-модули, у каждого README.md
+│   ├── workers/                    # Celery: разбор вложений и генерация файлов (jobs.py — сама работа)
 │   └── cli/                        # python -m app.cli …
 ├── backend/migrations/             # Alembic
 ├── backend/tests/                  # unit, integration, security
 ├── frontend/src/                   # app, api (генерируется), features, admin, components/ui, lib, i18n
 ├── services/fake-llm/              # OpenAI-совместимый mock для разработки и тестов
-├── config/                         # app.yaml, models.yaml (+ оверлеи <env>), дальше prompts, scenarios…
+├── config/                         # app.yaml, models.yaml (+ оверлеи <env>), prompts/, templates/; дальше scenarios…
 ├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, .env.example
 ├── deploy/mock-ad/                 # Samba AD DC с тестовыми пользователями
 └── scripts/docs_check.py
 ```
 
-Появятся по этапам: `backend/app/workers/`, `services/data-gateway/`, `services/sandbox-runner/` ★,
-`deploy/nginx/`, `deploy/models/`, `deploy/monitoring/`, `deploy/offline/`, `eval/`, `config/prompts/` и др. (§5).
+Появятся по этапам: `services/data-gateway/`, `services/sandbox-runner/` ★,
+`deploy/nginx/`, `deploy/models/`, `deploy/monitoring/`, `deploy/offline/`, `eval/`, `config/scenarios/` и др. (§5).
 
 ### Карта изменений
 
@@ -83,6 +85,8 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 | Добавить параметр конфигурации | `backend/app/core/config.py` (+ `config/*.yaml`) | `make docs-config` |
 | Добавить или изменить эндпоинт | роутер модуля | `make gen-api`, тесты |
 | Добавить сценарий fake-llm | `services/fake-llm/src/fake_llm/scenarios.py` | README сервиса, тест |
+| Поддержать новый формат вложений | `modules/files/sniff.py` + `modules/ingestion/parsers.py` | README `ingestion`, тест в `tests/unit/test_files.py` |
+| Сменить шаблон DOCX/PPTX | `config/templates/` | `config/templates/README.md` |
 
 ## 4. Соглашения
 
@@ -152,3 +156,16 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 - **ldap3 синхронный** — вызовы AD только через `asyncio.to_thread`; тайм-ауты сокета — целые секунды.
 - **Конфиг слоями**: init-аргументы `Settings(...)` сливаются с YAML, а не заменяют его — в тестах
   конфигурацию подменяйте через `APP_CONFIG_DIR` на временный каталог.
+- **Воркер в тестах — eager**: `worker.eager=true` выполняет задачу в потоке api без Celery и
+  брокера; в проде api только ставит задачу. Бинарники (LibreOffice, Tesseract) есть только в образе
+  воркера — код api не должен вызывать их напрямую (`preview_pdf` и OCR — в задачах воркера).
+- **Файлы инструментов — только из вложений чата**: `ToolContext.attachments` строит сервер; аргумент
+  модели `file` лишь выбирает из этого списка. Права на поиск в Qdrant — фильтр по id этих файлов.
+- **`.mjs` в nginx**: воркер pdf.js — ES-модуль; без `application/javascript` для `.mjs`
+  (`frontend/nginx.conf`, прод-gateway этапа 10) просмотр PDF не работает.
+- **CSP `sandbox` на скачивании** ломает имя файла в Chromium — только на inline-ответах.
+- **Колбэки `mutate(…, {onSuccess})`** не вызываются, если компонент размонтирован раньше (типично
+  для пунктов списка, который перечитывается в общем `onSuccess`) — для навигации после мутации
+  используйте `mutateAsync().then(…)`.
+- **Playwright и кириллица**: без UTF-8-локали Chromium называет скачанный файл «download» —
+  локаль задана в `playwright.config.ts`.

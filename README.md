@@ -22,7 +22,9 @@ make install
 make dev-up
 ```
 
-Первый `make dev-up` собирает образы и скачивает веса bge-m3 (~2,3 ГБ), поэтому дольше обычного.
+Первый `make dev-up` собирает образы (воркер с LibreOffice и Tesseract — ~1 ГБ) и скачивает веса
+bge-m3 (~2,3 ГБ), поэтому дольше обычного. Разбор вложений и создание файлов идут в сервисе `worker`
+(логи — `make dev-logs S=worker`, самопроверка — `make test-worker`).
 Файл `deploy/compose/.env` создаётся из `.env.example` автоматически.
 
 | Что | Адрес |
