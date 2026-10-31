@@ -52,6 +52,7 @@ class Scope:
     personal_kb_ids: tuple[UUID, ...] = ()
     attachment_ids: tuple[UUID, ...] = ()  # вложения текущего чата → attachment_chunks
     kb_names: dict[str, str] = field(default_factory=dict)
+    kb_collection: str = KB_COLLECTION  # другая коллекция — только для eval/rag
 
     def filters(self) -> list[tuple[str, models.Filter]]:
         def any_of(key: str, values: Sequence[UUID]) -> models.FieldCondition:
@@ -61,7 +62,7 @@ class Scope:
 
         result: list[tuple[str, models.Filter]] = []
         if self.kb_ids:
-            result.append((KB_COLLECTION, models.Filter(must=[any_of("kb_id", self.kb_ids)])))
+            result.append((self.kb_collection, models.Filter(must=[any_of("kb_id", self.kb_ids)])))
         if self.owner_id is not None and self.personal_kb_ids:
             owner = models.FieldCondition(
                 key="owner_id", match=models.MatchValue(value=str(self.owner_id))
