@@ -1,10 +1,14 @@
-import { Bot, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { Bot, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Outlet } from "react-router";
+import { Link, Outlet, useMatch, useNavigate } from "react-router";
 import { create } from "zustand";
 
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/features/auth/UserMenu";
+import { useChat } from "@/features/chat/api";
+import { ChatSidebar } from "@/features/sidebar/ChatSidebar";
+import { SearchDialog } from "@/features/sidebar/SearchDialog";
 import { ApiStatus } from "@/features/system/ApiStatus";
 import { cn } from "@/lib/utils";
 
@@ -20,11 +24,44 @@ const useSidebar = create<SidebarState>((set) => ({
   },
 }));
 
-// Каркас §7.1: слева боковая панель (новый чат, поиск, папки, чаты; внизу меню пользователя),
-// справа — чат. На этапе 0 — только структура; содержимое появится на этапах 1–2.
+/** Горячие клавиши (§7.10): Ctrl+K — поиск, Ctrl+Shift+O — новый чат. Esc — в странице чата. */
+function useHotkeys(openSearch: () => void) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const mod = event.ctrlKey || event.metaKey;
+      if (mod && !event.shiftKey && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        openSearch();
+      }
+      if (mod && event.shiftKey && event.code === "KeyO") {
+        event.preventDefault();
+        void navigate("/");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [navigate, openSearch]);
+}
+
+// Каркас §7.1: слева боковая панель (новый чат, поиск, папки, история; внизу меню пользователя),
+// справа — чат: шапка с названием, лента сообщений, поле ввода.
 export function AppLayout() {
   const { t } = useTranslation();
   const { collapsed, toggle } = useSidebar();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const match = useMatch("/c/:chatId");
+  const chat = useChat(match?.params.chatId);
+  useHotkeys(() => {
+    setSearchOpen(true);
+  });
+  const title = chat.data?.title ?? t("chat.newChatTitle");
+
+  useEffect(() => {
+    document.title = match ? `${title} — ${t("app.name")}` : t("app.name");
+  }, [match, title, t]);
 
   return (
     <div className="flex h-dvh bg-background text-foreground">
@@ -51,29 +88,38 @@ export function AppLayout() {
             </Link>
           )}
         </div>
-        <div className="p-2">
-          <Button className="w-full justify-start" disabled title={t("common.comingSoon")}>
-            <Plus />
-            {!collapsed && t("sidebar.newChat")}
-          </Button>
-        </div>
-        {!collapsed && (
-          <p className="px-4 py-2 text-sm text-muted-foreground">{t("sidebar.emptyHistory")}</p>
+        {collapsed ? (
+          <div className="flex-1" />
+        ) : (
+          <ChatSidebar
+            onSearch={() => {
+              setSearchOpen(true);
+            }}
+          />
         )}
-        <div className="mt-auto border-t border-border p-2">
+        <div className="border-t border-border p-2">
           <UserMenu collapsed={collapsed} />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between gap-4 border-b border-border px-4">
-          <span className="truncate font-medium">{t("chat.newChatTitle")}</span>
+        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-4">
+          <span className="truncate font-medium" data-testid="chat-title">
+            {title}
+          </span>
           <ApiStatus />
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main className="min-h-0 flex-1 overflow-hidden">
           <Outlet />
         </main>
       </div>
+      {searchOpen && (
+        <SearchDialog
+          onClose={() => {
+            setSearchOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

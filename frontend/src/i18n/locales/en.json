@@ -1,5 +1,7 @@
 {
-  "app": { "name": "AI Assistant" },
+  "app": {
+    "name": "AI Assistant"
+  },
   "common": {
     "comingSoon": "Coming in later stages",
     "loading": "Loading…",
@@ -8,16 +10,45 @@
     "loadMore": "Load more",
     "nothingFound": "Nothing found",
     "yes": "yes",
-    "no": "no"
+    "no": "no",
+    "cancel": "Cancel"
   },
   "sidebar": {
     "label": "Sidebar",
     "expand": "Expand sidebar",
     "collapse": "Collapse sidebar",
     "newChat": "New chat",
-    "emptyHistory": "Your chat history will appear here"
+    "emptyHistory": "Your chat history will appear here",
+    "search": "Search",
+    "folders": "Folders",
+    "newFolder": "New folder",
+    "folderName": "Folder name",
+    "renameFolder": "Rename folder",
+    "deleteFolder": "Delete folder",
+    "deleteFolderQuestion": "What to do with the folder's chats?",
+    "deleteFolderMove": "Move chats to the main list",
+    "deleteFolderWithChats": "Delete the folder with its chats",
+    "emptyFolder": "Empty — drag a chat here",
+    "chatMenu": "Chat actions",
+    "rename": "Rename",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "moveToFolder": "Move to folder",
+    "noFolder": "No folder",
+    "delete": "Delete",
+    "confirmDelete": "Really delete?",
+    "groups": {
+      "pinned": "Pinned",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Previous 7 days",
+      "month": "Previous 30 days"
+    }
   },
-  "chat": { "newChatTitle": "New chat" },
+  "chat": {
+    "newChatTitle": "New chat",
+    "notFound": "Chat not found or deleted"
+  },
   "home": {
     "greeting": {
       "morning": "Good morning",
@@ -27,7 +58,13 @@
     },
     "greetingWithName": "{{greeting}}, {{name}}!",
     "subtitle": "Corporate AI assistant: answers from company documents, files and data.",
-    "stagePlaceholder": "Sign-in and profile are ready. Chat and scenarios come next."
+    "stagePlaceholder": "Sign-in and profile are ready. Chat and scenarios come next.",
+    "examples": {
+      "letter": "Draft a formal letter to a partner about a delivery delay",
+      "summary": "Summarize the text: key points and deadlines",
+      "excel": "How do I sum by condition from another sheet in Excel?",
+      "explain": "Explain VAT in simple words and how to calculate it"
+    }
   },
   "theme": {
     "label": "Color theme",
@@ -81,7 +118,10 @@
     "formal": "Formal, without a name",
     "formalPreview": "formal, without a name"
   },
-  "roleSource": { "ad": "from AD", "manual": "granted manually" },
+  "roleSource": {
+    "ad": "from AD",
+    "manual": "granted manually"
+  },
   "admin": {
     "title": "Admin",
     "back": "Back to chat",
@@ -175,5 +215,65 @@
     "session.revoke": "Session ended",
     "ad.diagnostics": "AD diagnostics"
   },
-  "notFound": { "title": "Page not found", "home": "Go home" }
+  "notFound": {
+    "title": "Page not found",
+    "home": "Go home"
+  },
+  "composer": {
+    "placeholder": "Ask anything…",
+    "send": "Send",
+    "stop": "Stop (Esc)",
+    "thinking": "Think"
+  },
+  "message": {
+    "reasoning": "Reasoning",
+    "thinkingNow": "Thinking…",
+    "thoughtFor": "Reasoning · {{seconds}} s",
+    "generating": "Generating",
+    "copy": "Copy",
+    "regenerate": "Regenerate",
+    "like": "Like",
+    "dislike": "Dislike",
+    "retry": "Retry",
+    "stopped": "Answer stopped",
+    "interrupted": "Generation interrupted",
+    "prevVersion": "Previous version",
+    "nextVersion": "Next version",
+    "info": {
+      "model": "Model: {{model}}",
+      "time": "time: {{seconds}} s",
+      "tokens": "tokens: {{prompt}} + {{completion}}"
+    },
+    "errors": {
+      "unknown": "Failed to get an answer",
+      "model_unavailable": "The model is unavailable. Try again.",
+      "model_timeout": "The model did not respond in time",
+      "model_http_500": "The model returned an error",
+      "model_http_429": "The model is busy, try again in a minute",
+      "internal_error": "Failed to get an answer",
+      "interrupted": "Generation interrupted"
+    }
+  },
+  "markdown": {
+    "code": "code",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "feedback": {
+    "title": "What's wrong with the answer?",
+    "comment": "Comment (optional)",
+    "send": "Send",
+    "reasons": {
+      "inaccurate": "Inaccurate",
+      "off_topic": "Off topic",
+      "code_error": "Code error",
+      "incomplete": "Incomplete",
+      "other": "Other"
+    }
+  },
+  "search": {
+    "title": "Search chats",
+    "placeholder": "Search titles and messages",
+    "results": "Search results"
+  }
 }

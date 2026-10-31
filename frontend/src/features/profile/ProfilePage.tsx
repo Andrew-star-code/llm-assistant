@@ -44,7 +44,7 @@ export function ProfilePage() {
   const selected = choice ?? p.address_form;
 
   return (
-    <section className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
+    <section className="mx-auto flex h-full max-w-3xl flex-col gap-8 overflow-y-auto px-6 py-10">
       <header className="flex items-center gap-4">
         <Avatar
           name={p.full_name}

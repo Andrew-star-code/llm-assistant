@@ -11,6 +11,7 @@ import { AppLayout } from "@/app/layout/AppLayout";
 import { NotFoundPage } from "@/app/layout/NotFoundPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { ChatPage } from "@/features/chat/ChatPage";
 import { HomePage } from "@/features/home/HomePage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
 
@@ -26,6 +27,7 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { index: true, element: <HomePage /> },
+      { path: "c/:chatId", element: <ChatPage /> },
       { path: "profile", element: <ProfilePage /> },
     ],
   },
