@@ -272,8 +272,8 @@ def test_find_cites_knowledge_fragment() -> None:
     text = resolve({"messages": [{"role": "system", "content": system}, user]}, 0).steps[0].text
     assert text == "Нашёл в документе: Договор № 17-42/Б подписан. [2]"
     attachment = {"role": "user", "content": "[[scenario:find]] «Строка вложения»"}
-    text = resolve({"messages": [{"role": "system", "content": system}, attachment]}, 0)
-    assert text.steps[0].text == "Нашёл в документе: Строка вложения про договор."
+    plain = resolve({"messages": [{"role": "system", "content": system}, attachment]}, 0)
+    assert plain.steps[0].text == "Нашёл в документе: Строка вложения про договор."
 
 
 def test_rerank_matches_word_forms() -> None:
