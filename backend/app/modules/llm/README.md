@@ -1,15 +1,25 @@
 # modules/llm
 
-> Статус: каркас. Реализация — §8.2, этап 2.
+> Статус: реализовано на этапе 2 (§8.2, §8.3).
 
-**Назначение:** Реестр моделей по ролям (`config/models.yaml`), клиент AsyncOpenAI, режимы thinking, токенизация для бюджета контекста.
+**Назначение:** доступ к моделям по ролям (`chat`, `coder`, `utility`, `guard`, `embed`, `rerank`)
+из `config/models.yaml` — код не знает имён моделей.
 
-**Публичный интерфейс:** `ModelRegistry.get(role)`, `LLMClient.stream(...)`, `count_tokens(...)`.
+**Публичный интерфейс:**
 
-**Зависит от:** vLLM / fake-llm (OpenAI-совместимый API).
+* `registry.ModelRegistry` — `get(role)`, `client(role)` (кэшируемый `AsyncOpenAI`),
+  `thinking_available(role)`, `plan(role, thinking=…)` → параметры запроса с учётом режима thinking
+  и сэмплинга: `chat_template_kwarg` → `extra_body.chat_template_kwargs`, `reasoning_effort`,
+  `separate_model` → другая роль, `none`. Расширения vLLM (`top_k`, `min_p`, …) — в `extra_body`.
+* `tokens.TokenCounter` — токенизатор модели (`models.<роль>.tokenizer`, локальный tokenizer.json);
+  без него — оценка по длине текста.
+* `stream.parse_stream` — дельты размышлений (`reasoning` и `reasoning_content`), ответа, `usage`,
+  `finish_reason`.
 
-**Точки расширения:** Новая модель — `config/models.yaml` + `docs/runbooks/models.md`.
+**Зависит от:** OpenAI-совместимые эндпоинты (vLLM в проде, fake-llm в разработке).
 
-**Данные:** —
+**Точки расширения:** новая модель или роль — [add-model.md](../../../../docs/guides/add-model.md).
 
-**Тесты:** `backend/tests/unit/llm/`, `backend/tests/integration/llm/`; запуск — `make test`.
+**Данные:** нет.
+
+**Тесты:** `backend/tests/unit/test_chat_units.py` (режимы thinking, разбор стрима, бюджет).

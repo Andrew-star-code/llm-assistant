@@ -78,6 +78,7 @@ class MessageOut(BaseModel):
     completion_tokens: int | None
     reasoning_tokens: int | None
     ttft_ms: int | None
+    reasoning_ms: int | None = Field(None, description="Время размышления, мс (§7.4).")
     latency_ms: int | None
     error: MessageError | None
     created_at: datetime

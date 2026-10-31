@@ -3047,6 +3047,18 @@
             ],
             "title": "Ttft Ms"
           },
+          "reasoning_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Ms",
+            "description": "Время размышления, мс (§7.4)."
+          },
           "latency_ms": {
             "anyOf": [
               {

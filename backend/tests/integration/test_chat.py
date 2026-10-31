@@ -160,8 +160,8 @@ async def test_model_error_then_retry(
         "code": "model_http_500",
         "message": "Модель вернула ошибку",
     }
-    # Заголовок не генерируется по упавшему ответу.
-    assert detail["title"] is None
+    # По упавшему ответу модель заголовок не придумывает — берутся первые слова вопроса.
+    assert detail["title"] == "[[scenario:error_500]] упади"
 
 
 async def test_thinking_mode(
@@ -181,6 +181,7 @@ async def test_thinking_mode(
     assert detail["thinking_enabled"] is True
     assert detail["messages"][-1]["reasoning"] == reasoning
     assert detail["messages"][-1]["reasoning_tokens"] > 0
+    assert detail["messages"][-1]["reasoning_ms"] is not None
 
 
 async def test_busy_chat_rejects_second_message(

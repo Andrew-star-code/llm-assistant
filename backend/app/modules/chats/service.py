@@ -74,6 +74,7 @@ def message_out(message: Message, feedback: Feedback | None = None) -> MessageOu
         completion_tokens=message.completion_tokens,
         reasoning_tokens=message.reasoning_tokens,
         ttft_ms=message.ttft_ms,
+        reasoning_ms=(message.trace or {}).get("reasoning_ms"),
         latency_ms=message.latency_ms,
         error=error,
         created_at=message.created_at,

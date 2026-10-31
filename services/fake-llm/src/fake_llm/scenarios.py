@@ -137,6 +137,9 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
         )
     if name == "markdown":
         return Scenario(name, [Step("content", MARKDOWN_SAMPLE)])
+    if name == "markdown_slow":
+        # То же форматирование по словам с паузой — для проверки рендера во время стрима.
+        return Scenario(name, [Step("content", MARKDOWN_SAMPLE)], delay_s=slow_delay_s / 3)
     if name == "tool_call_search":
         if last.get("role") == "tool":
             result = _text_of(last)
@@ -185,6 +188,7 @@ SCENARIO_NAMES = (
     "default",
     "thinking",
     "markdown",
+    "markdown_slow",
     "tool_call_search",
     "error_500",
     "disconnect",

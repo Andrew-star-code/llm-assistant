@@ -1,15 +1,32 @@
 # modules/chats
 
-> Статус: каркас. Реализация — §7.2, §8.6, этап 2.
+> Статус: реализовано на этапе 2 (§7.2, §8.6, §14).
 
-**Назначение:** Чаты, папки, сообщения деревом (`parent_id`, `active_leaf_id`), закрепление, мягкое удаление, поиск.
+**Назначение:** чаты, папки и сообщения. Сообщения образуют дерево через `parent_id`; у чата хранится
+`active_leaf_id` — лист активной ветки (перегенерация создаёт сестринский ответ, §8.6).
 
-**Публичный интерфейс:** `/api/chats/*`, `/api/folders/*`, `/api/search`.
+**Публичный интерфейс:**
 
-**Зависит от:** `users`.
+| Эндпоинт | Назначение |
+| --- | --- |
+| `GET /api/chats?pinned&folder_id&cursor&limit` | Чаты с сообщениями, свежие сверху, курсор по `last_message_at` |
+| `GET /api/chats/search?q=` | Поиск по названиям и тексту сообщений: FTS (`russian`) + подстрока (`pg_trgm`), фрагменты с отмеченными совпадениями |
+| `POST /api/chats` | Пустой чат (в списке — после первого сообщения) |
+| `GET /api/chats/{id}` | Чат и все его сообщения (дерево) с оценками пользователя |
+| `PATCH /api/chats/{id}` | Название, закрепление, папка, активная ветка, режим thinking |
+| `DELETE /api/chats/{id}` | Мягкое удаление (`deleted_at`): у пользователя пропадает, админ видит (этап 6) |
+| `GET/POST /api/folders`, `PATCH/DELETE /api/folders/{id}?chats=move\|delete` | Папки без вложенности |
 
-**Точки расширения:** —
+Сервисы: `service.get_chat` / `get_message` / `get_folder` — **единственный способ** достать объект
+пользователя: чужой или удалённый → 404 (защита от IDOR, §18.2); `service.branch` — активная ветка.
 
-**Данные:** `chats`, `folders`, `messages`, `message_sources`, `tool_calls`.
+**Зависит от:** `auth` (текущий пользователь), `feedback` (оценки в выдаче сообщений).
 
-**Тесты:** `backend/tests/unit/chats/`, `backend/tests/integration/chats/`; запуск — `make test`.
+**Точки расширения:** вложения к сообщениям — этап 3; сценарий чата (`scenario_id`) — этап 5;
+просмотр и выгрузка чужих чатов админом — этап 6 (через `audit`).
+
+**Данные:** `folders`, `chats`, `messages` (индексы: `ix_chats_user_last_message`, GIN по
+`search_vector` и по `content` с `gin_trgm_ops`).
+
+**Тесты:** `backend/tests/integration/test_chat.py` (удаление, поиск, папки, IDOR),
+`frontend/tests/unit/chatUtils.test.ts`, `frontend/tests/e2e/chat.spec.ts`.

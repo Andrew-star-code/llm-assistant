@@ -68,6 +68,8 @@ class GenerationResult:
     finish_reason: str | None = None
     usage: Usage | None = None
     ttft_ms: int | None = None
+    reasoning_started: float | None = None
+    reasoning_ms: int | None = None
     error: dict[str, Any] | None = None
 
 
@@ -261,8 +263,15 @@ class GenerationManager:
             await writer.emit("error", result.error)
         finally:
             keepalive.cancel()
+        # Заголовок — служебной моделью по первому успешному ответу; если ответ остановлен или
+        # упал — сразу из первых слов вопроса, чтобы чат не висел в истории безымянным.
         title_for = question if is_first_answer and result.status == "completed" else None
-        await self._finish(message_id, result, trace, started, writer, title_for=title_for)
+        fallback = (
+            fallback_title(question) if is_first_answer and not title_for and question else None
+        )
+        await self._finish(
+            message_id, result, trace, started, writer, title_for=title_for, title_now=fallback
+        )
 
     async def _stream(
         self,
@@ -285,8 +294,18 @@ class GenerationManager:
         try:
             async for item in parse_stream(stream):
                 if isinstance(item, Delta):
+                    now = time.monotonic()
                     if result.ttft_ms is None:
-                        result.ttft_ms = int((time.monotonic() - started) * 1000)
+                        result.ttft_ms = int((now - started) * 1000)
+                    if item.kind == "reasoning" and result.reasoning_started is None:
+                        result.reasoning_started = now
+                    if (
+                        item.kind == "content"
+                        and result.reasoning_started is not None
+                        and result.reasoning_ms is None
+                    ):
+                        # Время размышления — от первой дельты размышлений до первой дельты ответа.
+                        result.reasoning_ms = int((now - result.reasoning_started) * 1000)
                     (result.content if item.kind == "content" else result.reasoning).append(
                         item.text
                     )
@@ -333,11 +352,12 @@ class GenerationManager:
         writer: EventWriter,
         *,
         title_for: str | None,
+        title_now: str | None = None,
     ) -> None:
         """Сохраняет ответ в БД и закрывает поток событий. Вызывается ровно один раз."""
         latency_ms = int((time.monotonic() - started) * 1000)
         usage = result.usage
-        title = await self._generate_title(title_for) if title_for else None
+        title = await self._generate_title(title_for) if title_for else title_now
         chat_id: UUID | None = None
         try:
             async with self.sessions() as db:
@@ -354,6 +374,12 @@ class GenerationManager:
                         if result.error
                         else None
                     )
+                    if result.reasoning_started is not None and result.reasoning_ms is None:
+                        result.reasoning_ms = int(
+                            (time.monotonic() - result.reasoning_started) * 1000
+                        )
+                    if result.reasoning_ms is not None:
+                        trace["reasoning_ms"] = result.reasoning_ms
                     message.trace = {**(message.trace or {}), **trace}
                     if usage:
                         message.prompt_tokens = usage.prompt_tokens

@@ -1050,6 +1050,11 @@ export interface components {
       reasoning_tokens: number | null;
       /** Ttft Ms */
       ttft_ms: number | null;
+      /**
+       * Reasoning Ms
+       * @description Время размышления, мс (§7.4).
+       */
+      reasoning_ms?: number | null;
       /** Latency Ms */
       latency_ms: number | null;
       error: components["schemas"]["MessageError"] | null;
