@@ -423,6 +423,104 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/files/limits": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Limits */
+    get: operations["getFileLimits"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload
+     * @description Загрузка вложения: проверки (§9.3) и разбор в воркере; статус — ``GET /api/files/{id}``.
+     */
+    post: operations["uploadFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get File */
+    get: operations["getFile"];
+    put?: never;
+    post?: never;
+    /**
+     * Delete
+     * @description Удалить загрузку, ещё не отправленную в сообщении (крестик на чипе файла).
+     */
+    delete: operations["deleteFile"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/files/{file_id}/content": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Content
+     * @description Оригинал. ``download=false`` — показать в браузере (только PDF и текст как text/plain).
+     */
+    get: operations["downloadFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/files/{file_id}/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Preview
+     * @description PDF-превью (§7.7): PDF — сам файл, Office — PDF, подготовленный воркером в LibreOffice.
+     */
+    get: operations["previewFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/users": {
     parameters: {
       query?: never;
@@ -688,6 +786,11 @@ export interface components {
        */
       until?: string | null;
     };
+    /** Body_uploadFile */
+    Body_uploadFile: {
+      /** File */
+      file: string;
+    };
     /** ChatCreate */
     ChatCreate: {
       /** Folder Id */
@@ -883,6 +986,56 @@ export interface components {
       /** Comment */
       comment: string | null;
     };
+    /** FileLimits */
+    FileLimits: {
+      /** Max File Mb */
+      max_file_mb: number;
+      /** Max Files Per Message */
+      max_files_per_message: number;
+      /** Accept */
+      accept: string[];
+    };
+    /** FileOut */
+    FileOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "upload" | "generated";
+      /** Filename */
+      filename: string;
+      /** Mime */
+      mime: string;
+      /** File Type */
+      file_type: string;
+      /** Size */
+      size: number;
+      /**
+       * Parse Status
+       * @enum {string}
+       */
+      parse_status: "pending" | "processing" | "ready" | "error";
+      /** Parse Error */
+      parse_error: string | null;
+      /** Pages */
+      pages: number | null;
+      /** Has Preview */
+      has_preview: boolean;
+      /** Chat Id */
+      chat_id: string | null;
+      /** Message Id */
+      message_id: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** FolderIn */
     FolderIn: {
       /** Name */
@@ -1064,6 +1217,13 @@ export interface components {
        */
       created_at: string;
       feedback?: components["schemas"]["FeedbackOut"] | null;
+      /**
+       * Files
+       * @description Вложения вопроса или файлы, созданные в ответе.
+       */
+      files?: components["schemas"]["FileOut"][];
+      /** Tools */
+      tools?: components["schemas"]["ToolStep"][];
     };
     /** Notice */
     Notice: {
@@ -1286,6 +1446,11 @@ export interface components {
        * @description Режим размышлений; null — как в чате.
        */
       thinking?: boolean | null;
+      /**
+       * Attachment Ids
+       * @description Загруженные и прочитанные файлы (POST /files).
+       */
+      attachment_ids?: string[];
     };
     /** SendMessageOut */
     SendMessageOut: {
@@ -1329,6 +1494,32 @@ export interface components {
       ok: boolean;
       /** Error */
       error?: string | null;
+    };
+    /**
+     * ToolStep
+     * @description Шаг цикла инструментов в истории (§7.4): скрытые инструменты сюда не попадают (§9.6).
+     */
+    ToolStep: {
+      /** Call Id */
+      call_id: string;
+      /** Tool */
+      tool: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "ok" | "error" | "timeout";
+      /**
+       * Label
+       * @description i18n-ключ строки статуса, например tools.read_document.
+       */
+      label: string;
+      /** Params */
+      params?: {
+        [key: string]: string;
+      };
+      /** Duration Ms */
+      duration_ms: number;
     };
     /** UserCard */
     UserCard: {
@@ -2220,6 +2411,190 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getFileLimits: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileLimits"];
+        };
+      };
+    };
+  };
+  uploadFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_uploadFile"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FileOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  deleteFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  downloadFile: {
+    parameters: {
+      query?: {
+        download?: boolean;
+      };
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  previewFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": unknown;
+        };
+      };
+      /** @description Превью нет */
+      404: {
         headers: {
           [name: string]: unknown;
         };

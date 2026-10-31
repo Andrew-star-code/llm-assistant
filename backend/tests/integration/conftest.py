@@ -38,6 +38,9 @@ POSTGRES_IMAGE = (
 REDIS_IMAGE = (
     "redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f"
 )
+QDRANT_IMAGE = (
+    "qdrant/qdrant:v1.19.2@sha256:b7b0444c4c351c970b98e90a6f89c2ee4287c65b44e52b4cb503fa5b2aa927ad"
+)
 MOCK_AD_IMAGE = "ai-assistant/mock-ad:test"
 MOCK_AD_SVC_PASSWORD = "Svc-Test-Passw0rd!"
 USER_PASSWORD = "Passw0rd!"
@@ -86,6 +89,25 @@ def infra() -> Iterator[Infra]:
         get_settings.cache_clear()
         redis_url = f"redis://{rd.get_container_host_ip()}:{rd.get_exposed_port(6379)}/0"
         yield Infra(database_url=url, redis_url=redis_url)
+
+
+@pytest.fixture(scope="session")
+def qdrant_url() -> Iterator[str]:
+    """Qdrant для поиска по вложениям; стартует только для тестов, которым он нужен."""
+    container = DockerContainer(QDRANT_IMAGE).with_exposed_ports(6333)
+    with container:
+        url = f"http://{container.get_container_host_ip()}:{container.get_exposed_port(6333)}"
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            try:
+                if httpx.get(f"{url}/readyz", timeout=2).status_code == 200:
+                    break
+            except httpx.HTTPError:
+                pass
+            time.sleep(0.5)
+        else:
+            raise AssertionError("Qdrant не поднялся за 60 с")
+        yield url
 
 
 @dataclass(frozen=True)
@@ -277,13 +299,15 @@ def fake_llm_url() -> Iterator[str]:
 def chat_settings(infra: Infra, tmp_path: Path, fake_llm_url: str, **overrides: Any) -> Settings:
     models = {
         role: {"base_url": fake_llm_url, "model": f"fake-{role}"}
-        for role in ("chat", "utility", "guard", "rerank")
+        for role in ("chat", "utility", "guard", "rerank", "embed")
     }
     return make_settings(
         infra,
         tmp_path,
         models=models,
         chat={"heartbeat_seconds": 1, "stream_ttl_seconds": 60},
+        # Воркер в тестах — та же функция в потоке api (без Celery и брокера).
+        worker={"eager": True},
         **overrides,
     )
 

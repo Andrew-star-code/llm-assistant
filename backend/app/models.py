@@ -5,8 +5,10 @@ from app.modules.audit.models import AuditLog
 from app.modules.auth.models import UserSession
 from app.modules.chats.models import Chat, Folder, Message
 from app.modules.feedback.models import Feedback
+from app.modules.files.models import File
 from app.modules.rbac.models import Permission, Role, RolePermission, UserRole
 from app.modules.security.models import LoginEvent
+from app.modules.tools.models import ToolCall
 from app.modules.users.models import User
 
 __all__ = [
@@ -14,12 +16,14 @@ __all__ = [
     "AuditLog",
     "Chat",
     "Feedback",
+    "File",
     "Folder",
     "LoginEvent",
     "Message",
     "Permission",
     "Role",
     "RolePermission",
+    "ToolCall",
     "User",
     "UserRole",
     "UserSession",

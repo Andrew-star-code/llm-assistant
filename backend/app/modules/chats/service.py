@@ -22,8 +22,13 @@ from app.modules.chats.schemas import (
     MessageOut,
     SearchFragment,
     SearchHit,
+    ToolStep,
 )
 from app.modules.feedback.models import Feedback
+from app.modules.files.models import File
+from app.modules.files.schemas import FileOut
+from app.modules.files.service import file_out
+from app.modules.tools.models import ToolCall
 
 # Маркеры подсветки в ts_headline: управляющие символы не встречаются в тексте пользователя.
 _START, _STOP = "\x02", "\x03"
@@ -52,7 +57,13 @@ async def get_folder(db: AsyncSession, user_id: UUID, folder_id: UUID) -> Folder
     return folder
 
 
-def message_out(message: Message, feedback: Feedback | None = None) -> MessageOut:
+def message_out(
+    message: Message,
+    feedback: Feedback | None = None,
+    *,
+    files: Sequence[FileOut] = (),
+    tools: Sequence[ToolStep] = (),
+) -> MessageOut:
     error = None
     if message.error:
         error = MessageError(
@@ -79,6 +90,19 @@ def message_out(message: Message, feedback: Feedback | None = None) -> MessageOu
         error=error,
         created_at=message.created_at,
         feedback=(FeedbackOut.model_validate(feedback, from_attributes=True) if feedback else None),
+        files=list(files),
+        tools=list(tools),
+    )
+
+
+def tool_step(call: ToolCall) -> ToolStep:
+    return ToolStep(
+        call_id=call.call_id,
+        tool=call.tool,
+        status=call.status,
+        label=call.label,
+        params=call.label_params or {},
+        duration_ms=call.duration_ms,
     )
 
 
@@ -89,7 +113,26 @@ async def chat_messages(db: AsyncSession, chat_id: UUID, user_id: UUID) -> list[
         .where(Message.chat_id == chat_id, Message.deleted_at.is_(None))
         .order_by(Message.created_at, Message.id)
     )
-    return [message_out(m, f) for m, f in rows.all()]
+    files: dict[UUID, list[FileOut]] = {}
+    for row in await db.scalars(
+        select(File)
+        .where(File.chat_id == chat_id, File.deleted_at.is_(None), File.message_id.is_not(None))
+        .order_by(File.created_at)
+    ):
+        files.setdefault(row.message_id, []).append(file_out(row))  # type: ignore[arg-type]
+    tools: dict[UUID, list[ToolStep]] = {}
+    # Скрытые инструменты не уходят в пользовательский API (§9.6).
+    for call in await db.scalars(
+        select(ToolCall)
+        .join(Message, Message.id == ToolCall.message_id)
+        .where(Message.chat_id == chat_id, ToolCall.visibility == "visible")
+        .order_by(ToolCall.iteration, ToolCall.created_at)
+    ):
+        tools.setdefault(call.message_id, []).append(tool_step(call))
+    return [
+        message_out(m, f, files=files.get(m.id, ()), tools=tools.get(m.id, ()))
+        for m, f in rows.all()
+    ]
 
 
 def branch(messages: Sequence[Message], leaf_id: UUID | None) -> list[Message]:

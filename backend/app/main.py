@@ -37,11 +37,13 @@ from app.modules.completions.generation import GenerationManager
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.router import router as completions_router
 from app.modules.feedback.router import router as feedback_router
+from app.modules.files.router import router as files_router
 from app.modules.llm.registry import ModelRegistry
 from app.modules.rbac.service import ensure_system_rbac
 from app.modules.security.bruteforce import BruteforceGuard
 from app.modules.users.router import router as profile_router
 from app.modules.users.sync import run_periodic_sync
+from app.workers.dispatch import Dispatcher
 
 log = structlog.stdlib.get_logger("app")
 
@@ -76,12 +78,15 @@ def init_services(app: FastAPI) -> None:
     if "dev" in settings.auth.providers:
         providers["dev"] = DevProvider(settings.auth.dev_users)
     app.state.models = ModelRegistry(settings)
+    app.state.dispatcher = Dispatcher(settings)
     app.state.generations = GenerationManager(
         settings=settings,
         redis=redis_client,
         sessions=app.state.db_sessions,
         registry=app.state.models,
         renderer=PromptRenderer(settings.config_dir / "prompts"),
+        storage=app.state.storage,
+        dispatcher=app.state.dispatcher,
     )
     app.state.login_service = LoginService(
         settings=settings,
@@ -179,6 +184,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(chats_router)
     api.include_router(completions_router)
     api.include_router(feedback_router)
+    api.include_router(files_router)
     api.include_router(admin_router)
     app.include_router(api)
 

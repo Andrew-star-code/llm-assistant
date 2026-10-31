@@ -78,6 +78,26 @@
 | `chat.stream_ttl_seconds` | int | 600 | `APP_CHAT__STREAM_TTL_SECONDS` | Сколько поток генерации хранится в Redis после завершения (§8.5). |
 | `chat.heartbeat_seconds` | int | 15 | `APP_CHAT__HEARTBEAT_SECONDS` | Интервал heartbeat в SSE, с. |
 | `chat.title_timeout_seconds` | float | 15 | `APP_CHAT__TITLE_TIMEOUT_SECONDS` | Тайм-аут генерации заголовка, с. |
+| `files.max_file_mb` | int | 50 | `APP_FILES__MAX_FILE_MB` | Максимальный размер файла, МБ. |
+| `files.max_files_per_message` | int | 10 | `APP_FILES__MAX_FILES_PER_MESSAGE` | Сколько файлов можно приложить. |
+| `files.max_unpacked_mb` | int | 300 | `APP_FILES__MAX_UNPACKED_MB` | Лимит распакованного объёма DOCX/XLSX/PPTX/ODF (защита от zip-бомб). |
+| `files.max_compression_ratio` | int | 100 | `APP_FILES__MAX_COMPRESSION_RATIO` | Максимальный коэффициент сжатия записи архива. |
+| `files.max_archive_entries` | int | 5000 | `APP_FILES__MAX_ARCHIVE_ENTRIES` | Максимум файлов внутри архива. |
+| `files.max_pages` | int | 1000 | `APP_FILES__MAX_PAGES` | Лимит страниц разбираемого документа. |
+| `files.max_text_chars` | int | 5000000 | `APP_FILES__MAX_TEXT_CHARS` | Лимит извлечённого текста; дальше документ обрезается. |
+| `files.parse_timeout_seconds` | int | 600 | `APP_FILES__PARSE_TIMEOUT_SECONDS` | Тайм-аут разбора одного файла, с. |
+| `files.convert_timeout_seconds` | int | 180 | `APP_FILES__CONVERT_TIMEOUT_SECONDS` | Тайм-аут одной конвертации LibreOffice, с. |
+| `files.ocr_languages` | str | `rus+eng` | `APP_FILES__OCR_LANGUAGES` | Языки Tesseract для сканов. |
+| `files.ocr_min_chars_per_page` | int | 30 | `APP_FILES__OCR_MIN_CHARS_PER_PAGE` | Меньше символов на странице PDF — считаем её сканом и делаем OCR. |
+| `files.full_text_budget_share` | float | 0.3 | `APP_FILES__FULL_TEXT_BUDGET_SHARE` | Вложения целиком в промпт, если занимают меньше этой доли. |
+| `files.outline_preview_chars` | int | 6000 | `APP_FILES__OUTLINE_PREVIEW_CHARS` | Сколько первых символов большого документа идёт в промпт. |
+| `files.docling_enabled` | bool | false | `APP_FILES__DOCLING_ENABLED` | Разбирать документы docling (модели — локально, этап 10). |
+| `tools.enabled` | list[str] \| null | null | `APP_TOOLS__ENABLED` | Включённые инструменты; null — все зарегистрированные (§13.2 — этап 6). |
+| `tools.max_iterations` | int | 8 | `APP_TOOLS__MAX_ITERATIONS` | Максимум итераций цикла инструментов. |
+| `tools.result_max_chars` | int | 20000 | `APP_TOOLS__RESULT_MAX_CHARS` | Результат инструмента обрезается до этой длины для модели. |
+| `worker.broker_db` | int | 1 | `APP_WORKER__BROKER_DB` | Номер БД Redis для брокера Celery. |
+| `worker.task_timeout_seconds` | int | 300 | `APP_WORKER__TASK_TIMEOUT_SECONDS` | Сколько api ждёт задачу воркера (генерация файла), с. |
+| `worker.eager` | bool | false | `APP_WORKER__EAGER` | Выполнять задачи в процессе api (только тесты). |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`

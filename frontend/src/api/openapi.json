@@ -1090,6 +1090,240 @@
         }
       }
     },
+    "/api/files/limits": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Limits",
+        "operationId": "getFileLimits",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileLimits"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Upload",
+        "description": "Загрузка вложения: проверки (§9.3) и разбор в воркере; статус — ``GET /api/files/{id}``.",
+        "operationId": "uploadFile",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadFile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/{file_id}": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Get File",
+        "operationId": "getFile",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Delete",
+        "description": "Удалить загрузку, ещё не отправленную в сообщении (крестик на чипе файла).",
+        "operationId": "deleteFile",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/{file_id}/content": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Content",
+        "description": "Оригинал. ``download=false`` — показать в браузере (только PDF и текст как text/plain).",
+        "operationId": "downloadFile",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Download"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/{file_id}/preview": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Preview",
+        "description": "PDF-превью (§7.7): PDF — сам файл, Office — PDF, подготовленный воркером в LibreOffice.",
+        "operationId": "previewFile",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "404": {
+            "description": "Превью нет"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/users": {
       "get": {
         "tags": [
@@ -1888,6 +2122,20 @@
         ],
         "title": "BlockIn"
       },
+      "Body_uploadFile": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadFile"
+      },
       "ChatCreate": {
         "properties": {
           "folder_id": {
@@ -2566,6 +2814,147 @@
         ],
         "title": "FeedbackOut"
       },
+      "FileLimits": {
+        "properties": {
+          "max_file_mb": {
+            "type": "integer",
+            "title": "Max File Mb"
+          },
+          "max_files_per_message": {
+            "type": "integer",
+            "title": "Max Files Per Message"
+          },
+          "accept": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Accept"
+          }
+        },
+        "type": "object",
+        "required": [
+          "max_file_mb",
+          "max_files_per_message",
+          "accept"
+        ],
+        "title": "FileLimits"
+      },
+      "FileOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "generated"
+            ],
+            "title": "Kind"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime": {
+            "type": "string",
+            "title": "Mime"
+          },
+          "file_type": {
+            "type": "string",
+            "title": "File Type"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "parse_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "ready",
+              "error"
+            ],
+            "title": "Parse Status"
+          },
+          "parse_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parse Error"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages"
+          },
+          "has_preview": {
+            "type": "boolean",
+            "title": "Has Preview"
+          },
+          "chat_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Id"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "filename",
+          "mime",
+          "file_type",
+          "size",
+          "parse_status",
+          "parse_error",
+          "pages",
+          "has_preview",
+          "chat_id",
+          "message_id",
+          "created_at"
+        ],
+        "title": "FileOut"
+      },
       "FolderIn": {
         "properties": {
           "name": {
@@ -3094,6 +3483,21 @@
                 "type": "null"
               }
             ]
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileOut"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Вложения вопроса или файлы, созданные в ответе."
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolStep"
+            },
+            "type": "array",
+            "title": "Tools"
           }
         },
         "type": "object",
@@ -3821,6 +4225,15 @@
             ],
             "title": "Thinking",
             "description": "Режим размышлений; null — как в чате."
+          },
+          "attachment_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Attachment Ids",
+            "description": "Загруженные и прочитанные файлы (POST /files)."
           }
         },
         "type": "object",
@@ -3934,6 +4347,53 @@
           "ok"
         ],
         "title": "StepOut"
+      },
+      "ToolStep": {
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "title": "Call Id"
+          },
+          "tool": {
+            "type": "string",
+            "title": "Tool"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error",
+              "timeout"
+            ],
+            "title": "Status"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "i18n-ключ строки статуса, например tools.read_document."
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Params"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "call_id",
+          "tool",
+          "status",
+          "label",
+          "duration_ms"
+        ],
+        "title": "ToolStep",
+        "description": "Шаг цикла инструментов в истории (§7.4): скрытые инструменты сюда не попадают (§9.6)."
       },
       "UserCard": {
         "properties": {

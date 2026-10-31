@@ -307,6 +307,63 @@ class ChatSettings(_Section):
         return self
 
 
+class FilesSettings(_Section):
+    """Вложения и разбор документов (§7.3, §9.3)."""
+
+    max_file_mb: int = Field(50, gt=0, description="Максимальный размер файла, МБ.")
+    max_files_per_message: int = Field(10, gt=0, description="Сколько файлов можно приложить.")
+    max_unpacked_mb: int = Field(
+        300,
+        gt=0,
+        description="Лимит распакованного объёма DOCX/XLSX/PPTX/ODF (защита от zip-бомб).",
+    )
+    max_compression_ratio: int = Field(
+        100, gt=0, description="Максимальный коэффициент сжатия записи архива."
+    )
+    max_archive_entries: int = Field(5000, gt=0, description="Максимум файлов внутри архива.")
+    max_pages: int = Field(1000, gt=0, description="Лимит страниц разбираемого документа.")
+    max_text_chars: int = Field(
+        5_000_000, gt=0, description="Лимит извлечённого текста; дальше документ обрезается."
+    )
+    parse_timeout_seconds: int = Field(600, gt=0, description="Тайм-аут разбора одного файла, с.")
+    convert_timeout_seconds: int = Field(
+        180, gt=0, description="Тайм-аут одной конвертации LibreOffice, с."
+    )
+    ocr_languages: str = Field("rus+eng", description="Языки Tesseract для сканов.")
+    ocr_min_chars_per_page: int = Field(
+        30, ge=0, description="Меньше символов на странице PDF — считаем её сканом и делаем OCR."
+    )
+    full_text_budget_share: float = Field(
+        0.3, gt=0, le=1, description="Вложения целиком в промпт, если занимают меньше этой доли."
+    )
+    outline_preview_chars: int = Field(
+        6000, gt=0, description="Сколько первых символов большого документа идёт в промпт."
+    )
+    docling_enabled: bool = Field(
+        False, description="Разбирать документы docling (модели — локально, этап 10)."
+    )
+
+
+class ToolsSettings(_Section):
+    """Инструменты модели (§8.4, §9)."""
+
+    enabled: list[str] | None = Field(
+        None, description="Включённые инструменты; null — все зарегистрированные (§13.2 — этап 6)."
+    )
+    max_iterations: int = Field(8, gt=0, description="Максимум итераций цикла инструментов.")
+    result_max_chars: int = Field(
+        20_000, gt=0, description="Результат инструмента обрезается до этой длины для модели."
+    )
+
+
+class WorkerSettings(_Section):
+    broker_db: int = Field(1, ge=0, description="Номер БД Redis для брокера Celery.")
+    task_timeout_seconds: int = Field(
+        300, gt=0, description="Сколько api ждёт задачу воркера (генерация файла), с."
+    )
+    eager: bool = Field(False, description="Выполнять задачи в процессе api (только тесты).")
+
+
 class StorageSettings(_Section):
     root: Path = Field(
         Path("/srv/storage"), description="Каталог тома с файлами (фото, загрузки, документы)."
@@ -347,6 +404,9 @@ class Settings(BaseSettings):
     users: UsersSettings = Field(default_factory=UsersSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
+    files: FilesSettings = Field(default_factory=FilesSettings)
+    tools: ToolsSettings = Field(default_factory=ToolsSettings)
+    worker: WorkerSettings = Field(default_factory=WorkerSettings)
     models: dict[str, ModelEndpoint] = Field(
         default_factory=dict, description="Реестр моделей по ролям (config/models.yaml)."
     )

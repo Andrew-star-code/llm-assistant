@@ -31,7 +31,17 @@ class Finish:
     reason: str | None
 
 
-StreamItem = Delta | Usage | Finish
+@dataclass(frozen=True)
+class ToolCallDelta:
+    """Кусок вызова инструмента: id и имя приходят в первом куске, аргументы — частями."""
+
+    index: int
+    id: str | None
+    name: str | None
+    arguments: str
+
+
+StreamItem = Delta | Usage | Finish | ToolCallDelta
 
 
 def _reasoning_of(delta: Any) -> str | None:
@@ -54,5 +64,13 @@ async def parse_stream(chunks: AsyncIterator[ChatCompletionChunk]) -> AsyncItera
                 yield Delta("reasoning", reasoning)
             if choice.delta.content:
                 yield Delta("content", choice.delta.content)
+            for call in choice.delta.tool_calls or []:
+                function = call.function
+                yield ToolCallDelta(
+                    index=call.index,
+                    id=call.id,
+                    name=function.name if function else None,
+                    arguments=(function.arguments or "") if function else "",
+                )
             if choice.finish_reason:
                 yield Finish(choice.finish_reason)

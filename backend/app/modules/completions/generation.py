@@ -1,7 +1,8 @@
 """Генерация ответа (§2.2, §8): фоновая asyncio-задача на каждый ответ ассистента.
 
-Шаги: сборка промпта → запрос к модели со стримингом → дельты в Redis Stream → сохранение
-ответа, токенов и трассировки в Postgres → автозаголовок → ``message.end``.
+Шаги: сборка промпта (с вложениями, §9.3) → запрос к модели со стримингом → цикл инструментов
+(§8.4) → дельты и события в Redis Stream → сохранение ответа, токенов, вызовов инструментов и
+трассировки в Postgres → автозаголовок → ``message.end``.
 
 * «Стоп» может попасть в любой процесс api: отмена — флаг ``gen:cancel:<id>`` в Redis; исполнитель
   проверяет его между чанками, закрывает запрос к модели и сохраняет частичный ответ (``stopped``).
@@ -29,8 +30,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.core.db import utcnow
+from app.core.storage import Storage
 from app.modules.chats.models import Chat, Message
 from app.modules.chats.service import branch
+from app.modules.completions.attachments import build_attachments
 from app.modules.completions.prompt import (
     PromptRenderer,
     PromptUser,
@@ -45,11 +48,18 @@ from app.modules.completions.streaming import (
     alive_key,
     cancel_key,
 )
+from app.modules.files.service import chat_files
 from app.modules.llm.registry import ModelRegistry
-from app.modules.llm.stream import Delta, Finish, Usage, parse_stream
+from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_stream
 from app.modules.llm.tokens import TokenCounter
+from app.modules.rbac import service as rbac
+from app.modules.tools.base import Services, ToolContext
+from app.modules.tools.executor import ToolOutcome, execute
+from app.modules.tools.models import ToolCall
+from app.modules.tools.registry import available_tools
 from app.modules.users.models import User
 from app.modules.users.service import address_of
+from app.workers.dispatch import Dispatcher
 
 log = structlog.stdlib.get_logger("app.completions")
 
@@ -71,6 +81,31 @@ class GenerationResult:
     reasoning_started: float | None = None
     reasoning_ms: int | None = None
     error: dict[str, Any] | None = None
+    tools: list[ToolOutcome] = field(default_factory=list)
+    files: list[dict[str, Any]] = field(default_factory=list)
+
+    def add_usage(self, usage: Usage) -> None:
+        if self.usage is None:
+            self.usage = usage
+            return
+        self.usage = Usage(
+            prompt_tokens=self.usage.prompt_tokens + usage.prompt_tokens,
+            completion_tokens=self.usage.completion_tokens + usage.completion_tokens,
+            reasoning_tokens=(self.usage.reasoning_tokens or 0) + (usage.reasoning_tokens or 0),
+        )
+
+
+@dataclass
+class PendingCall:
+    id: str = ""
+    name: str = ""
+    arguments: str = ""
+
+
+MAX_ITERATIONS_NOTE = (
+    "\n\nНе удалось завершить ответ: превышено число шагов с инструментами. "
+    "Попробуйте уточнить или разбить запрос."
+)
 
 
 def clean_title(raw: str) -> str | None:
@@ -114,12 +149,22 @@ class GenerationManager:
         sessions: async_sessionmaker[AsyncSession],
         registry: ModelRegistry,
         renderer: PromptRenderer,
+        storage: Storage,
+        dispatcher: Dispatcher,
     ) -> None:
         self.settings = settings
         self.redis = redis
         self.sessions = sessions
         self.registry = registry
         self.renderer = renderer
+        self.storage = storage
+        self.services = Services(
+            settings=settings,
+            sessions=sessions,
+            storage=storage,
+            models=registry,
+            dispatcher=dispatcher,
+        )
         self.tasks: dict[UUID, asyncio.Task[None]] = {}
 
     # ------------------------------------------------------------------ управление
@@ -202,18 +247,60 @@ class GenerationManager:
                 ]
                 is_first_answer = chat.title is None
                 plan = self.registry.plan(CHAT_ROLE, thinking=message.thinking)
+                counter = TokenCounter(plan.endpoint.tokenizer)
                 prompt_user = PromptUser(
                     full_name=user.full_name,
                     title=user.title,
                     department=user.department,
                     address=address_of(user, self.settings),
                 )
+                # Вложения только сообщений текущей ветки: у отредактированного вопроса — свои.
+                branch_ids = {m.id for m in chain}
+                uploads = [
+                    f
+                    for f in await chat_files(db, chat.id, kind="upload")
+                    if f.message_id in branch_ids
+                ]
+                attachments = await build_attachments(
+                    uploads,
+                    storage=self.storage,
+                    renderer=self.renderer,
+                    settings=self.settings,
+                    endpoint=plan.endpoint,
+                    counter=counter,
+                )
+                system = system_prompt(self.renderer, self.settings, prompt_user, utcnow())
+                if attachments.text:
+                    system = f"{system}\n\n{attachments.text}"
                 prompt = build_messages(
-                    system=system_prompt(self.renderer, self.settings, prompt_user, utcnow()),
+                    system=system,
                     history=history,
                     message=question,
                     endpoint=plan.endpoint,
-                    counter=TokenCounter(plan.endpoint.tokenizer),
+                    counter=counter,
+                )
+                roles = await rbac.user_roles(db, user.id)
+                permissions = rbac.effective_permissions(
+                    roles, await rbac.permissions_for_roles(db, (r.role.id for r in roles))
+                )
+                # TODO(stage-5): список инструментов сценария вместо None.
+                tools = (
+                    available_tools(
+                        enabled=self.settings.tools.enabled,
+                        scenario=None,
+                        permissions=permissions,
+                        has_attachments=bool(attachments.files),
+                    )
+                    if plan.endpoint.supports_tools
+                    else []
+                )
+                context = ToolContext(
+                    user_id=user.id,
+                    permissions=permissions,
+                    chat_id=chat.id,
+                    message_id=message_id,
+                    attachments=attachments.files,
+                    services=self.services,
                 )
                 chat_id, parent_id = chat.id, message.parent_id
                 message.model = plan.endpoint.model
@@ -225,6 +312,12 @@ class GenerationManager:
                 "model": plan.endpoint.model,
                 "thinking": plan.thinking,
                 **prompt.trace(),
+                "attachments": {
+                    "mode": attachments.mode,
+                    "files": len(attachments.files),
+                    "tokens": attachments.tokens,
+                },
+                "tools_offered": [t.name for t in tools],
             }
             await writer.emit(
                 "message.start",
@@ -237,11 +330,18 @@ class GenerationManager:
                     "protocol_version": PROTOCOL_VERSION,
                 },
             )
-            await self._stream(
-                message_id, plan.role, prompt.messages, plan.params, writer, result, started
+            await self._loop(
+                message_id,
+                plan.role,
+                prompt.messages,
+                plan.params,
+                writer,
+                result,
+                started,
+                tools=tools,
+                context=context,
             )
             if result.usage is None:
-                counter = TokenCounter(plan.endpoint.tokenizer)
                 result.usage = Usage(
                     prompt_tokens=prompt.prompt_tokens,
                     completion_tokens=counter.count(
@@ -273,6 +373,111 @@ class GenerationManager:
             message_id, result, trace, started, writer, title_for=title_for, title_now=fallback
         )
 
+    async def _loop(
+        self,
+        message_id: UUID,
+        role: str,
+        messages: list[dict[str, Any]],
+        params: dict[str, Any],
+        writer: EventWriter,
+        result: GenerationResult,
+        started: float,
+        *,
+        tools: list[Any],
+        context: ToolContext,
+    ) -> None:
+        """Цикл инструментов (§8.4): запрос → вызовы инструментов → их результаты → снова запрос."""
+        schemas = [t.schema() for t in tools]
+        allowed = {t.name for t in tools}
+        max_iterations = self.settings.tools.max_iterations
+        for iteration in range(1, max_iterations + 1):
+            text, calls = await self._stream(
+                message_id, role, messages, params, writer, result, started, schemas=schemas
+            )
+            if result.status == "stopped" or not calls:
+                return
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": text or None,
+                    "tool_calls": [
+                        {
+                            "id": c.id,
+                            "type": "function",
+                            "function": {"name": c.name, "arguments": c.arguments},
+                        }
+                        for c in calls
+                    ],
+                }
+            )
+            outcomes = await asyncio.gather(
+                *(self._run_tool(context, call, writer, allowed) for call in calls)
+            )
+            for outcome in outcomes:
+                outcome.iteration = iteration
+                result.tools.append(outcome)
+                result.files.extend(outcome.files)
+                messages.append(
+                    {"role": "tool", "tool_call_id": outcome.call_id, "content": outcome.content}
+                )
+            if await self.redis.exists(cancel_key(message_id)):
+                result.status = "stopped"
+                return
+        # Модель всё ещё вызывает инструменты — честно сообщаем, что не уложились.
+        # TODO(stage-7): инцидент уровня warning (§8.4).
+        result.content.append(MAX_ITERATIONS_NOTE)
+        await writer.delta("content", MAX_ITERATIONS_NOTE)
+        result.finish_reason = "max_iterations"
+
+    async def _run_tool(
+        self, context: ToolContext, call: PendingCall, writer: EventWriter, allowed: set[str]
+    ) -> ToolOutcome:
+        from app.modules.tools.registry import get_tool
+
+        tool = get_tool(call.name) if call.name in allowed else None
+        visible = tool is None or tool.visibility == "visible"
+        # Скрытые инструменты не порождают событий SSE (§9.6).
+        if visible:
+            await writer.emit(
+                "tool.start",
+                {
+                    "call_id": call.id,
+                    "tool": call.name,
+                    "label": tool.status_label if tool else "tools.unknown",
+                },
+            )
+        outcome = await execute(
+            context,
+            call_id=call.id,
+            name=call.name,
+            raw_arguments=call.arguments,
+            allowed=allowed,
+            limit=self.settings.tools.result_max_chars,
+        )
+        if visible:
+            await writer.emit(
+                "tool.end",
+                {
+                    "call_id": call.id,
+                    "tool": call.name,
+                    "status": outcome.status,
+                    "label": outcome.label,
+                    "params": outcome.label_params,
+                },
+            )
+            for file in outcome.files:
+                await writer.emit(
+                    "file",
+                    {
+                        "file_id": file["file_id"],
+                        "name": file["filename"],
+                        "mime": file["mime"],
+                        "size": file["size"],
+                        "preview": file["has_preview"],
+                    },
+                )
+        return outcome
+
     async def _stream(
         self,
         message_id: UUID,
@@ -282,15 +487,22 @@ class GenerationManager:
         writer: EventWriter,
         result: GenerationResult,
         started: float,
-    ) -> None:
+        *,
+        schemas: list[dict[str, Any]],
+    ) -> tuple[str, list[PendingCall]]:
+        """Один запрос к модели со стримингом: текст этой итерации и вызовы инструментов."""
         client = self.registry.client(role)
+        extra: dict[str, Any] = {"tools": schemas, "tool_choice": "auto"} if schemas else {}
         stream: AsyncStream[ChatCompletionChunk] = await client.chat.completions.create(  # type: ignore[call-overload]
             messages=messages,
             stream=True,
             stream_options={"include_usage": True},
             **params,
+            **extra,
         )
         last_check = time.monotonic()
+        text: list[str] = []
+        calls: dict[int, PendingCall] = {}
         try:
             async for item in parse_stream(stream):
                 if isinstance(item, Delta):
@@ -306,12 +518,19 @@ class GenerationManager:
                     ):
                         # Время размышления — от первой дельты размышлений до первой дельты ответа.
                         result.reasoning_ms = int((now - result.reasoning_started) * 1000)
-                    (result.content if item.kind == "content" else result.reasoning).append(
-                        item.text
-                    )
+                    if item.kind == "content":
+                        result.content.append(item.text)
+                        text.append(item.text)
+                    else:
+                        result.reasoning.append(item.text)
                     await writer.delta(item.kind, item.text)
+                elif isinstance(item, ToolCallDelta):
+                    call = calls.setdefault(item.index, PendingCall())
+                    call.id = call.id or (item.id or "")
+                    call.name = call.name or (item.name or "")
+                    call.arguments += item.arguments
                 elif isinstance(item, Usage):
-                    result.usage = item
+                    result.add_usage(item)
                 elif isinstance(item, Finish):
                     result.finish_reason = item.reason
                 if time.monotonic() - last_check >= CANCEL_CHECK_INTERVAL:
@@ -324,6 +543,10 @@ class GenerationManager:
             await stream.close()
         if result.status != "stopped" and await self.redis.exists(cancel_key(message_id)):
             result.status = "stopped"
+        pending = [c for _, c in sorted(calls.items()) if c.name]
+        for index, call in enumerate(pending):
+            call.id = call.id or f"call_{index}"
+        return "".join(text), pending
 
     async def _generate_title(self, question: str) -> str:
         try:
@@ -380,6 +603,35 @@ class GenerationManager:
                         )
                     if result.reasoning_ms is not None:
                         trace["reasoning_ms"] = result.reasoning_ms
+                    if result.tools:
+                        trace["tools"] = [
+                            {
+                                "call_id": o.call_id,
+                                "tool": o.tool,
+                                "status": o.status,
+                                "duration_ms": o.duration_ms,
+                                "visibility": o.visibility,
+                                "arguments": o.arguments,
+                                "result_preview": o.content[:2000],
+                            }
+                            for o in result.tools
+                        ]
+                        for outcome in result.tools:
+                            db.add(
+                                ToolCall(
+                                    message_id=message_id,
+                                    call_id=outcome.call_id,
+                                    tool=outcome.tool,
+                                    arguments=outcome.arguments,
+                                    result_preview=outcome.content[:4000],
+                                    status=outcome.status,
+                                    duration_ms=outcome.duration_ms,
+                                    visibility=outcome.visibility,
+                                    iteration=outcome.iteration,
+                                    label=outcome.label,
+                                    label_params=outcome.label_params or None,
+                                )
+                            )
                     message.trace = {**(message.trace or {}), **trace}
                     if usage:
                         message.prompt_tokens = usage.prompt_tokens

@@ -54,6 +54,31 @@
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 
+## `files`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `owner_id` | UUID | not null | → users.id, index |
+| `chat_id` | UUID | null | → chats.id, index |
+| `message_id` | UUID | null | → messages.id, index |
+| `kind` | VARCHAR(16) | not null |  |
+| `filename` | VARCHAR(255) | not null |  |
+| `mime` | VARCHAR(128) | not null |  |
+| `file_type` | VARCHAR(16) | not null |  |
+| `size` | BIGINT | not null |  |
+| `sha256` | VARCHAR(64) | not null | index |
+| `storage_key` | VARCHAR(256) | not null |  |
+| `text_key` | VARCHAR(256) | null |  |
+| `preview_key` | VARCHAR(256) | null |  |
+| `parse_status` | VARCHAR(16) | not null |  |
+| `parse_error` | TEXT | null |  |
+| `pages` | INTEGER | null |  |
+| `chars` | INTEGER | null |  |
+| `outline` | JSONB | null |  |
+| `deleted_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
 ## `folders`
 
 | Колонка | Тип | NULL | Ключи и индексы |
@@ -145,6 +170,24 @@
 | `revoked_at` | TIMESTAMP WITH TIME ZONE | null |  |
 | `revoked_by` | UUID | null | → users.id, index |
 | `revoke_reason` | VARCHAR(64) | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `tool_calls`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `message_id` | UUID | not null | → messages.id, index |
+| `call_id` | VARCHAR(128) | not null |  |
+| `tool` | VARCHAR(64) | not null | index |
+| `arguments` | JSONB | null |  |
+| `result_preview` | TEXT | null |  |
+| `status` | VARCHAR(16) | not null |  |
+| `duration_ms` | INTEGER | not null |  |
+| `visibility` | VARCHAR(16) | not null |  |
+| `iteration` | INTEGER | not null |  |
+| `label` | VARCHAR(64) | not null |  |
+| `label_params` | JSONB | null |  |
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 

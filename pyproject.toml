@@ -30,6 +30,7 @@ dev = [
     "testcontainers[postgres,redis]>=4.15.0",
     "types-ldap3>=2.9.13.20260827",
     "types-docker>=7.2.0.20261006",
+    "types-openpyxl>=3.1.5.20261017",
 ]
 
 [tool.ruff]
@@ -57,6 +58,11 @@ plugins = ["pydantic.mypy"]
 mypy_path = ["backend", "services/fake-llm/src"]
 explicit_package_bases = true
 exclude = ["backend/migrations/"]
+
+[[tool.mypy.overrides]]
+# Без типов и py.typed: pandoc вызывается одной функцией, Celery — только в воркере.
+module = ["pypandoc", "celery", "celery.*", "markitdown", "docling.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -30,6 +30,12 @@
 | PATCH | `/api/chats/{chat_id}` | `updateChat` | Update Chat | 200, 422 |
 | DELETE | `/api/chats/{chat_id}` | `deleteChat` | Delete Chat | 204, 422 |
 | POST | `/api/chats/{chat_id}/messages` | `sendMessage` | Send Message | 202, 422 |
+| POST | `/api/files` | `uploadFile` | Upload | 201, 422 |
+| GET | `/api/files/limits` | `getFileLimits` | Limits | 200 |
+| GET | `/api/files/{file_id}` | `getFile` | Get File | 200, 422 |
+| DELETE | `/api/files/{file_id}` | `deleteFile` | Delete | 204, 422 |
+| GET | `/api/files/{file_id}/content` | `downloadFile` | Content | 200, 422 |
+| GET | `/api/files/{file_id}/preview` | `previewFile` | Preview | 200, 404, 422 |
 | GET | `/api/folders` | `listFolders` | List Folders | 200 |
 | POST | `/api/folders` | `createFolder` | Create Folder | 201, 422 |
 | PATCH | `/api/folders/{folder_id}` | `updateFolder` | Update Folder | 200, 422 |

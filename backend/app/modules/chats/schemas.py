@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.modules.files.schemas import FileOut
+
 MessageStatus = Literal["completed", "streaming", "stopped", "error", "interrupted"]
 DislikeReason = Literal["inaccurate", "off_topic", "code_error", "incomplete", "other"]
 
@@ -63,6 +65,17 @@ class MessageError(BaseModel):
     message: str
 
 
+class ToolStep(BaseModel):
+    """Шаг цикла инструментов в истории (§7.4): скрытые инструменты сюда не попадают (§9.6)."""
+
+    call_id: str
+    tool: str
+    status: Literal["ok", "error", "timeout"]
+    label: str = Field(description="i18n-ключ строки статуса, например tools.read_document.")
+    params: dict[str, str] = Field(default_factory=dict)
+    duration_ms: int
+
+
 class MessageOut(BaseModel):
     id: UUID
     chat_id: UUID
@@ -83,6 +96,10 @@ class MessageOut(BaseModel):
     error: MessageError | None
     created_at: datetime
     feedback: FeedbackOut | None = None
+    files: list[FileOut] = Field(
+        default_factory=list, description="Вложения вопроса или файлы, созданные в ответе."
+    )
+    tools: list[ToolStep] = Field(default_factory=list)
 
 
 class ChatDetail(ChatListItem):
@@ -97,6 +114,9 @@ class SendMessageIn(BaseModel):
         None, description="Ответ, к которому продолжаем ветку; по умолчанию — активная ветка."
     )
     thinking: bool | None = Field(None, description="Режим размышлений; null — как в чате.")
+    attachment_ids: list[UUID] = Field(
+        default_factory=list, description="Загруженные и прочитанные файлы (POST /files)."
+    )
 
 
 class SendMessageOut(BaseModel):

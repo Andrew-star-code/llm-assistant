@@ -26,6 +26,7 @@ from app.modules.chats.schemas import (
 )
 from app.modules.completions.generation import CHAT_ROLE, GenerationManager
 from app.modules.completions.streaming import sse_events
+from app.modules.files import service as files_service
 from app.modules.llm.registry import ModelRegistry
 
 router = APIRouter(tags=["completions"])
@@ -104,6 +105,14 @@ async def send_message(
     )
     db.add(user_message)
     await db.flush()
+    attached = await files_service.attach(
+        db,
+        owner_id=current.id,
+        file_ids=body.attachment_ids,
+        chat_id=chat.id,
+        message_id=user_message.id,
+        max_files=settings.files.max_files_per_message,
+    )
     assistant = Message(
         chat_id=chat.id,
         parent_id=user_message.id,
@@ -123,7 +132,10 @@ async def send_message(
     await db.commit()
     await _manager(request).start(assistant.id)
     return SendMessageOut(
-        user_message=chats.message_out(user_message), assistant_message=chats.message_out(assistant)
+        user_message=chats.message_out(
+            user_message, files=[files_service.file_out(f) for f in attached]
+        ),
+        assistant_message=chats.message_out(assistant),
     )
 
 
