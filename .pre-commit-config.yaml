@@ -1,0 +1,39 @@
+# Быстрые проверки при каждом коммите (§20). Полные — make check перед пушем.
+# Все хуки локальные (repo: local): работают без интернета, версии — из uv.lock и pnpm-lock.yaml.
+# Установка: make install (или uv run pre-commit install).
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format
+        language: system
+        types: [python]
+      - id: prettier
+        name: prettier
+        entry: pnpm --dir frontend exec prettier --write --ignore-unknown
+        language: system
+        files: ^frontend/
+        exclude: ^frontend/(pnpm-lock\.yaml|src/api/openapi\.json)$
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && pnpm exec eslint --max-warnings 0 "${@#frontend/}"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+      - id: no-secrets-files
+        name: запрет коммита .env и ключей
+        entry: bash -c 'echo "Нельзя коммитить секреты: $*"; exit 1' --
+        language: system
+        files: (^|/)(\.env|.*\.(pem|key))$
+        exclude: \.env\.example$
+      - id: uv-lock
+        name: uv.lock актуален
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: (^|/)pyproject\.toml$|^uv\.lock$
