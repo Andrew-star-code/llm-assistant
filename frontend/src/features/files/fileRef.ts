@@ -6,6 +6,8 @@ export interface FileRef {
   name: string;
   size: number;
   hasPreview: boolean;
+  /** Свои адреса (документ базы знаний); по умолчанию — `/api/files/{id}/…`. */
+  urls?: { download: string; inline: string; preview: string };
 }
 
 export const SPREADSHEET_TYPES = new Set(["xlsx", "xls", "ods", "csv", "tsv"]);

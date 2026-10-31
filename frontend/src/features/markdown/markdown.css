@@ -83,3 +83,25 @@
 .code-block .shiki span {
   background-color: transparent !important;
 }
+
+/* Цитата [n] — номер источника (§10.5). */
+.markdown .citation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  margin: 0 0.1rem;
+  padding: 0 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: super;
+  line-height: 1;
+  background: color-mix(in oklab, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.markdown .citation:hover {
+  background: color-mix(in oklab, var(--color-primary) 25%, transparent);
+}

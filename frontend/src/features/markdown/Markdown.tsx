@@ -8,6 +8,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
+import { citationNumber, linkCitations } from "@/features/markdown/citations";
 import { CodeBlock } from "@/features/markdown/CodeBlock";
 import { prepareMarkdown } from "@/features/markdown/normalize";
 
@@ -34,14 +35,48 @@ function textOf(node: ReactNode): string {
   return "";
 }
 
-function MarkdownImpl({ text, streaming = false }: { text: string; streaming?: boolean }) {
+const NO_CITATIONS: ReadonlySet<number> = new Set();
+
+interface MarkdownProps {
+  text: string;
+  streaming?: boolean;
+  /** Номера источников ответа: `[n]` становится кнопкой, открывающей источник. */
+  citations?: ReadonlySet<number>;
+  onCite?: (index: number) => void;
+}
+
+function MarkdownImpl({
+  text,
+  streaming = false,
+  citations = NO_CITATIONS,
+  onCite,
+}: MarkdownProps) {
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[[rehypeSanitize, schema], rehypeKatex]}
         components={{
-          a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+          a: ({ node, href, children, ...props }) => {
+            const cite = citationNumber(href);
+            if (cite !== null) {
+              return (
+                <button
+                  type="button"
+                  className="citation"
+                  data-testid="citation"
+                  onClick={() => onCite?.(cite)}
+                >
+                  {cite}
+                </button>
+              );
+            }
+            return (
+              <a href={href} {...props} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            );
+          },
           pre: ({ children }) => <>{children}</>,
           code: ({ className, children, node, ...props }: CodeProps) => {
             const match = /language-([\w#+-]+)/.exec(className ?? "");
@@ -58,7 +93,7 @@ function MarkdownImpl({ text, streaming = false }: { text: string; streaming?: b
           },
         }}
       >
-        {prepareMarkdown(text, streaming)}
+        {linkCitations(prepareMarkdown(text, streaming), citations)}
       </ReactMarkdown>
     </div>
   );

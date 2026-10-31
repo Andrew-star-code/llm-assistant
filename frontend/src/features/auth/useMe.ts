@@ -25,6 +25,7 @@ export function useSetMe() {
   };
 }
 
-export function hasPermission(me: Me | null | undefined, permission: string): boolean {
-  return Boolean(me?.permissions.includes(permission));
+export function hasPermission(me: Me | null | undefined, permission: string | string[]): boolean {
+  const wanted = Array.isArray(permission) ? permission : [permission];
+  return wanted.some((p) => Boolean(me?.permissions.includes(p)));
 }

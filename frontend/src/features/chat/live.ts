@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { create } from "zustand";
 
-import { subscribeMessageStream, type FileEvent } from "@/api/sse";
+import { subscribeMessageStream, type FileEvent, type SourceCard } from "@/api/sse";
 import { chatKeys, invalidateChatLists, type ChatDetail } from "@/features/chat/api";
 import type { Message } from "@/features/chat/tree";
 
@@ -19,6 +19,7 @@ export interface ToolStepView {
 export interface LiveAnswer {
   tools: ToolStepView[];
   files: FileEvent[];
+  sources: SourceCard[];
   content: string;
   reasoning: string;
   reasoningStartedAt: number | null;
@@ -35,6 +36,7 @@ interface LiveState {
 const EMPTY: LiveAnswer = {
   tools: [],
   files: [],
+  sources: [],
   content: "",
   reasoning: "",
   reasoningStartedAt: null,
@@ -116,6 +118,9 @@ export function useMessageStream(message: Message): void {
               : [...prev.tools, step],
           };
         });
+      },
+      onSources: (sources) => {
+        update(id, () => ({ sources }));
       },
       onFile: (file) => {
         update(id, (prev) => ({ files: [...prev.files, file] }));

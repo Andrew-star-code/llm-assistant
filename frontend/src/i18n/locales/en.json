@@ -43,7 +43,8 @@
       "yesterday": "Yesterday",
       "week": "Previous 7 days",
       "month": "Previous 30 days"
-    }
+    },
+    "personalKb": "My knowledge base"
   },
   "chat": {
     "newChatTitle": "New chat",
@@ -130,7 +131,9 @@
       "users": "Users",
       "logins": "Sign-ins",
       "audit": "Audit log",
-      "ad": "AD diagnostics"
+      "ad": "AD diagnostics",
+      "kb": "Knowledge bases",
+      "incidents": "Incidents"
     },
     "users": {
       "search": "Search by name, login, department or title",
@@ -189,6 +192,50 @@
       "ms": "ms",
       "canLogin": "Sign-in possible",
       "cannotLogin": "Sign-in not possible"
+    },
+    "kb": {
+      "name": "Name",
+      "code": "Code (latin, e.g. regulations)",
+      "description": "Description",
+      "level": "Level",
+      "roles": "Roles",
+      "documents": "Documents",
+      "created": "Created",
+      "levels": {
+        "global": "Shared",
+        "role": "Role",
+        "personal": "Personal"
+      },
+      "create": "New knowledge base",
+      "createButton": "Create",
+      "whoSees": "Who can see the base",
+      "import": "Import from a server folder",
+      "importHint": "Folders inside the import directory (KB_IMPORT_DIR). Import runs in the background, duplicates are skipped, it resumes after a restart.",
+      "importFolder": "Folder",
+      "startImport": "Start import",
+      "importStatus": "Status",
+      "progress": "Progress",
+      "folderOption": "{{path}} — {{count}} files",
+      "progressText": "{{done}} of {{total}}: ready {{ready}}, errors {{errors}}, skipped {{skipped}}",
+      "importStatuses": {
+        "scanning": "scanning",
+        "running": "indexing",
+        "done": "done",
+        "error": "error"
+      }
+    },
+    "incidents": {
+      "lastSeen": "Last seen",
+      "severity": "Severity",
+      "title": "Incident",
+      "occurrences": "Occurrences",
+      "status": "Status",
+      "empty": "No incidents",
+      "statuses": {
+        "new": "new",
+        "in_progress": "in progress",
+        "resolved": "resolved"
+      }
     }
   },
   "failure": {
@@ -311,6 +358,33 @@
     "status": {
       "error": "error",
       "timeout": "timed out"
-    }
+    },
+    "search_knowledge_base": "Searching knowledge bases: “{{query}}”"
+  },
+  "sources": {
+    "open": "Open source",
+    "attachment": "Attachment",
+    "page": "p. {{page}}",
+    "unavailable": "Source is not available"
+  },
+  "kb": {
+    "personalTitle": "My knowledge base",
+    "personalHint": "Only you can see these documents. The assistant searches them automatically and cites them in answers.",
+    "quota": "{{used}} of {{max}} used · {{docs}} of {{maxDocs}} documents",
+    "dropHere": "Drop files here or choose them",
+    "chooseFiles": "Choose files",
+    "empty": "No documents yet",
+    "chunks_one": "{{count}} chunk",
+    "chunks_other": "{{count}} chunks",
+    "status": {
+      "queued": "queued",
+      "processing": "processing",
+      "ready": "ready",
+      "error": "error"
+    },
+    "reindex": "Reindex",
+    "delete": "Delete “{{name}}”",
+    "confirmDelete": "Delete for sure?",
+    "uploadFailed": "“{{name}}” was not uploaded: {{reason}}"
   }
 }

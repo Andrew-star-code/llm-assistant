@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Search, SquarePen } from "lucide-react";
+import { Library, Search, SquarePen } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -100,6 +100,14 @@ export function ChatSidebar({ onSearch }: { onSearch: () => void }) {
           {t("sidebar.search")}
           <kbd className="ml-auto text-[10px] text-muted-foreground">Ctrl+K</kbd>
         </button>
+        <Link
+          to="/kb"
+          className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
+          data-testid="open-personal-kb"
+        >
+          <Library className="size-4" />
+          {t("sidebar.personalKb")}
+        </Link>
       </div>
       <div
         ref={scrollRef}

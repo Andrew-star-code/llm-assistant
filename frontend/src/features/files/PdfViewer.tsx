@@ -8,11 +8,12 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 const OPTIONS = { isEvalSupported: false };
 
 /** Просмотр PDF (оригинал или PDF-превью Office-файла): все страницы по ширине окна. */
-export default function PdfViewer({ url }: { url: string }) {
+export default function PdfViewer({ url, page }: { url: string; page?: number }) {
   const { t } = useTranslation();
   const [pages, setPages] = useState(0);
   const [width, setWidth] = useState(800);
   const box = useRef<HTMLDivElement>(null);
+  const scrolled = useRef(false);
 
   useEffect(() => {
     const element = box.current;
@@ -27,7 +28,12 @@ export default function PdfViewer({ url }: { url: string }) {
   }, []);
 
   return (
-    <div ref={box} className="flex flex-col items-center gap-4 p-4" data-testid="pdf-viewer">
+    <div
+      ref={box}
+      className="flex flex-col items-center gap-4 p-4"
+      data-testid="pdf-viewer"
+      data-initial-page={page}
+    >
       <Document
         file={url}
         options={OPTIONS}
@@ -45,6 +51,15 @@ export default function PdfViewer({ url }: { url: string }) {
             renderTextLayer={false}
             renderAnnotationLayer={false}
             className="mb-4 shadow-md"
+            onRenderSuccess={() => {
+              // Источник цитаты: прокрутить к нужной странице, когда она отрисована.
+              if (page === index + 1 && !scrolled.current) {
+                scrolled.current = true;
+                box.current
+                  ?.querySelector(`[data-page-number="${String(page)}"]`)
+                  ?.scrollIntoView({ block: "start" });
+              }
+            }}
           />
         ))}
       </Document>

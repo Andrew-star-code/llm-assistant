@@ -18,7 +18,8 @@ function TextPreview({ file }: { file: FileRef }) {
   const query = useQuery({
     queryKey: ["file-text", file.id],
     queryFn: async () => {
-      const response = await fetch(inlineUrl(file.id), { credentials: "same-origin" });
+      const url = file.urls?.inline ?? inlineUrl(file.id);
+      const response = await fetch(url, { credentials: "same-origin" });
       if (!response.ok) throw new Error(String(response.status));
       return (await response.text()).replace(/^\uFEFF/, "");
     },
@@ -68,7 +69,16 @@ function TextPreview({ file }: { file: FileRef }) {
 }
 
 /** Просмотр файла (§7.7): PDF и PDF-превью — pdf.js; Markdown, CSV и текст — отрисованными. */
-export default function PreviewDialog({ file, onClose }: { file: FileRef; onClose: () => void }) {
+export default function PreviewDialog({
+  file,
+  page,
+  onClose,
+}: {
+  file: FileRef;
+  /** Открыть PDF на этой странице (источник цитаты, §10.5). */
+  page?: number;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
   const ext = extensionOf(file.name);
 
@@ -83,8 +93,13 @@ export default function PreviewDialog({ file, onClose }: { file: FileRef; onClos
   }, [onClose]);
 
   let body;
-  if (ext === "pdf") body = <PdfViewer url={inlineUrl(file.id)} />;
-  else if (file.hasPreview) body = <PdfViewer url={previewUrl(file.id)} />;
+  const urls = file.urls ?? {
+    download: downloadUrl(file.id),
+    inline: inlineUrl(file.id),
+    preview: previewUrl(file.id),
+  };
+  if (ext === "pdf") body = <PdfViewer url={urls.inline} page={page} />;
+  else if (file.hasPreview) body = <PdfViewer url={urls.preview} page={page} />;
   else if (TEXT_PREVIEW.has(ext)) body = <TextPreview file={file} />;
   else body = <p className="p-4 text-sm text-muted-foreground">{t("files.noPreview")}</p>;
 
@@ -106,7 +121,7 @@ export default function PreviewDialog({ file, onClose }: { file: FileRef; onClos
         <div className="flex items-center gap-2 border-b border-border px-4 py-2">
           <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{file.name}</h2>
           <a
-            href={downloadUrl(file.id)}
+            href={urls.download}
             download={file.name}
             className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm hover:bg-muted"
           >

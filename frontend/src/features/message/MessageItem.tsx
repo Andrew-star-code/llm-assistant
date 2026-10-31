@@ -8,11 +8,11 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import type { FileEvent } from "@/api/sse";
+import type { FileEvent, SourceCard } from "@/api/sse";
 import { useLiveAnswer, useMessageStream, type ToolStepView } from "@/features/chat/live";
 import type { Message } from "@/features/chat/tree";
 import type { Schemas } from "@/api/client";
@@ -22,6 +22,8 @@ import { Markdown } from "@/features/markdown/Markdown";
 import { DislikeDialog } from "@/features/message/DislikeDialog";
 import { ReasoningBlock } from "@/features/message/ReasoningBlock";
 import { ToolSteps } from "@/features/message/ToolSteps";
+import { SourceList } from "@/features/sources/SourceList";
+import { SourceViewer } from "@/features/sources/SourceViewer";
 import { useCopy } from "@/lib/useCopy";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +48,14 @@ function fromRest(file: MessageFile): FileRef {
 
 function fromEvent(file: FileEvent): FileRef {
   return { id: file.file_id, name: file.name, size: file.size, hasPreview: file.preview };
+}
+
+const NO_SOURCES: SourceCard[] = [];
+
+/** Источники, на которые ответ ссылается `[n]` (во время стрима — по уже пришедшему тексту). */
+function citedSources(sources: SourceCard[], content: string): SourceCard[] {
+  const cited = new Set(Array.from(content.matchAll(/\[(\d{1,2})\]/g), (m) => Number(m[1])));
+  return sources.filter((s) => cited.has(s.index));
 }
 
 function stepsOf(message: Message): ToolStepView[] {
@@ -123,6 +133,16 @@ function AssistantMessage({
   const files = streaming
     ? (live?.files ?? []).map(fromEvent)
     : (message.files ?? []).map(fromRest);
+  const allSources: SourceCard[] = (streaming ? live?.sources : message.sources) ?? NO_SOURCES;
+  const sources = useMemo(() => citedSources(allSources, content), [allSources, content]);
+  const citations = useMemo(() => new Set(allSources.map((s) => s.index)), [allSources]);
+  const [openSource, setOpenSource] = useState<SourceCard | null>(null);
+  const onCite = useCallback(
+    (index: number) => {
+      setOpenSource(allSources.find((s) => s.index === index) ?? null);
+    },
+    [allSources],
+  );
   const index = actions.versions.findIndex((v) => v.id === message.id);
   const rating = message.feedback?.rating ?? null;
 
@@ -135,7 +155,7 @@ function AssistantMessage({
       <ToolSteps steps={steps} />
       <div data-testid="assistant-message" data-status={message.status}>
         {content ? (
-          <Markdown text={content} streaming={streaming} />
+          <Markdown text={content} streaming={streaming} citations={citations} onCite={onCite} />
         ) : streaming && !reasoning && !steps.length ? (
           <span className="inline-flex gap-1 py-2" aria-label={t("message.generating")}>
             <span className="size-2 animate-bounce rounded-full bg-muted-foreground/60" />
@@ -145,6 +165,15 @@ function AssistantMessage({
         ) : null}
       </div>
 
+      <SourceList sources={sources} onOpen={setOpenSource} />
+      {openSource && (
+        <SourceViewer
+          source={openSource}
+          onClose={() => {
+            setOpenSource(null);
+          }}
+        />
+      )}
       {files.length > 0 && (
         <div className="mt-2 flex flex-col gap-2" data-testid="message-files">
           {files.map((file) => (

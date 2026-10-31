@@ -57,7 +57,13 @@ export function AppLayout() {
   useHotkeys(() => {
     setSearchOpen(true);
   });
-  const title = chat.data?.title ?? t("chat.newChatTitle");
+  const kbPage = useMatch("/kb");
+  const profilePage = useMatch("/profile");
+  const title = kbPage
+    ? t("kb.personalTitle")
+    : profilePage
+      ? t("userMenu.profile")
+      : (chat.data?.title ?? t("chat.newChatTitle"));
 
   useEffect(() => {
     document.title = match ? `${title} — ${t("app.name")}` : t("app.name");

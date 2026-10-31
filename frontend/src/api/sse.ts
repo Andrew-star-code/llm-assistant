@@ -27,6 +27,19 @@ export interface FileEvent {
   preview: boolean;
 }
 
+/** Карточка источника (§10.5); событие `sources` всегда несёт полный текущий список. */
+export interface SourceCard {
+  index: number;
+  kind: "kb" | "attachment";
+  title: string;
+  kb_name: string | null;
+  document_id: string | null;
+  file_id: string | null;
+  page: number | null;
+  section: string | null;
+  snippet: string;
+}
+
 export interface StreamHandlers {
   onStart?: (data: { model: string; thinking: boolean; protocol_version: number }) => void;
   onReasoning?: (text: string) => void;
@@ -34,6 +47,7 @@ export interface StreamHandlers {
   onToolStart?: (data: ToolStartEvent) => void;
   onToolEnd?: (data: ToolEndEvent) => void;
   onFile?: (data: FileEvent) => void;
+  onSources?: (items: SourceCard[]) => void;
   onUsage?: (data: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -85,6 +99,9 @@ export function subscribeMessageStream(messageId: string, handlers: StreamHandle
   });
   on("file", (d: FileEvent) => {
     handlers.onFile?.(d);
+  });
+  on("sources", (d: { items: SourceCard[] }) => {
+    handlers.onSources?.(d.items);
   });
   on("usage", (d: Parameters<NonNullable<StreamHandlers["onUsage"]>>[0]) => {
     handlers.onUsage?.(d);

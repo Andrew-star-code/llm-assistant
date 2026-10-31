@@ -3,6 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { json, ME, mockFetch } from "./fetchMock";
+
+// pdf.js в jsdom не работает (нет DOMMatrix): проверяем, что открыто и на какой странице.
+vi.mock("@/features/files/PdfViewer", () => ({
+  default: ({ url, page }: { url: string; page?: number }) => (
+    <div data-testid="pdf-viewer" data-url={url} data-initial-page={page} />
+  ),
+}));
 import { renderApp } from "./renderApp";
 
 type Listener = (event: Event) => void;
@@ -207,6 +214,69 @@ describe("Лента чата", () => {
     expect(screen.getByTestId("tool-step")).toHaveTextContent("Создаю таблицу Продажи.xlsx");
     expect(screen.getByTestId("file-card")).toHaveTextContent("2 КБ");
     expect(screen.getByRole("button", { name: "Просмотр" })).toBeInTheDocument();
+  });
+
+  it("показывает цитаты и карточки источников, клик по [1] открывает источник", async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    FakeEventSource.last = null;
+    const card = {
+      index: 1,
+      kind: "kb",
+      title: "Регламент отпусков",
+      kb_name: "Общая",
+      document_id: "d1",
+      file_id: null,
+      page: 3,
+      section: "Порядок",
+      snippet: "Отпуск оформляется заявлением",
+    };
+    const unused = { ...card, index: 2, title: "Не процитирован", document_id: "d2" };
+    const streaming = chat(
+      [
+        message("u", null, "user"),
+        message("aa", "u", "assistant", { status: "streaming", content: "" }),
+      ],
+      "aa",
+    );
+    const calls = mockFetch({
+      ...COMMON,
+      "GET /api/chats/c1": () => json(streaming),
+      "GET /api/kb/documents/d1": () =>
+        json({
+          id: "d1",
+          kb_id: "k",
+          title: "Регламент отпусков",
+          filename: "Регламент.pdf",
+          file_type: "pdf",
+          size: 100,
+          status: "ready",
+          error: null,
+          chunks: 3,
+          pages: 5,
+          version: 1,
+          has_preview: true,
+          created_at: "2026-10-31T10:00:00Z",
+          indexed_at: "2026-10-31T10:00:00Z",
+        }),
+    });
+    renderApp("/c/c1");
+    await waitFor(() => {
+      expect(FakeEventSource.last?.url).toBe("/api/messages/aa/stream");
+    });
+    const source = streamOf();
+    source.emit("sources", { items: [card, unused] });
+    source.emit("content.delta", { text: "Отпуск оформляется заявлением [1]." });
+    const [cardButton] = await screen.findAllByTestId("source-card");
+    expect(screen.getAllByTestId("source-card")).toHaveLength(1); // только процитированный
+    expect(cardButton).toHaveTextContent("Регламент отпусков");
+    expect(cardButton).toHaveTextContent("стр. 3");
+
+    await userEvent.click(screen.getByTestId("citation"));
+    expect(await screen.findByTestId("preview-dialog")).toHaveAccessibleName("Регламент.pdf");
+    const viewer = await screen.findByTestId("pdf-viewer");
+    expect(viewer).toHaveAttribute("data-url", "/api/kb/documents/d1/content?download=false");
+    expect(viewer).toHaveAttribute("data-initial-page", "3");
+    expect(calls.some((c) => c.url.endsWith("/api/kb/documents/d1"))).toBe(true);
   });
 
   it("переключает версии ответа «‹ 1/2 ›» и сохраняет выбор", async () => {

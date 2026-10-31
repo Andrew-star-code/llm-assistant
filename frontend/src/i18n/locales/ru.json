@@ -43,7 +43,8 @@
       "yesterday": "Вчера",
       "week": "Последние 7 дней",
       "month": "Последние 30 дней"
-    }
+    },
+    "personalKb": "Моя база знаний"
   },
   "chat": {
     "newChatTitle": "Новый чат",
@@ -130,7 +131,9 @@
       "users": "Пользователи",
       "logins": "Входы",
       "audit": "Журнал аудита",
-      "ad": "Диагностика AD"
+      "ad": "Диагностика AD",
+      "kb": "Базы знаний",
+      "incidents": "Инциденты"
     },
     "users": {
       "search": "Поиск по ФИО, логину, отделу или должности",
@@ -189,6 +192,50 @@
       "ms": "мс",
       "canLogin": "Вход возможен",
       "cannotLogin": "Вход невозможен"
+    },
+    "kb": {
+      "name": "Название",
+      "code": "Код (латиница, например regulations)",
+      "description": "Описание",
+      "level": "Уровень",
+      "roles": "Роли",
+      "documents": "Документы",
+      "created": "Создана",
+      "levels": {
+        "global": "Общая",
+        "role": "Ролевая",
+        "personal": "Личная"
+      },
+      "create": "Новая база знаний",
+      "createButton": "Создать",
+      "whoSees": "Кто видит базу",
+      "import": "Импорт из папки на сервере",
+      "importHint": "Папки — внутри каталога импорта (KB_IMPORT_DIR). Импорт идёт фоном, дубли по содержимому пропускаются, после перезапуска продолжается.",
+      "importFolder": "Папка",
+      "startImport": "Начать импорт",
+      "importStatus": "Статус",
+      "progress": "Прогресс",
+      "folderOption": "{{path}} — файлов: {{count}}",
+      "progressText": "{{done}} из {{total}}: готово {{ready}}, ошибок {{errors}}, пропущено {{skipped}}",
+      "importStatuses": {
+        "scanning": "сканирование",
+        "running": "индексация",
+        "done": "готово",
+        "error": "ошибка"
+      }
+    },
+    "incidents": {
+      "lastSeen": "Последний раз",
+      "severity": "Уровень",
+      "title": "Инцидент",
+      "occurrences": "Повторов",
+      "status": "Статус",
+      "empty": "Инцидентов нет",
+      "statuses": {
+        "new": "новый",
+        "in_progress": "в работе",
+        "resolved": "решён"
+      }
     }
   },
   "failure": {
@@ -311,6 +358,35 @@
     "status": {
       "error": "ошибка",
       "timeout": "не успел"
-    }
+    },
+    "search_knowledge_base": "Ищу в базах знаний: «{{query}}»"
+  },
+  "sources": {
+    "open": "Открыть источник",
+    "attachment": "Вложение",
+    "page": "стр. {{page}}",
+    "unavailable": "Источник недоступен"
+  },
+  "kb": {
+    "personalTitle": "Моя база знаний",
+    "personalHint": "Документы видите только вы. Ассистент ищет по ним автоматически и ссылается на них в ответах.",
+    "quota": "Занято {{used}} из {{max}} · документов {{docs}} из {{maxDocs}}",
+    "dropHere": "Перетащите сюда файлы или выберите их",
+    "chooseFiles": "Выбрать файлы",
+    "empty": "Документов пока нет",
+    "chunks_one": "{{count}} фрагмент",
+    "chunks_few": "{{count}} фрагмента",
+    "chunks_many": "{{count}} фрагментов",
+    "chunks_other": "{{count}} фрагмента",
+    "status": {
+      "queued": "в очереди",
+      "processing": "обработка",
+      "ready": "готово",
+      "error": "ошибка"
+    },
+    "reindex": "Переиндексировать",
+    "delete": "Удалить «{{name}}»",
+    "confirmDelete": "Точно удалить?",
+    "uploadFailed": "«{{name}}» не загружен: {{reason}}"
   }
 }

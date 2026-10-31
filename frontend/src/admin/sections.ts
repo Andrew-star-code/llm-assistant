@@ -1,13 +1,22 @@
-import { Network, ScrollText, ShieldAlert, Users, type LucideIcon } from "lucide-react";
+import {
+  Library,
+  Network,
+  ScrollText,
+  ShieldAlert,
+  Siren,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 interface Section {
   to: string;
   label: string;
   icon: LucideIcon;
-  permission: string;
+  /** Нужно любое из прав. */
+  permission: string | string[];
 }
 
-// Разделы админки этапа 1 (§13.2). Видны только при наличии права; сервер проверяет права сам.
+// Разделы админки (§13.2). Видны только при наличии права; сервер проверяет права сам.
 export const ADMIN_SECTIONS: Section[] = [
   { to: "/admin/users", label: "admin.nav.users", icon: Users, permission: "admin.users.view" },
   {
@@ -23,4 +32,16 @@ export const ADMIN_SECTIONS: Section[] = [
     permission: "admin.audit.view",
   },
   { to: "/admin/ad", label: "admin.nav.ad", icon: Network, permission: "admin.ad.diagnostics" },
+  {
+    to: "/admin/kb",
+    label: "admin.nav.kb",
+    icon: Library,
+    permission: ["admin.kb.manage", "admin.kb.manage_roles"],
+  },
+  {
+    to: "/admin/incidents",
+    label: "admin.nav.incidents",
+    icon: Siren,
+    permission: "admin.incidents.view",
+  },
 ];

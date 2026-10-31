@@ -9,8 +9,14 @@ function keys(obj: object, prefix = ""): string[] {
   );
 }
 
+// Формы множественного числа у языков разные (ru: one/few/many, en: one/other) — сравниваем основу.
+function normalized(obj: object): string[] {
+  const plural = /_(zero|one|two|few|many|other)$/;
+  return [...new Set(keys(obj).map((k) => k.replace(plural, "")))].sort();
+}
+
 describe("i18n", () => {
   it("в en те же ключи, что в ru", () => {
-    expect(keys(en).sort()).toEqual(keys(ru).sort());
+    expect(normalized(en)).toEqual(normalized(ru));
   });
 });
