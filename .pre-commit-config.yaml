@@ -16,18 +16,18 @@ repos:
         types: [python]
       - id: prettier
         name: prettier
-        entry: pnpm --dir frontend exec prettier --write --ignore-unknown
+        entry: bash -c 'cd frontend && pnpm exec prettier --write --ignore-unknown "${@#frontend/}"' --
         language: system
         files: ^frontend/
         exclude: ^frontend/(pnpm-lock\.yaml|src/api/openapi\.json)$
       - id: eslint
         name: eslint
-        entry: bash -c 'cd frontend && pnpm exec eslint --max-warnings 0 "${@#frontend/}"' --
+        entry: bash -c 'cd frontend && pnpm exec eslint --max-warnings 0 --no-warn-ignored "${@#frontend/}"' --
         language: system
         files: ^frontend/.*\.(ts|tsx)$
       - id: no-secrets-files
         name: запрет коммита .env и ключей
-        entry: bash -c 'echo "Нельзя коммитить секреты: $*"; exit 1' --
+        entry: bash -c 'echo "Нельзя коммитить секреты — $*"; exit 1' --
         language: system
         files: (^|/)(\.env|.*\.(pem|key))$
         exclude: \.env\.example$
