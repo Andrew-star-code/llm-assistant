@@ -27,7 +27,7 @@ make dev-up
 
 | Что | Адрес |
 | --- | --- |
-| Фронтенд (Vite, hot reload) | <http://localhost:5173> |
+| Фронтенд (Vite, hot reload) | <http://localhost:5173> — вход кнопками dev или `ivanov` / `Passw0rd!` через mock-AD |
 | API: Swagger / готовность | <http://localhost:8000/api/docs> · <http://localhost:8000/ready> |
 | fake-llm (OpenAI-совместимый mock) | <http://localhost:8081/v1> |
 | embed (bge-m3 на CPU) | <http://localhost:8082> |

@@ -21,6 +21,7 @@ services:
       - ../../backend/app:/srv/backend/app:ro
       - ../../config:/srv/config:ro
       - mock-ad-export:/run/mock-ad:ro
+      - api-storage:/srv/storage
     secrets:
       - source: ldap_bind_password
         target: ldap_bind_password
@@ -28,6 +29,7 @@ services:
     ports: ["127.0.0.1:8000:8000"]
     depends_on:
       fake-llm: {condition: service_healthy}
+      mock-ad: {condition: service_healthy}
 
   migrate:
     volumes:

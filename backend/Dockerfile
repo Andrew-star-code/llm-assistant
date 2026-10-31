@@ -28,7 +28,10 @@ COPY config config
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --package ai-assistant-api
 
-RUN useradd --system --uid 10001 --home-dir /srv app
+# Том с файлами (фото из AD, загрузки): каталог создаётся с владельцем app — именованный том
+# Docker при первом монтировании наследует эти права.
+RUN useradd --system --uid 10001 --home-dir /srv app \
+ && mkdir -p /srv/storage && chown app /srv/storage
 USER app
 WORKDIR /srv/backend
 EXPOSE 8000

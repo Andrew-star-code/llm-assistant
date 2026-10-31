@@ -69,6 +69,8 @@ services:
       APP_QDRANT_API_KEY: ${QDRANT_API_KEY}
       HF_HUB_OFFLINE: "1"
       OTEL_SDK_DISABLED: "true"
+    volumes:
+      - api-storage:/srv/storage
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
@@ -90,6 +92,7 @@ services:
     logging: *default-logging
 
 volumes:
+  api-storage:
   postgres-data:
   redis-data:
   qdrant-data:

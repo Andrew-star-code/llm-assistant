@@ -16,18 +16,25 @@ RAG по базам знаний трёх уровней, инструмента
 | `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, fake-llm, embed, api, frontend |
 | `make dev-down` / `make dev-reset` | Остановить стенд / остановить и удалить данные |
 | `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → сборка образов |
-| `make test` | Unit- и интеграционные тесты (pytest, Vitest) |
+| `make test` | Unit- и интеграционные тесты (pytest, Vitest; нужен Docker: testcontainers и mock-AD) |
+| `make test-unit` | Быстрые тесты без Docker |
 | `make lint` / `make fmt` | Линтеры (ruff, eslint, prettier) / автоформат |
 | `make typecheck` | mypy strict, tsc |
-| `make e2e` | Playwright |
+| `make e2e` | Playwright против работающего api (сначала `make dev-up`) |
 | `make gen-api` | OpenAPI → `frontend/src/api/` + `docs/reference/api.md` (после любого изменения API) |
 | `make migrate` | Миграции Alembic |
 | `make docs-config` | `docs/reference/config.md` из Pydantic-настроек (после изменения конфига) |
+| `make docs-db` | `docs/reference/db-schema.md` из моделей SQLAlchemy (после изменения схемы) |
 | `make docs-check` | README модулей, актуальность справочников, битые ссылки |
 | `make deploy` | Выкатка на сервер — этап 10 |
 
-CLI бэкенда: `uv run python -m app.cli --help` (`config check`, `config docs`, `openapi`, `api-docs`;
-дальше — `ad check`, `create-admin`, `kb import`).
+CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `openapi`, `api-docs`, `db-docs`,
+`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`; дальше — `kb import`.
+В дев-стенде: `docker compose … exec api python -m app.cli …`.
+
+Вход на дев-стенде: провайдер dev — кнопки на странице входа (seed из `config/app.dev.yaml`);
+через mock-AD — любой пользователь из `deploy/mock-ad/README.md`, пароль `Passw0rd!`;
+суперадмин — `ivanov`.
 
 ## 3. Карта репозитория
 
@@ -70,7 +77,9 @@ CLI бэкенда: `uv run python -m app.cli --help` (`config check`, `config d
 | Добавить тип инцидента | `backend/app/modules/incidents/` | фильтры в админке |
 | Добавить набор данных или функцию SQL | `services/data-gateway/catalog/` | описания полей и примеры запросов |
 | Изменить формат стрима | `docs/architecture/sse-protocol.md` → `modules/completions/streaming.py` → `frontend/src/api/sse.ts` | версия протокола, тесты обеих сторон |
-| Изменить схему БД | модель SQLAlchemy + миграция Alembic | `docs/reference/db-schema.md` (генерируется) |
+| Изменить схему БД | модель SQLAlchemy + `app/models.py` + миграция Alembic | `make docs-db` |
+| Добавить право | `modules/rbac/permissions.py` | `docs/reference/permissions.md` |
+| Добавить провайдер входа | `modules/auth/providers/` + `main.py::init_services` | README `modules/auth` |
 | Добавить параметр конфигурации | `backend/app/core/config.py` (+ `config/*.yaml`) | `make docs-config` |
 | Добавить или изменить эндпоинт | роутер модуля | `make gen-api`, тесты |
 | Добавить сценарий fake-llm | `services/fake-llm/src/fake_llm/scenarios.py` | README сервиса, тест |
@@ -126,5 +135,11 @@ CLI бэкенда: `uv run python -m app.cli --help` (`config check`, `config d
 - **Никаких внешних обращений и CDN** в рантайме: модели, шрифты, KaTeX, pdf.js — только локально.
   Без inline-скриптов (CSP) — поэтому тема применяется внешним `frontend/public/theme-init.js`.
 - **mock-AD** требует `cap_add: SYS_ADMIN` (Samba пишет NT ACL в xattr) — только дев-стенд.
+- **Права — в каждом админ-эндпоинте** через `Depends(require(Perm.…))`; тест
+  `test_every_admin_endpoint_requires_permission` упадёт, если забыть. Действие над чужими
+  данными без `audit.record` — ошибка ревью.
+- **CSRF**: все изменяющие запросы под `/api` требуют `X-CSRF-Token`; фронтенд ставит его сам
+  (`frontend/src/api/client.ts`), в тестах — `ApiClient` из `backend/tests/integration/conftest.py`.
+- **ldap3 синхронный** — вызовы AD только через `asyncio.to_thread`; тайм-ауты сокета — целые секунды.
 - **Конфиг слоями**: init-аргументы `Settings(...)` сливаются с YAML, а не заменяют его — в тестах
   конфигурацию подменяйте через `APP_CONFIG_DIR` на временный каталог.
