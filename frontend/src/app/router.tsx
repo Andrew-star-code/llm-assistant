@@ -7,6 +7,8 @@ import { AuditPage } from "@/admin/pages/AuditPage";
 import { IncidentsPage } from "@/admin/pages/IncidentsPage";
 import { KbBasePage } from "@/admin/pages/KbBasePage";
 import { KbListPage } from "@/admin/pages/KbListPage";
+import { ScenarioEditorPage } from "@/admin/pages/ScenarioEditorPage";
+import { ScenarioListPage } from "@/admin/pages/ScenarioListPage";
 import { LoginsPage } from "@/admin/pages/LoginsPage";
 import { UserCardPage } from "@/admin/pages/UserCardPage";
 import { UsersPage } from "@/admin/pages/UsersPage";
@@ -53,6 +55,8 @@ export const routes: RouteObject[] = [
       { path: "kb", element: <KbListPage /> },
       { path: "kb/:kbId", element: <KbBasePage /> },
       { path: "incidents", element: <IncidentsPage /> },
+      { path: "scenarios", element: <ScenarioListPage /> },
+      { path: "scenarios/:scenarioId", element: <ScenarioEditorPage /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

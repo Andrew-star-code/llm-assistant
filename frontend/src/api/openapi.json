@@ -5263,6 +5263,24 @@
         ],
         "title": "MessageOut"
       },
+      "NamedOption": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "NamedOption"
+      },
       "Notice": {
         "properties": {
           "required": {
@@ -6042,20 +6060,14 @@
           },
           "knowledge_bases": {
             "items": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
+              "$ref": "#/components/schemas/NamedOption"
             },
             "type": "array",
             "title": "Knowledge Bases"
           },
           "roles": {
             "items": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
+              "$ref": "#/components/schemas/NamedOption"
             },
             "type": "array",
             "title": "Roles"

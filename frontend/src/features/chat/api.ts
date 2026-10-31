@@ -56,8 +56,15 @@ export function invalidateChatLists(queryClient: QueryClient): Promise<void> {
   return queryClient.invalidateQueries({ queryKey: chatKeys.all });
 }
 
-export async function createChat(thinking: boolean | null): Promise<ChatDetail> {
-  return unwrap(await api.POST("/api/chats", { body: { thinking_enabled: thinking } }));
+export async function createChat(
+  thinking: boolean | null,
+  scenarioId: string | null = null,
+): Promise<ChatDetail> {
+  return unwrap(
+    await api.POST("/api/chats", {
+      body: { thinking_enabled: thinking, scenario_id: scenarioId },
+    }),
+  );
 }
 
 /** Отправка сообщения: при необходимости создаёт чат; возвращает id чата. */
@@ -69,10 +76,11 @@ export function useSendMessage() {
       content: string;
       thinking: boolean | null;
       attachmentIds?: string[];
+      scenarioId?: string | null;
     }) => {
       let chatId = input.chatId;
       if (!chatId) {
-        const chat = await createChat(input.thinking);
+        const chat = await createChat(input.thinking, input.scenarioId ?? null);
         queryClient.setQueryData(chatKeys.detail(chat.id), chat);
         chatId = chat.id;
       }

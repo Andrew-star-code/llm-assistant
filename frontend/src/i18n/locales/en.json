@@ -133,7 +133,8 @@
       "audit": "Audit log",
       "ad": "AD diagnostics",
       "kb": "Knowledge bases",
-      "incidents": "Incidents"
+      "incidents": "Incidents",
+      "scenarios": "Scenarios"
     },
     "users": {
       "search": "Search by name, login, department or title",
@@ -236,6 +237,51 @@
         "in_progress": "in progress",
         "resolved": "resolved"
       }
+    },
+    "scenarios": {
+      "new": "New scenario",
+      "name": "Name",
+      "code": "Code (latin)",
+      "description": "Description",
+      "icon": "Icon",
+      "model": "Model",
+      "roles": "Who can see it",
+      "everyone": "everyone",
+      "rolesHint": "Nothing selected — visible to everyone.",
+      "ragMode": "RAG mode",
+      "ragModes": {
+        "auto": "auto: search + tool",
+        "tool": "tool only",
+        "off": "no RAG"
+      },
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Disabled",
+      "thinking": "“Think” by default",
+      "thinkingModel": "as the model",
+      "thinkingOn": "on",
+      "thinkingOff": "off",
+      "prompt": "Scenario prompt (Jinja2)",
+      "variables": "Variables: {{list}}",
+      "knowledgeBases": "Knowledge bases",
+      "kbHint": "Nothing selected — all bases available to the user. The user's personal base is always searched.",
+      "tools": "Tools",
+      "allTools": "All enabled tools",
+      "roleMissing": "role does not exist yet — appears when a user logs in",
+      "requiresAttachment": "Attachment required",
+      "attachmentHint": "Hint, e.g. “Attach the contract”",
+      "starters": "Example requests",
+      "startersHint": "One per line, up to six.",
+      "order": "Order",
+      "save": "Save",
+      "saved": "Saved — applies from the next message",
+      "delete": "Delete",
+      "confirmDelete": "Delete the scenario? Its chats continue as regular chats.",
+      "testChat": "Test chat",
+      "startTest": "Start",
+      "restartTest": "Restart",
+      "saveFirst": "Save the scenario to try it in a chat.",
+      "testHint": "The chat uses the saved version, ignores roles and stays out of history."
     }
   },
   "failure": {
@@ -386,5 +432,10 @@
     "delete": "Delete “{{name}}”",
     "confirmDelete": "Delete for sure?",
     "uploadFailed": "“{{name}}” was not uploaded: {{reason}}"
+  },
+  "scenarios": {
+    "title": "Scenarios",
+    "reset": "Reset scenario",
+    "attachFile": "Attach a file for this scenario"
   }
 }

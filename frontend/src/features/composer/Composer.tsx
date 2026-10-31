@@ -20,6 +20,7 @@ import {
 } from "@/features/composer/attachments";
 import { AttachmentChip } from "@/features/composer/AttachmentChip";
 import { useDrafts } from "@/features/composer/drafts";
+import { ScenarioBadge } from "@/features/scenarios/ScenarioBadge";
 import { useFileLimits } from "@/features/files/api";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,10 @@ export interface ComposerProps {
   onSend: (text: string, attachmentIds: string[]) => void;
   onStop: () => void;
   autoFocus?: boolean;
+  /** Активный сценарий (§7.3): индикатор и кнопка сброса. */
+  scenario?: { name: string; icon: string | null; onReset?: () => void } | null;
+  /** Сценарий требует вложение, а в чате его ещё нет: текст подсказки («Приложите договор»). */
+  attachmentRequired?: string | null;
 }
 
 const MAX_HEIGHT = 240;
@@ -48,6 +53,8 @@ export function Composer({
   onSend,
   onStop,
   autoFocus = true,
+  scenario = null,
+  attachmentRequired = null,
 }: ComposerProps) {
   const { t } = useTranslation();
   const text = useDrafts((s) => s.drafts[draftKey] ?? "");
@@ -80,9 +87,10 @@ export function Composer({
   }, [autoFocus, draftKey]);
 
   // Отправка ждёт окончания загрузки и разбора файлов (§7.3); файлы с ошибкой не отправляются.
+  const needsFile = Boolean(attachmentRequired) && ids.length === 0;
   const submit = () => {
     const value = text.trim();
-    if (!value || busy || sending || pending) return;
+    if (!value || busy || sending || pending || needsFile) return;
     onSend(value, ids);
     setDraft(draftKey, "");
     clearAttachments(draftKey);
@@ -147,6 +155,11 @@ export function Composer({
           ))}
         </div>
       )}
+      {needsFile && (
+        <p className="px-2 pb-1 text-xs text-primary" data-testid="attachment-required">
+          {attachmentRequired}
+        </p>
+      )}
       <textarea
         ref={ref}
         rows={1}
@@ -162,7 +175,7 @@ export function Composer({
         className="max-h-60 w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
       />
       <div className="flex items-center justify-between gap-2 px-1">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <input
             ref={fileInput}
             type="file"
@@ -189,6 +202,9 @@ export function Composer({
           >
             <Paperclip className="size-4" />
           </Button>
+          {scenario && (
+            <ScenarioBadge name={scenario.name} icon={scenario.icon} onReset={scenario.onReset} />
+          )}
           {thinkingAvailable && (
             <button
               type="button"
@@ -223,9 +239,15 @@ export function Composer({
           <Button
             size="icon"
             onClick={submit}
-            disabled={!text.trim() || sending || pending}
+            disabled={!text.trim() || sending || pending || needsFile}
             aria-label={t("composer.send")}
-            title={pending ? t("composer.attachments.waiting") : undefined}
+            title={
+              pending
+                ? t("composer.attachments.waiting")
+                : needsFile
+                  ? (attachmentRequired ?? undefined)
+                  : undefined
+            }
             data-testid="send-button"
           >
             <ArrowUp />

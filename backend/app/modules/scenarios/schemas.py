@@ -45,13 +45,18 @@ class ScenarioOut(ScenarioSpec):
     unknown_knowledge_bases: list[str] = Field(default_factory=list)
 
 
+class NamedOption(BaseModel):
+    code: str
+    name: str
+
+
 class ScenarioOptions(BaseModel):
     """Что можно выбрать в редакторе."""
 
     model_roles: list[str]
     tools: list[str]
-    knowledge_bases: list[dict[str, str]]
-    roles: list[dict[str, str]]
+    knowledge_bases: list[NamedOption]
+    roles: list[NamedOption]
     icons: list[str]
     variables: dict[str, str]
     rag_modes: list[RagMode]

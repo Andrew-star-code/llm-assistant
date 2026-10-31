@@ -1823,6 +1823,13 @@ export interface components {
       /** Sources */
       sources?: components["schemas"]["SourceOut"][];
     };
+    /** NamedOption */
+    NamedOption: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+    };
     /** Notice */
     Notice: {
       /** Required */
@@ -2082,13 +2089,9 @@ export interface components {
       /** Tools */
       tools: string[];
       /** Knowledge Bases */
-      knowledge_bases: {
-        [key: string]: string;
-      }[];
+      knowledge_bases: components["schemas"]["NamedOption"][];
       /** Roles */
-      roles: {
-        [key: string]: string;
-      }[];
+      roles: components["schemas"]["NamedOption"][];
       /** Icons */
       icons: string[];
       /** Variables */

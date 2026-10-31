@@ -32,7 +32,7 @@ thinking по умолчанию, «нужно вложение», пример�
 **Зависит от:** `rbac`, `tools`, `rag`, `kb`, `llm`, `audit`.
 
 **Точки расширения:** новый сценарий — [docs/guides/add-scenario.md](../../../../docs/guides/add-scenario.md);
-новая иконка — `ICONS` здесь и `frontend/src/features/scenarios/icons.tsx`.
+новая иконка — `ICONS` здесь и `frontend/src/features/scenarios/iconMap.ts`.
 
 **Данные:** `scenarios`, `chats.scenario_id`, `chats.is_test`.
 

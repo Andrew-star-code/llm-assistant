@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/features/auth/UserMenu";
 import { useChat } from "@/features/chat/api";
+import { ScenarioBadge } from "@/features/scenarios/ScenarioBadge";
 import { ChatSidebar } from "@/features/sidebar/ChatSidebar";
 import { SearchDialog } from "@/features/sidebar/SearchDialog";
 import { ApiStatus } from "@/features/system/ApiStatus";
@@ -110,8 +111,13 @@ export function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-4">
-          <span className="truncate font-medium" data-testid="chat-title">
-            {title}
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-medium" data-testid="chat-title">
+              {title}
+            </span>
+            {match && chat.data?.scenario && (
+              <ScenarioBadge name={chat.data.scenario.name} icon={chat.data.scenario.icon} />
+            )}
           </span>
           <ApiStatus />
         </header>

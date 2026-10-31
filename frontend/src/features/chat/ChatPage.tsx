@@ -15,13 +15,29 @@ import {
 import { activeBranch, latestLeaf, siblings, type Message } from "@/features/chat/tree";
 import { Composer } from "@/features/composer/Composer";
 import { MessageItem, type MessageActions } from "@/features/message/MessageItem";
+import { useScenarios } from "@/features/scenarios/api";
 
 /** Страница чата (§7.1–7.4): лента активной ветки и поле ввода. */
 export function ChatPage() {
-  const { t } = useTranslation();
   const { chatId = "" } = useParams();
   const [params] = useSearchParams();
-  const highlightId = params.get("m");
+  return <ChatView chatId={chatId} highlightId={params.get("m")} />;
+}
+
+/**
+ * Лента и поле ввода одного чата. Используется страницей чата и тестовым чатом в редакторе
+ * сценария (`embedded`: без перехода «чат не найден → новый чат»).
+ */
+export function ChatView({
+  chatId,
+  highlightId = null,
+  embedded = false,
+}: {
+  chatId: string;
+  highlightId?: string | null;
+  embedded?: boolean;
+}) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const chat = useChat(chatId);
   const model = useChatModel();
@@ -43,8 +59,25 @@ export function ChatPage() {
   );
   const streamingMessage = branch.find((m) => m.status === "streaming");
   const busy = Boolean(streamingMessage) || regenerate.isPending;
+  const scenarios = useScenarios();
+  const scenarioRef = chat.data?.scenario ?? null;
+  // Карточка сценария знает, доступен ли «Размышлять» у его модели; в тестовом чате админа
+  // сценария может не быть в списке пользователя — тогда как у обычного чата.
+  const scenarioCard = scenarios.data?.find((s) => s.id === scenarioRef?.id);
+  const thinkingAvailable = scenarioCard
+    ? scenarioCard.thinking_available
+    : (model.data?.thinking_available ?? false);
   const thinking =
-    thinkingOverride ?? chat.data?.thinking_enabled ?? model.data?.thinking_default ?? false;
+    thinkingAvailable &&
+    (thinkingOverride ??
+      chat.data?.thinking_enabled ??
+      (scenarioCard ? scenarioCard.thinking_default : model.data?.thinking_default) ??
+      false);
+  const hasFiles = messages.some((m) => m.role === "user" && (m.files?.length ?? 0) > 0);
+  const attachmentRequired =
+    scenarioRef?.requires_attachment && !hasFiles
+      ? (scenarioRef.attachment_hint ?? t("scenarios.attachFile"))
+      : null;
 
   // Автопрокрутка вниз, пока пользователь сам не прокрутил вверх.
   useEffect(() => {
@@ -75,7 +108,7 @@ export function ChatPage() {
     };
   }, [streamingMessage]);
 
-  if (chat.isError) {
+  if (chat.isError && !embedded) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
         <p>{t("chat.notFound")}</p>
@@ -134,8 +167,23 @@ export function ChatPage() {
           draftKey={chatId}
           busy={busy}
           sending={send.isPending}
-          thinkingAvailable={model.data?.thinking_available ?? false}
+          thinkingAvailable={thinkingAvailable}
           thinking={thinking}
+          scenario={
+            scenarioRef
+              ? {
+                  name: scenarioRef.name,
+                  icon: scenarioRef.icon,
+                  // Сброс — чат продолжается без сценария; у тестового чата сценарий фиксирован.
+                  onReset: chat.data?.is_test
+                    ? undefined
+                    : () => {
+                        updateChat.mutate({ chatId, body: { scenario_id: null } });
+                      },
+                }
+              : null
+          }
+          attachmentRequired={attachmentRequired}
           onThinkingChange={(value) => {
             setOverride({ chatId, value });
             updateChat.mutate({ chatId, body: { thinking_enabled: value } });

@@ -28,7 +28,7 @@ from app.modules.scenarios.models import Scenario
 log = structlog.stdlib.get_logger("app.scenarios")
 
 RagMode = Literal["auto", "tool", "off"]
-# Иконки карточек — из набора, который знает фронтенд (frontend/src/features/scenarios/icons.ts).
+# Иконки карточек — из набора, который знает фронтенд (frontend/src/features/scenarios/iconMap.ts).
 ICONS = (
     "file-signature",
     "life-buoy",

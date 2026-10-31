@@ -24,7 +24,7 @@ from app.modules.rbac.models import Role
 from app.modules.rbac.permissions import Perm
 from app.modules.scenarios import service
 from app.modules.scenarios.models import Scenario
-from app.modules.scenarios.schemas import ScenarioOptions, ScenarioOut, TestChatOut
+from app.modules.scenarios.schemas import NamedOption, ScenarioOptions, ScenarioOut, TestChatOut
 from app.modules.scenarios.service import ICONS, TEMPLATE_VARIABLES, ScenarioSpec
 from app.modules.tools.registry import all_tools
 
@@ -104,8 +104,8 @@ async def options(request: Request, db: DbDep, _: Manager) -> ScenarioOptions:
     return ScenarioOptions(
         model_roles=[r for r in registry.roles() if r not in {"embed", "rerank", "guard"}],
         tools=sorted(name for name, tool in all_tools().items() if tool.visibility == "visible"),
-        knowledge_bases=[{"code": b.code, "name": b.name} for b in bases],
-        roles=[{"code": r.code, "name": r.name} for r in roles],
+        knowledge_bases=[NamedOption(code=b.code, name=b.name) for b in bases],
+        roles=[NamedOption(code=r.code, name=r.name) for r in roles],
         icons=list(ICONS),
         variables=TEMPLATE_VARIABLES,
         rag_modes=["auto", "tool", "off"],

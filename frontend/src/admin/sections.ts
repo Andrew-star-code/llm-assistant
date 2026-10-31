@@ -4,6 +4,7 @@ import {
   ScrollText,
   ShieldAlert,
   Siren,
+  Sparkles,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -37,6 +38,12 @@ export const ADMIN_SECTIONS: Section[] = [
     label: "admin.nav.kb",
     icon: Library,
     permission: ["admin.kb.manage", "admin.kb.manage_roles"],
+  },
+  {
+    to: "/admin/scenarios",
+    label: "admin.nav.scenarios",
+    icon: Sparkles,
+    permission: "admin.scenarios.manage",
   },
   {
     to: "/admin/incidents",
