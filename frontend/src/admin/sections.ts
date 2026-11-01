@@ -10,6 +10,7 @@ import {
   Network,
   ScrollText,
   ShieldAlert,
+  ShieldBan,
   Siren,
   UserCog,
   Sparkles,
@@ -62,6 +63,12 @@ export const ADMIN_SECTIONS: Section[] = [
     to: "/admin/logins",
     label: "admin.nav.logins",
     icon: ShieldAlert,
+    permission: "admin.logins.view",
+  },
+  {
+    to: "/admin/security",
+    label: "admin.nav.security",
+    icon: ShieldBan,
     permission: "admin.logins.view",
   },
   {

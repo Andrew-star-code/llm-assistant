@@ -142,7 +142,8 @@
       "models": "Models",
       "tools": "Tools",
       "settings": "Settings",
-      "roles": "Roles"
+      "roles": "Roles",
+      "security": "Security"
     },
     "users": {
       "search": "Search by name, login, department or title",
@@ -177,7 +178,22 @@
       "success": "Success",
       "failure": "Failure",
       "all": "All",
-      "filterLogin": "Login"
+      "filterLogin": "Login",
+      "flags": "Flags",
+      "onlyFlagged": "Flagged",
+      "unreviewed": "Unreviewed",
+      "review": "Reviewed",
+      "reviewed": "reviewed",
+      "blockIp": "Block IP",
+      "blockReason": "Reason for blocking the IP",
+      "ipBlocked": "IP {{ip}} blocked",
+      "flagNames": {
+        "after_failures": "after failures",
+        "new_subnet": "new subnet",
+        "off_hours": "off hours",
+        "concurrent_subnets": "sessions from other subnets",
+        "blocked_attempt": "blocked"
+      }
     },
     "audit": {
       "actor": "Who",
@@ -250,11 +266,70 @@
       "occurrences": "Occurrences",
       "status": "Status",
       "empty": "No incidents",
+      "type": "Type",
+      "any": "Any",
+      "open": "Open",
+      "search": "Search by title",
+      "user": "User",
+      "assignee": "Assignee",
+      "nobody": "unassigned",
+      "firstSeen": "First seen",
+      "resolution": "Resolution",
+      "save": "Save",
+      "takeMe": "Assign to me",
+      "comments": "Comments",
+      "comment": "Comment",
+      "addComment": "Add",
+      "system": "system",
+      "openChat": "Open chat",
+      "back": "Back to incidents",
+      "payload": "Data",
+      "stack": "Stack trace",
+      "logs": "Request log",
+      "recentLogs": "Recent process log",
+      "environment": "Environment",
+      "endpoint": "Endpoint",
+      "requestId": "request_id",
+      "category": "Category",
+      "summary": "Summary",
+      "evidence": "Quote",
+      "verdict": "Verdict",
+      "categories": "Categories",
+      "excerpt": "Message",
+      "blocked": "Answer blocked",
+      "rule": "Rule",
+      "ip": "IP",
+      "logins": "Logins",
+      "blockedUntil": "Blocked until",
+      "model": "Model",
+      "detail": "Reason",
+      "containerLogs": "Container logs",
+      "noLogs": "No container logs: {{note}}",
+      "saved": "Saved",
       "statuses": {
         "new": "new",
         "in_progress": "in progress",
-        "resolved": "resolved"
-      }
+        "resolved": "resolved",
+        "false_positive": "false positive"
+      },
+      "severities": {
+        "low": "low",
+        "medium": "medium",
+        "warning": "warning",
+        "high": "high",
+        "critical": "critical"
+      },
+      "types": {
+        "system_error": "System error",
+        "model_report": "Model report",
+        "guard": "Guard model",
+        "security": "Security",
+        "model_health": "Model health",
+        "rag_degraded": "Search degraded",
+        "kb_index": "KB indexing",
+        "worker_failed": "Worker failure"
+      },
+      "badge": "New incidents: {{count}}"
     },
     "scenarios": {
       "new": "New scenario",
@@ -495,7 +570,11 @@
       "overridden": "set in admin",
       "reset": "Restore configuration value",
       "save": "Save",
-      "saved": "Saved — applies without restart"
+      "saved": "Saved — applies without restart",
+      "guard": {
+        "title": "Guard model blocking",
+        "hint": "By default the guard model only raises an incident. Checked categories are verified before the answer and get the neutral refusal."
+      }
     },
     "roles": {
       "hint": "Department from AD is not used: roles are assigned manually. A role opens scenarios, role knowledge bases and models.",
@@ -529,6 +608,31 @@
       "neverLoggedIn": "never logged in",
       "empty": "No members yet",
       "delete": "Delete role"
+    },
+    "security": {
+      "hint": "A blocked address cannot sign in or use the API even with an open session. Trusted networks (e.g. office NAT) get no new-subnet flag and are not blocked automatically for password guessing.",
+      "blocks": "IP and subnet blocks",
+      "trusted": "Trusted networks",
+      "cidr": "IP or subnet",
+      "cidrPlaceholder": "10.1.2.3 or 10.1.2.0/24",
+      "reason": "Reason",
+      "minutes": "Minutes (empty — forever)",
+      "until": "Until",
+      "forever": "forever",
+      "source": "Source",
+      "sources": {
+        "auto": "automatic",
+        "manual": "manual"
+      },
+      "author": "By",
+      "block": "Block",
+      "unblock": "Unblock",
+      "note": "Note",
+      "trust": "Add",
+      "untrust": "Remove",
+      "showExpired": "Show expired",
+      "expired": "expired",
+      "empty": "None"
     }
   },
   "failure": {
@@ -570,7 +674,14 @@
     "role.update": "Role changed",
     "role.delete": "Role deleted",
     "role.members_add": "Members added",
-    "role.members_remove": "Members removed"
+    "role.members_remove": "Members removed",
+    "incident.update": "Incident changed",
+    "incident.comment": "Incident comment",
+    "ip.block": "IP blocked",
+    "ip.unblock": "IP unblocked",
+    "network.trust": "Trusted network added",
+    "network.untrust": "Trusted network removed",
+    "login.review": "Login event reviewed"
   },
   "notFound": {
     "title": "Page not found",

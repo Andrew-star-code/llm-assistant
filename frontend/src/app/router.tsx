@@ -9,6 +9,7 @@ import { ChatsPage } from "@/admin/pages/ChatsPage";
 import { DashboardPage } from "@/admin/pages/DashboardPage";
 import { ExportsPage } from "@/admin/pages/ExportsPage";
 import { FeedbackPage } from "@/admin/pages/FeedbackPage";
+import { IncidentPage } from "@/admin/pages/IncidentPage";
 import { IncidentsPage } from "@/admin/pages/IncidentsPage";
 import { KbBasePage } from "@/admin/pages/KbBasePage";
 import { KbListPage } from "@/admin/pages/KbListPage";
@@ -18,6 +19,7 @@ import { LoginsPage } from "@/admin/pages/LoginsPage";
 import { ModelsPage } from "@/admin/pages/ModelsPage";
 import { RolePage } from "@/admin/pages/RolePage";
 import { RolesPage } from "@/admin/pages/RolesPage";
+import { SecurityPage } from "@/admin/pages/SecurityPage";
 import { SettingsPage } from "@/admin/pages/SettingsPage";
 import { ToolsPage } from "@/admin/pages/ToolsPage";
 import { UserCardPage } from "@/admin/pages/UserCardPage";
@@ -65,6 +67,8 @@ export const routes: RouteObject[] = [
       { path: "kb", element: <KbListPage /> },
       { path: "kb/:kbId", element: <KbBasePage /> },
       { path: "incidents", element: <IncidentsPage /> },
+      { path: "incidents/:incidentId", element: <IncidentPage /> },
+      { path: "security", element: <SecurityPage /> },
       { path: "scenarios", element: <ScenarioListPage /> },
       { path: "scenarios/:scenarioId", element: <ScenarioEditorPage /> },
       { path: "dashboard", element: <DashboardPage /> },

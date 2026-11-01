@@ -72,6 +72,7 @@ function SettingsForm({
     max_files_per_message: initial.max_files_per_message,
     default_address_form: initial.default_address_form,
     system_prompt: initial.system_prompt,
+    guard_block_categories: initial.guard_block_categories,
   });
   const [reaccept, setReaccept] = useState(false);
   const done = (data: SettingsOut) => {
@@ -100,7 +101,8 @@ function SettingsForm({
     // Отправляем только изменённое: остальное остаётся как есть (в т. ч. «из конфигурации»).
     const body: SettingsIn = { require_notice_reaccept: reaccept };
     for (const key of Object.keys(values) as Field[]) {
-      if (values[key] !== initial[key]) Object.assign(body, { [key]: values[key] });
+      if (JSON.stringify(values[key]) !== JSON.stringify(initial[key]))
+        Object.assign(body, { [key]: values[key] });
     }
     save.mutate(body);
   };
@@ -290,6 +292,29 @@ function SettingsForm({
         </span>
         {source("system_prompt")}
       </label>
+
+      <fieldset className="flex flex-col gap-1 text-sm" data-testid="settings-guard">
+        <legend className="font-medium">{t("admin.settings.guard.title")}</legend>
+        <span className="text-xs text-muted-foreground">{t("admin.settings.guard.hint")}</span>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+          {initial.guard_categories.map((c) => (
+            <label key={c} className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={values.guard_block_categories?.includes(c) ?? false}
+                onChange={(e) => {
+                  const current = values.guard_block_categories ?? [];
+                  set(
+                    "guard_block_categories",
+                    e.target.checked ? [...current, c] : current.filter((x) => x !== c),
+                  );
+                }}
+              />
+              {c}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       {error && (
         <p role="alert" className="text-sm text-red-600" data-testid="settings-error">
