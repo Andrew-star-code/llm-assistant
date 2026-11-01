@@ -90,7 +90,7 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 | Добавить сценарий fake-llm | `services/fake-llm/src/fake_llm/scenarios.py` | README сервиса, тест |
 | Поддержать новый формат вложений | `modules/files/sniff.py` + `modules/ingestion/parsers.py` | README `ingestion`, тест в `tests/unit/test_files.py` |
 | Сменить шаблон DOCX/PPTX | `config/templates/` | `config/templates/README.md` |
-| Поменять параметры поиска или чанкинга | `rag.search`, `rag.chunking` в `config/app.yaml` | прогон `make eval-rag`; после смены BM25 — переиндексация |
+| Поменять параметры поиска или чанкинга | `rag.search`, `rag.chunking` в `config/app.yaml`; порог реранкера — и в админке «Базы знаний» (перекрывает конфиг) | прогон `make eval-rag` (по реальным базам — `KB=… QUESTIONS=…`); после смены BM25 — переиндексация |
 | Добавить уровень или поле базы знаний | `modules/kb/` + `modules/rag/service.build_scope` | тесты изоляции в `test_rag.py` |
 
 ## 4. Соглашения
@@ -187,6 +187,9 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
   (`rag.store.write_document`); переиндексация = `mark_reindex` (version + 1) и задача `kb.index`.
 - **`EventWriter`** вызывают параллельные инструменты: запись в Redis Stream — под замком, новые
   события пишите только через `emit`/`delta`.
+- **Порог реранкера из админки** (`app_settings`) применяет `rag.service.run_search`; прямой вызов
+  `rag.search.search` с `settings.rag.search` (тесты, eval по корпусу) поправку не видит — новый
+  поиск в продукте делайте через `run_search`.
 - **Номера цитат** выдаёт `SourceBook` (общая на ответ); не нумеруйте фрагменты в инструментах
   сами — `render_fragments` в `tools/builtin/knowledge.py`.
 - **Сценарий читается из БД на каждое сообщение** (`completions/generation.py`) — не кэшируйте

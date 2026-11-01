@@ -7,14 +7,19 @@
 ### Added
 
 - `eval/rag`: вопросы без ответа в корпусе (`no_answer`, отдельно от hit@5/MRR), перебор порога
-  реранкера по трассе и `recommended_threshold`; `make eval-rag` пишет `eval/rag/report.json`.
+  реранкера по трассе и `recommended_threshold`; `make eval-rag` пишет `eval/rag/report.json`;
+  прогон по настоящим базам знаний (`make eval-rag KB=<коды> QUESTIONS=<файл>`, документ — по
+  названию, без переиндексации).
+- Админка «Базы знаний» → «Параметры поиска»: порог реранкера меняется без перезапуска
+  (`GET/PUT /api/admin/kb/search-settings`, `app_settings`, аудит), «Вернуть из конфигурации».
 - Вложения «в очереди» и «в обработке» возвращаются в очередь при старте воркера `files`
   (`files.requeue`); `worker check` проверяет, что все таблицы зарегистрированы.
 
 ### Changed
 
-- Порог реранкера `rag.search.rerank.score_threshold` 0,2 → 0,01 — подобран по `eval/rag` на
-  bge-m3 и bge-reranker-v2-m3 (с 0,2 рабочая конфигурация теряла 7 из 48 ответов).
+- Порог реранкера `rag.search.rerank.score_threshold` 0,2 → 0,005, с уклоном в полноту поиска:
+  на bge-m3 и bge-reranker-v2-m3 с 0,2 рабочая конфигурация теряла 7 из 48 ответов. Окончательное
+  значение подбирается на реальных документах.
 - Дев-стенд: healthcheck embed и rerank ждут до 30 минут (`--wait-timeout 2100`), реранкер
   стартует после готового embed и не перезапускается вместе с Docker (одновременный прогрев не
   помещается в память WSL2); `pnpm` в Makefile запускается из `frontend/` (corepack берёт версию
