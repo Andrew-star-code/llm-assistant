@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import io
+import uuid
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -13,8 +14,12 @@ import pytest
 from sqlalchemy import select
 
 from app.modules.chats.models import Message
+from app.modules.files.models import File
+from app.modules.incidents.models import Incident
 from app.modules.ingestion.convert import soffice_binary, tesseract_available
+from app.modules.ingestion.parsers import ParsedDocument
 from app.modules.tools.models import ToolCall
+from app.workers import jobs
 from tests import samples
 from tests.integration.conftest import (
     ApiClient,
@@ -119,6 +124,45 @@ async def test_broken_document_gets_parse_error(
         json={"content": "Что в файле?", "attachment_ids": [body["id"]]},
     )
     assert sent.status_code == 400 and sent.json()["error"]["code"] == "file_not_ready"
+
+
+async def test_worker_crash_marks_attachment_failed_and_requeue_on_start(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str, monkeypatch: Any
+) -> None:
+    app, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+
+    # Сбой вне разбора (запись результата): вложение — «ошибка», а не вечное «читаю…».
+    def broken_outline(self: Any) -> dict[str, Any]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(ParsedDocument, "outline", broken_outline)
+    response = await upload(client, "notes.md", "# Заметки\n\nТекст.".encode())
+    assert response.status_code == 201
+    body = response.json()
+    assert body["parse_status"] == "error" and "RuntimeError" in body["parse_error"], body
+    async with app.state.db_sessions() as db:
+        incident = await db.scalar(
+            select(Incident)
+            .where(Incident.type == "worker_failed")
+            .order_by(Incident.last_seen.desc())
+        )
+    assert incident is not None and incident.payload["file_id"] == body["id"]
+    monkeypatch.undo()
+
+    # Задача потерялась (воркер умер): при старте воркера файл возвращается в очередь.
+    async with app.state.db_sessions() as db:
+        row = await db.get(File, uuid.UUID(body["id"]))
+        assert row is not None
+        row.parse_status = "processing"
+        await db.commit()
+    settings = app.state.settings
+
+    async def parse(file_id: str) -> None:
+        await jobs.parse_job(file_id, settings)
+
+    assert await jobs.requeue_files_job(settings, parse) >= 1
+    ready = (await client.get(f"/api/files/{body['id']}")).json()
+    assert ready["parse_status"] == "ready" and ready["parse_error"] is None
 
 
 # ------------------------------------------------------------------ вложения в промпте

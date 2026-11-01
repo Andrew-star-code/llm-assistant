@@ -4,6 +4,11 @@
   оглавление в хранилище → чанки (dense + BM25) в ``attachment_chunks`` для ``search_in_documents``
   → ``ready`` или ``error`` с понятной причиной (её видит пользователь в чипе файла).
 * ``generate_job`` — создание файла по запросу модели и PDF-превью для Office-форматов.
+* ``requeue_files_job`` — при старте воркера очереди ``files``: вложения «в очереди» и
+  «в обработке» (задача потерялась или воркер умер) возвращаются в очередь.
+
+Непредвиденная ошибка задачи не оставляет вложение «читаю…»: ``parse_job`` ставит ``error`` с
+причиной и пишет инцидент ``worker_failed`` (страховка поверх обработки известных ошибок).
 """
 
 from __future__ import annotations
@@ -12,16 +17,20 @@ import asyncio
 import hashlib
 import tempfile
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import structlog
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+# Все модели — до любой работы с БД: воркер и CLI не поднимают api, а без этого внешние ключи
+# (files.chat_id → chats, kb_imports.created_by → users) не находят таблиц при flush.
+import app.models  # noqa: F401
 from app.core.config import Settings
 from app.core.storage import LocalStorage
 from app.modules.files.generate import (
@@ -36,6 +45,7 @@ from app.modules.files.generate import (
     preview_pdf,
 )
 from app.modules.files.models import File
+from app.modules.incidents import service as incidents
 from app.modules.ingestion.chunking import Chunk, chunk_pages
 from app.modules.ingestion.parsers import ParsedDocument, ParseError, parse_file
 from app.modules.llm.registry import ModelRegistry
@@ -107,7 +117,40 @@ async def index_chunks(ref: DocumentRef, chunks: list[Chunk], settings: Settings
         await registry.close()
 
 
+async def report_failure(
+    settings: Settings, *, type: str, title: str, fingerprint: str, payload: dict[str, Any]
+) -> None:
+    """Инцидент о сбое задачи; ошибка записи (например, БД недоступна) только логируется."""
+    try:
+        async with worker_context(settings) as ctx:
+            await incidents.report(
+                ctx.sessions, type=type, severity="high", title=title[:300],
+                fingerprint=fingerprint, payload=payload,
+            )  # fmt: skip
+    except Exception:
+        log.exception("worker.incident_failed", fingerprint=fingerprint)
+
+
 async def parse_job(file_id: str, settings: Settings) -> None:
+    try:
+        await _parse(file_id, settings)
+    except Exception as exc:
+        # Страховка: что бы ни сломалось (БД, хранилище, код), вложение не висит «читаю…».
+        log.exception("worker.parse_crashed", file_id=file_id)
+        reason = f"сбой обработки файла ({type(exc).__name__})"
+        try:
+            async with worker_context(settings) as ctx:
+                await _set_status(ctx, file_id, "error", reason)
+        except Exception:
+            log.exception("worker.parse_status_failed", file_id=file_id)
+        await report_failure(
+            settings, type="worker_failed", title=f"Сбой разбора вложения: {reason}",
+            fingerprint=f"worker_failed:files.parse:{type(exc).__name__}",
+            payload={"task": "files.parse", "file_id": file_id, "error": type(exc).__name__},
+        )  # fmt: skip
+
+
+async def _parse(file_id: str, settings: Settings) -> None:
     async with worker_context(settings) as ctx:
         async with ctx.sessions() as db:
             row = await db.get(File, uuid.UUID(file_id))
@@ -167,6 +210,28 @@ async def parse_job(file_id: str, settings: Settings) -> None:
             row.parse_error = None
             await db.commit()
         log.info("worker.parsed", file_id=file_id, pages=len(parsed.pages), parser=parsed.parser)
+
+
+# Вложения, которые воркер не довёл до конца, — после перезапуска разбираются заново.
+REQUEUE_FILE_KINDS = ("upload",)
+
+
+async def requeue_files_job(settings: Settings, enqueue: Callable[[str], Awaitable[None]]) -> int:
+    async with worker_context(settings) as ctx, ctx.sessions() as db:
+        ids = (
+            await db.scalars(
+                select(File.id).where(
+                    File.kind.in_(REQUEUE_FILE_KINDS),
+                    File.deleted_at.is_(None),
+                    File.parse_status.in_(("pending", "processing")),
+                )
+            )
+        ).all()
+    for file_id in ids:
+        await enqueue(str(file_id))
+    if ids:
+        log.info("worker.files_requeued", files=len(ids))
+    return len(ids)
 
 
 def _build(spec: dict[str, Any], settings: Settings) -> GeneratedFile:

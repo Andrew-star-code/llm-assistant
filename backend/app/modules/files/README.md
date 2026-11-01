@@ -23,6 +23,9 @@ zip-бомбы (`zip_bomb`: распакованный объём, число з
 
 К сообщению файлы прикладываются полем `attachment_ids` в `POST /api/chats/{id}/messages`
 (`service.attach`: только свои, только `ready`, не больше `files.max_files_per_message`).
+Сбой задачи разбора вне известных ошибок формата тоже даёт `error` с причиной (и инцидент
+`worker_failed`), а не вечное «читаю…»; вложения `pending` / `processing` воркер `files` при
+старте ставит в очередь заново (`files.requeue`).
 Сгенерированные файлы создаёт воркер (`generate.py`): DOCX — pandoc по `config/templates/reference.docx`
 (формулы `$…$` → нативные формулы Word), PDF — DOCX через LibreOffice, XLSX — openpyxl (типы, формат
 чисел, шапка, автофильтр, формулы), CSV с BOM, PPTX — python-pptx по `presentation.pptx`.

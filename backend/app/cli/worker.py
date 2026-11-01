@@ -74,7 +74,16 @@ def _tesseract(settings: Settings) -> str:
     return f"языки {settings.files.ocr_languages}, распознано «{text.strip()}»"
 
 
+def _models(_: Settings) -> str:
+    """Все таблицы зарегистрированы в процессе воркера (иначе задачи падают на внешних ключах)."""
+    import app.workers.celery_app  # noqa: F401 — тот же набор импортов, что у воркера
+    from app.core.db import Base
+
+    return f"таблиц: {len(Base.metadata.sorted_tables)}"
+
+
 CHECKS: dict[str, Callable[[Settings], str]] = {
+    "models": _models,
     "pandoc": _pandoc_docx,
     "libreoffice": _libreoffice_pdf,
     "tesseract": _tesseract,

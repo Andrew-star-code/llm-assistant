@@ -15,6 +15,8 @@ import pytest
 from sqlalchemy import func, select
 
 from app.core.config import Settings
+from app.modules.incidents.models import Incident
+from app.modules.ingestion.parsers import ParsedDocument
 from app.modules.kb.models import KbDocument, KbImport
 from app.modules.rag import search as search_module
 from app.modules.rag.search import Scope, search
@@ -325,12 +327,15 @@ async def test_folder_import_resumes_after_restart(stand: Any, tmp_path: Path) -
         import_id = str(imp.id)
     queued: list[str] = []
 
+    class WorkerKilled(BaseException):
+        """Процесс убит: код задачи не успевает ничего записать (в отличие от Exception)."""
+
     async def crash_after_two(document_id: str) -> None:
         queued.append(document_id)
         if len(queued) == 2:
-            raise RuntimeError("worker killed")
+            raise WorkerKilled
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(WorkerKilled):
         await kb_jobs.import_job(import_id, settings, crash_after_two)
 
     # Перезапуск воркера: незавершённое возвращается в очередь и доделывается без дублей.
@@ -353,6 +358,48 @@ async def test_folder_import_resumes_after_restart(stand: Any, tmp_path: Path) -
             select(func.count()).select_from(KbDocument).where(KbDocument.kb_id == uuid.UUID(kb_id))
         )
     assert total == 5
+
+
+async def test_unexpected_worker_errors_mark_import_and_document_failed(
+    stand: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "import3"
+    (root / "docs").mkdir(parents=True)
+    (root / "docs" / "a.md").write_text("# A\n\nТекст.", "utf-8")
+    _, app, admin, _, _ = await stand(kb={"import_root": str(root)})
+    kb_id = await create_kb(admin, uniq("crash"))
+
+    # Сбой посреди сканирования (не ParseError): импорт — «ошибка», а не вечное «сканирование».
+    def broken_scan(folder: Path, root: Path) -> list[Path] | None:
+        raise OSError("диск отвалился")
+
+    monkeypatch.setattr(kb_jobs, "scan_folder", broken_scan)
+    response = await admin.post(f"/api/admin/kb/{kb_id}/imports", json={"path": "docs"})
+    assert response.status_code == 202, response.text
+    [progress] = (await admin.get(f"/api/admin/kb/{kb_id}/imports")).json()
+    assert progress["status"] == "error" and "OSError" in progress["error"]
+    monkeypatch.undo()
+
+    # Сбой вне разбора (запись результата): документ — «ошибка» с причиной, а не «в обработке».
+    def broken_markdown(self: Any) -> str:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(ParsedDocument, "markdown", broken_markdown)
+    response = await admin.post(
+        f"/api/admin/kb/{kb_id}/documents",
+        files={"file": ("Сбой.md", "# Сбой\n\nТекст.".encode(), "text/markdown")},
+    )
+    assert response.status_code == 201, response.text
+    doc = (await admin.get(f"/api/admin/kb/{kb_id}/documents")).json()[0]
+    assert doc["status"] == "error" and "RuntimeError" in doc["error"], doc
+    async with app.state.db_sessions() as db:
+        found = (
+            await db.scalars(
+                select(Incident).where(Incident.type.in_(("kb_index", "worker_failed")))
+            )
+        ).all()
+    assert any(i.payload and i.payload.get("document_id") == doc["id"] for i in found)
+    assert any(i.payload and i.payload.get("import_id") == progress["id"] for i in found)
 
 
 async def test_admin_import_api_runs_in_background(stand: Any, tmp_path: Path) -> None:

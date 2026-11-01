@@ -60,6 +60,14 @@ def parse_file_task(file_id: str) -> None:
     asyncio.run(jobs.parse_job(file_id, get_settings()))
 
 
+@celery_app.task(name="files.requeue")  # type: ignore[untyped-decorator]
+def requeue_files_task() -> int:
+    async def enqueue(file_id: str) -> None:
+        celery_app.send_task("files.parse", args=[file_id], queue=QUEUE)
+
+    return asyncio.run(jobs.requeue_files_job(get_settings(), enqueue))
+
+
 @celery_app.task(name="files.generate")  # type: ignore[untyped-decorator]
 def generate_file_task(spec: dict[str, Any]) -> dict[str, Any]:
     return asyncio.run(jobs.generate_job(spec, get_settings()))
@@ -89,8 +97,11 @@ def requeue_task() -> dict[str, int]:
 
 @signals.worker_ready.connect  # type: ignore[untyped-decorator]
 def _requeue_on_start(sender: Any = None, **_: Any) -> None:
-    # Только воркер очереди kb: после перезапуска продолжить импорт и индексацию (§10.3).
+    # После перезапуска: воркер kb продолжает импорт и индексацию (§10.3), воркер files —
+    # разбор вложений, оставшихся «в очереди» или «в обработке».
     consumer = getattr(sender, "task_consumer", None)
     queues = {q.name for q in consumer.queues} if consumer is not None else set()
     if KB_QUEUE in queues:
         celery_app.send_task("kb.requeue", queue=KB_QUEUE)
+    if QUEUE in queues:
+        celery_app.send_task("files.requeue", queue=QUEUE)

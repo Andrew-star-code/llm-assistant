@@ -9,6 +9,9 @@
 * ``requeue_job`` — при старте воркера: незавершённые импорты и документы «в очереди» и
   «в обработке» (их воркер умер) возвращаются в очередь. Повтор безопасен: запись в Qdrant
   идемпотентна, а готовый документ задача пропускает.
+
+Непредвиденная ошибка задачи (БД, хранилище, код) не оставляет документ «в обработке», а импорт —
+«сканирование»: статус ``error`` с причиной и инцидент.
 """
 
 from __future__ import annotations
@@ -32,7 +35,13 @@ from app.modules.incidents import service as incidents
 from app.modules.ingestion.parsers import ParseError
 from app.modules.kb.models import LEVEL_PERSONAL, KbDocument, KbImport, KnowledgeBase
 from app.modules.rag.store import KB_COLLECTION, PERSONAL_COLLECTION, DocumentRef
-from app.workers.jobs import index_chunks, make_chunks, parse_bytes, worker_context
+from app.workers.jobs import (
+    index_chunks,
+    make_chunks,
+    parse_bytes,
+    report_failure,
+    worker_context,
+)
 
 log = structlog.stdlib.get_logger("app.worker.kb")
 
@@ -72,6 +81,22 @@ async def _fail(settings: Settings, document_id: uuid.UUID, reason: str) -> None
 
 
 async def index_document_job(document_id: str, settings: Settings) -> None:
+    try:
+        await _index_document(document_id, settings)
+    except Exception as exc:
+        log.exception("worker.kb_index_crashed", document_id=document_id)
+        try:
+            await _fail(settings, uuid.UUID(document_id), f"сбой индексации ({type(exc).__name__})")
+        except Exception:
+            log.exception("worker.kb_status_failed", document_id=document_id)
+            await report_failure(
+                settings, type="worker_failed", title="Сбой индексации документа базы знаний",
+                fingerprint=f"worker_failed:kb.index:{type(exc).__name__}",
+                payload={"task": "kb.index", "document_id": document_id},
+            )  # fmt: skip
+
+
+async def _index_document(document_id: str, settings: Settings) -> None:
     doc_id = uuid.UUID(document_id)
     async with worker_context(settings) as ctx:
         async with ctx.sessions() as db:
@@ -154,6 +179,29 @@ def _supported(path: Path, data: bytes, settings: Settings) -> str:
 
 
 async def import_job(import_id: str, settings: Settings, enqueue: Enqueue) -> None:
+    try:
+        await _import(import_id, settings, enqueue)
+    except Exception as exc:
+        log.exception("worker.kb_import_crashed", import_id=import_id)
+        reason = f"сбой импорта ({type(exc).__name__})"
+        try:
+            async with worker_context(settings) as ctx, ctx.sessions() as db:
+                imp = await db.get(KbImport, uuid.UUID(import_id))
+                if imp is not None:
+                    imp.status = "error"
+                    imp.error = reason
+                    imp.finished_at = utcnow()
+                    await db.commit()
+        except Exception:
+            log.exception("worker.kb_import_status_failed", import_id=import_id)
+        await report_failure(
+            settings, type="worker_failed", title=f"Импорт в базу знаний прерван: {reason}",
+            fingerprint=f"worker_failed:kb.import:{import_id}",
+            payload={"task": "kb.import", "import_id": import_id, "error": type(exc).__name__},
+        )  # fmt: skip
+
+
+async def _import(import_id: str, settings: Settings, enqueue: Enqueue) -> None:
     imp_id = uuid.UUID(import_id)
     async with worker_context(settings) as ctx:
         async with ctx.sessions() as db:
