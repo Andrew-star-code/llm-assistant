@@ -1,5 +1,5 @@
-"""Инциденты (§12.5, §14). Этап 4 — минимум: запись с дедупликацией по отпечатку и список в
-админке; карточка, назначение, комментарии и захват логов — этап 7.
+"""Инциденты (§13.5, §14): запись с группировкой по отпечатку, жизненный цикл
+(новый → в работе → решён или ложное срабатывание), ответственный, решение, комментарии.
 """
 
 from __future__ import annotations
@@ -12,15 +12,16 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db import Base, UUIDPkMixin
+from app.core.db import Base, CreatedAtMixin, UUIDPkMixin
 
 
 class Incident(UUIDPkMixin, Base):
     __tablename__ = "incidents"
 
     type: Mapped[str] = mapped_column(String(64), index=True)
-    severity: Mapped[str] = mapped_column(String(16))  # low | warning | high | critical
-    status: Mapped[str] = mapped_column(String(16), index=True)  # new | in_progress | resolved
+    severity: Mapped[str] = mapped_column(String(16))  # low | medium | warning | high | critical
+    # new | in_progress | resolved | false_positive
+    status: Mapped[str] = mapped_column(String(16), index=True)
     fingerprint: Mapped[str] = mapped_column(String(128), index=True)
     title: Mapped[str] = mapped_column(String(300))
     user_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), index=True)
@@ -32,3 +33,14 @@ class Incident(UUIDPkMixin, Base):
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     assigned_to: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"))
     resolution: Mapped[str | None] = mapped_column(Text)
+
+
+class IncidentComment(UUIDPkMixin, CreatedAtMixin, Base):
+    __tablename__ = "incident_comments"
+
+    incident_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("incidents.id", ondelete="CASCADE"), index=True
+    )
+    # Пусто — системный комментарий (например, «модель снова отвечает»).
+    author_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), index=True)
+    text: Mapped[str] = mapped_column(Text)

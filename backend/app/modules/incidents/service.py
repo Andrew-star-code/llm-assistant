@@ -1,6 +1,7 @@
-"""Запись инцидентов с группировкой по отпечатку (§12.5).
+"""Запись инцидентов с группировкой по отпечатку (§13.5).
 
-Открытый инцидент с тем же отпечатком получает +1 к счётчику; решённый — открывается снова.
+Открытый инцидент с тем же отпечатком получает +1 к счётчику; решённый — открывается снова,
+а «ложное срабатывание» только считает повторы (иначе ложная тревога возвращалась бы снова).
 ``throttle_s`` ограничивает частоту записи из горячего пути (например, «реранкер недоступен» —
 не чаще раза в 10 минут, §10.4): отметка в Redis видна всем процессам api и воркера.
 """
@@ -21,6 +22,9 @@ from app.modules.incidents.models import Incident
 log = structlog.stdlib.get_logger("app.incidents")
 
 OPEN = ("new", "in_progress")
+STATUSES = ("new", "in_progress", "resolved", "false_positive")
+SEVERITIES = ("low", "medium", "warning", "high", "critical")
+HIGH = ("high", "critical")
 
 
 async def report(
@@ -90,7 +94,7 @@ async def upsert(
         existing.occurrences += 1
         existing.last_seen = now
         existing.payload = payload or existing.payload
-        if existing.status not in OPEN:
+        if existing.status == "resolved":
             existing.status = "new"  # повтор после решения открывает инцидент снова
             existing.resolution = None
         return existing

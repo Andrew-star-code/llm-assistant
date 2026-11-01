@@ -27,7 +27,7 @@ export function IncidentsPage() {
           t("admin.incidents.status"),
         ]}
       >
-        {(incidents.data ?? []).map((i) => (
+        {(incidents.data?.items ?? []).map((i) => (
           <tr key={i.id} data-testid="incident-row">
             <Td>{formatDateTime(i.last_seen)}</Td>
             <Td>
@@ -44,7 +44,7 @@ export function IncidentsPage() {
           </tr>
         ))}
       </Table>
-      {incidents.data?.length === 0 && (
+      {incidents.data?.items.length === 0 && (
         <p className="text-sm text-muted-foreground">{t("admin.incidents.empty")}</p>
       )}
     </section>

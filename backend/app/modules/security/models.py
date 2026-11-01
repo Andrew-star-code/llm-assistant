@@ -10,7 +10,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db import Base, UUIDPkMixin, utcnow
+from app.core.db import Base, CreatedAtMixin, UUIDPkMixin, utcnow
 
 
 class LoginEvent(UUIDPkMixin, Base):
@@ -30,3 +30,26 @@ class LoginEvent(UUIDPkMixin, Base):
     risk_flags: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
     details: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     reviewed_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), index=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class IpBlock(UUIDPkMixin, CreatedAtMixin, Base):
+    """Блокировка IP или подсети (§13.4): автоматически за перебор паролей или вручную."""
+
+    __tablename__ = "ip_blocks"
+
+    cidr: Mapped[str] = mapped_column(String(64), index=True)  # 10.0.0.5/32, 10.1.2.0/24
+    reason: Mapped[str] = mapped_column(String(300))
+    until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # пусто — бессрочно
+    source: Mapped[str] = mapped_column(String(16))  # auto | manual
+    created_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), index=True)
+
+
+class TrustedNetwork(UUIDPkMixin, CreatedAtMixin, Base):
+    """Доверенная подсеть: без флага «новый IP» и без автоматической блокировки."""
+
+    __tablename__ = "trusted_networks"
+
+    cidr: Mapped[str] = mapped_column(String(64), unique=True)
+    note: Mapped[str | None] = mapped_column(String(300))
+    created_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), index=True)

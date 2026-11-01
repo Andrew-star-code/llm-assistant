@@ -21,6 +21,11 @@
 | GET | `/api/admin/feedback/export` | `adminExportFeedback` | Export Feedback | 200, 422 |
 | GET | `/api/admin/feedback/stats` | `adminFeedbackStats` | Stats | 200, 422 |
 | GET | `/api/admin/incidents` | `adminListIncidents` | List Incidents | 200, 422 |
+| GET | `/api/admin/incidents/assignees` | `adminIncidentAssignees` | Assignees | 200 |
+| GET | `/api/admin/incidents/summary` | `adminIncidentsSummary` | Summary | 200 |
+| GET | `/api/admin/incidents/{incident_id}` | `adminGetIncident` | Get Incident | 200, 422 |
+| PATCH | `/api/admin/incidents/{incident_id}` | `adminUpdateIncident` | Update Incident | 200, 422 |
+| POST | `/api/admin/incidents/{incident_id}/comments` | `adminCommentIncident` | Comment | 201, 422 |
 | GET | `/api/admin/kb` | `adminListKb` | List Bases | 200 |
 | POST | `/api/admin/kb` | `adminCreateKb` | Create Base | 201, 422 |
 | GET | `/api/admin/kb/import-folders` | `adminImportFolders` | Import Folders | 200 |

@@ -819,6 +819,78 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/incidents/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Summary */
+    get: operations["adminIncidentsSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/incidents/assignees": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Assignees
+     * @description Кому можно назначить инцидент: администраторы и суперадминистраторы.
+     */
+    get: operations["adminIncidentAssignees"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/incidents/{incident_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Incident */
+    get: operations["adminGetIncident"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Incident */
+    patch: operations["adminUpdateIncident"];
+    trace?: never;
+  };
+  "/api/admin/incidents/{incident_id}/comments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Comment */
+    post: operations["adminCommentIncident"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/scenarios": {
     parameters: {
       query?: never;
@@ -2133,6 +2205,27 @@ export interface components {
       /** Error */
       error?: string | null;
     };
+    /** CommentIn */
+    CommentIn: {
+      /** Text */
+      text: string;
+    };
+    /** CommentOut */
+    CommentOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      author: components["schemas"]["PersonRef"] | null;
+      /** Text */
+      text: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** ControllerOut */
     ControllerOut: {
       /** Url */
@@ -2588,6 +2681,48 @@ export interface components {
       /** Finished At */
       finished_at: string | null;
     };
+    /** IncidentDetail */
+    IncidentDetail: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Type */
+      type: string;
+      /** Severity */
+      severity: string;
+      /** Status */
+      status: string;
+      /** Title */
+      title: string;
+      /** Occurrences */
+      occurrences: number;
+      /**
+       * First Seen
+       * Format: date-time
+       */
+      first_seen: string;
+      /**
+       * Last Seen
+       * Format: date-time
+       */
+      last_seen: string;
+      user: components["schemas"]["PersonRef"] | null;
+      assignee: components["schemas"]["PersonRef"] | null;
+      /** Chat Id */
+      chat_id: string | null;
+      /** Message Id */
+      message_id: string | null;
+      /** Resolution */
+      resolution: string | null;
+      /** Payload */
+      payload: {
+        [key: string]: unknown;
+      } | null;
+      /** Comments */
+      comments: components["schemas"]["CommentOut"][];
+    };
     /** IncidentOut */
     IncidentOut: {
       /**
@@ -2615,16 +2750,21 @@ export interface components {
        * Format: date-time
        */
       last_seen: string;
-      /** User Id */
-      user_id: string | null;
+      user: components["schemas"]["PersonRef"] | null;
+      assignee: components["schemas"]["PersonRef"] | null;
       /** Chat Id */
       chat_id: string | null;
       /** Message Id */
       message_id: string | null;
-      /** Payload */
-      payload: {
-        [key: string]: unknown;
-      } | null;
+    };
+    /** IncidentUpdate */
+    IncidentUpdate: {
+      /** Status */
+      status?: ("new" | "in_progress" | "resolved" | "false_positive") | null;
+      /** Assigned To */
+      assigned_to?: string | null;
+      /** Resolution */
+      resolution?: string | null;
     };
     /** Incidents */
     Incidents: {
@@ -2965,6 +3105,13 @@ export interface components {
       /** Next Cursor */
       next_cursor?: string | null;
     };
+    /** Page[IncidentOut] */
+    Page_IncidentOut_: {
+      /** Items */
+      items: components["schemas"]["IncidentOut"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
     /** Page[LoginEventOut] */
     Page_LoginEventOut_: {
       /** Items */
@@ -2985,6 +3132,18 @@ export interface components {
       items: components["schemas"]["UserListItem"][];
       /** Next Cursor */
       next_cursor?: string | null;
+    };
+    /** PersonRef */
+    PersonRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
     };
     /** PersonalKbOut */
     PersonalKbOut: {
@@ -3750,6 +3909,21 @@ export interface components {
       ok: boolean;
       /** Error */
       error?: string | null;
+    };
+    /** Summary */
+    Summary: {
+      /**
+       * New
+       * @description Новые инциденты — счётчик в меню.
+       */
+      new: number;
+      /**
+       * New High
+       * @description Из них high и critical — подсветка.
+       */
+      new_high: number;
+      /** Open */
+      open: number;
     };
     /** TestChatOut */
     TestChatOut: {
@@ -5566,6 +5740,9 @@ export interface operations {
       query?: {
         status?: string | null;
         type?: string | null;
+        severity?: string | null;
+        q?: string | null;
+        cursor?: string | null;
         limit?: number;
       };
       header?: never;
@@ -5580,7 +5757,148 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["IncidentOut"][];
+          "application/json": components["schemas"]["Page_IncidentOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminIncidentsSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Summary"];
+        };
+      };
+    };
+  };
+  adminIncidentAssignees: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PersonRef"][];
+        };
+      };
+    };
+  };
+  adminGetIncident: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        incident_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUpdateIncident: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        incident_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IncidentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminCommentIncident: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        incident_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CommentIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentDetail"];
         };
       };
       /** @description Validation Error */

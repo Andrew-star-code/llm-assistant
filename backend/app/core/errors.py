@@ -88,9 +88,32 @@ async def _app_error_handler(request: Request, exc: Exception) -> JSONResponse:
 
 
 async def _unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    # TODO(stage-7): создавать инцидент system_error с захватом логов запроса (§13.5).
     log.exception("unhandled_error", exc_type=type(exc).__name__, request_id=_request_id(request))
+    await _report(request, exc)
     return _response(request, 500, "internal_error", "Внутренняя ошибка сервера")
+
+
+async def _report(request: Request, exc: Exception) -> None:
+    """Инцидент ``system_error`` со стеком и логами запроса (§13.5); сбой записи — только в лог."""
+    sessions = getattr(request.app.state, "db_sessions", None)
+    if sessions is None:
+        return
+    from app.modules.incidents.errors import report_exception
+
+    session = getattr(request.state, "auth_session", None)
+    route = getattr(request.scope.get("route"), "path", None)
+    await report_exception(
+        sessions,
+        exc,
+        context={
+            "request_id": _request_id(request),
+            "method": request.method,
+            "path": request.url.path,
+            "endpoint": route,
+        },
+        request_lines=list(getattr(request.state, "log_lines", ()) or ()),
+        user_id=getattr(session, "user_id", None),
+    )
 
 
 def install_error_handlers(app: FastAPI) -> None:

@@ -280,8 +280,9 @@ async def test_reranker_down_rrf_order_and_incident(stand: Any, fake_llm_url: st
         selected = [c for c in row.trace["rag"]["candidates"] if c["status"] == "selected"]
         assert len(selected) <= 6 and all(c["rerank"] is None for c in selected)
 
-    incidents = (await admin.get("/api/admin/incidents", params={"type": "rag_degraded"})).json()
-    [incident] = [i for i in incidents if i["payload"]["stage"] == "rerank"]
+    page = (await admin.get("/api/admin/incidents", params={"type": "rag_degraded"})).json()
+    cards = [(await admin.get(f"/api/admin/incidents/{i['id']}")).json() for i in page["items"]]
+    [incident] = [i for i in cards if i["payload"]["stage"] == "rerank"]
     assert incident["occurrences"] == 1  # второй отказ в течение 10 минут — без новой записи
     assert (await petrov.get("/api/admin/incidents")).status_code == 403
 

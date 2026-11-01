@@ -28,6 +28,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core import log_capture
 from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.storage import Storage
@@ -51,6 +52,7 @@ from app.modules.completions.streaming import (
     cancel_key,
 )
 from app.modules.files.service import chat_files
+from app.modules.incidents.errors import report_exception
 from app.modules.kb.models import KnowledgeBase
 from app.modules.llm.registry import ModelRegistry
 from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_stream
@@ -438,6 +440,14 @@ class GenerationManager:
             log.exception("completions.failed", message_id=str(message_id))
             result.status = "error"
             result.error = _error_payload(exc)
+            if result.error["code"] == "internal_error":
+                # Ошибка нашего кода (не модели): инцидент со стеком и логами генерации.
+                await report_exception(
+                    self.sessions, exc,
+                    context={"stage": "generation", "message_id": str(message_id)},
+                    request_lines=log_capture.request_lines(),
+                    message_id=message_id,
+                )  # fmt: skip
             trace["error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
             await writer.emit("error", result.error)
         finally:

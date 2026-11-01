@@ -15,6 +15,7 @@ from typing import Any
 import structlog
 
 from app.core.config import LoggingSettings
+from app.core.log_capture import CaptureHandler
 
 SENSITIVE_KEYS = frozenset(
     {
@@ -94,9 +95,12 @@ def configure_logging(settings: LoggingSettings) -> None:
     )
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
+    # Те же строки — в буферы для инцидентов (core/log_capture): лог запроса и последние строки.
+    capture = CaptureHandler()
+    capture.setFormatter(formatter)
 
     root = logging.getLogger()
-    root.handlers[:] = [handler]
+    root.handlers[:] = [handler, capture]
     root.setLevel(settings.level)
 
     # Болтливые библиотеки даже в DEBUG пишут не ниже INFO — иначе их строки забивают лог.
