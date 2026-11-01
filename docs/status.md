@@ -608,6 +608,9 @@ superadmin); форматы JSON, DOCX, PDF, доступ к выгрузке т
 `make check`, `E2E_REAL_WORKER=1 make e2e` (выгрузки PDF и DOCX — на настоящем воркере) и демо ниже;
 новый сервис `scheduler` поднимается в `make dev-up`.**
 
+Проверено на рабочей станции: [отчёт](reports/workstation-check-2026-11-01-stage6.md); найденные
+дефекты 1–4 исправлены в ветке `agent/workstation-check-stage6`.
+
 ### Демо-сценарий
 
 ```bash

@@ -38,12 +38,29 @@ export function SettingsPage() {
     queryKey: QUERY_KEY,
     queryFn: async () => unwrap(await api.GET("/api/admin/settings")),
   });
+  // Здесь, а не в форме: новые данные пересоздают форму, и её состояние теряется.
+  const [saved, setSaved] = useState(false);
   if (!settings.data) return null;
   // Сохранили — форма пересоздаётся с новыми значениями (без синхронизации в эффекте).
-  return <SettingsForm key={JSON.stringify(settings.data)} initial={settings.data} />;
+  return (
+    <SettingsForm
+      key={JSON.stringify(settings.data)}
+      initial={settings.data}
+      saved={saved}
+      setSaved={setSaved}
+    />
+  );
 }
 
-function SettingsForm({ initial }: { initial: SettingsOut }) {
+function SettingsForm({
+  initial,
+  saved,
+  setSaved,
+}: {
+  initial: SettingsOut;
+  saved: boolean;
+  setSaved: (saved: boolean) => void;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [values, setValues] = useState<Schemas["SettingsValues"]>({
@@ -57,7 +74,6 @@ function SettingsForm({ initial }: { initial: SettingsOut }) {
     system_prompt: initial.system_prompt,
   });
   const [reaccept, setReaccept] = useState(false);
-  const [saved, setSaved] = useState(false);
   const done = (data: SettingsOut) => {
     queryClient.setQueryData(QUERY_KEY, data);
     void queryClient.invalidateQueries({ queryKey: ["branding"] });

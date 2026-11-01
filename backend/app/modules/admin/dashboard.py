@@ -16,7 +16,7 @@ import httpx
 import structlog
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import Date, case, cast, distinct, func, select
+from sqlalchemy import Date, and_, case, cast, distinct, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -231,8 +231,17 @@ async def _queues(db: AsyncSession) -> Queues:
             )
         ).all()
     )
+    # В done импорт переводит только чтение (kb.service.import_out), поэтому running без документов
+    # в работе уже закончен, даже если страницу базы никто не открывал.
+    unfinished = exists().where(
+        KbDocument.import_id == KbImport.id,
+        KbDocument.deleted_at.is_(None),
+        KbDocument.status.in_(("queued", "processing")),
+    )
     imports = await db.scalar(
-        select(func.count()).where(KbImport.status.in_(("scanning", "running")))
+        select(func.count())
+        .select_from(KbImport)
+        .where(or_(KbImport.status == "scanning", and_(KbImport.status == "running", unfinished)))
     )
     pending = await db.scalar(
         select(func.count()).where(

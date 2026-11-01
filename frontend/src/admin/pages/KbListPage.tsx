@@ -21,7 +21,7 @@ export function KbListPage() {
     queryKey: kbKeys.admin,
     queryFn: async () => unwrap(await api.GET("/api/admin/kb")),
   });
-  const canCreate = bases.data === undefined || bases.data.every((b) => b.can_edit);
+  const canManage = hasPermission(me, "admin.kb.manage");
   return (
     <section className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">{t("admin.nav.kb")}</h1>
@@ -65,8 +65,8 @@ export function KbListPage() {
           </tr>
         ))}
       </Table>
-      {hasPermission(me, "admin.kb.manage") && <SearchSettingsCard />}
-      {canCreate && (
+      {canManage && <SearchSettingsCard />}
+      {canManage && (
         <CreateKbForm
           onCreated={() => {
             void queryClient.invalidateQueries({ queryKey: kbKeys.admin });

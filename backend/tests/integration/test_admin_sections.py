@@ -14,6 +14,8 @@ from typing import Any
 from sqlalchemy import select
 
 from app.modules.audit.models import AuditLog
+from app.modules.files.models import File
+from app.modules.kb.models import KbDocument, KbImport, KnowledgeBase
 from app.modules.rbac.models import Role
 from app.modules.users.models import User
 from tests.integration.conftest import ApiClient, Infra, chat_settings, new_chat, read_stream, send
@@ -102,6 +104,49 @@ async def test_feedback_and_dashboard(
     await kim.login("kim")
     for path in ("/api/admin/feedback", "/api/admin/dashboard", "/api/admin/feedback/export"):
         assert (await kim.get(path)).status_code == 403, path
+
+
+async def test_dashboard_counts_only_unfinished_imports(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Импорт с готовыми документами не «идёт», даже если страницу базы никто не открывал."""
+    _, app, admin, _, _ = await _stand(make_client, infra, tmp_path, fake_llm_url)
+    async with app.state.db_sessions() as db:
+        owner = await db.scalar(select(User.id).where(User.login == "ivanov"))
+        kb = KnowledgeBase(code="imports", name="Импорт", level="global", embed_model="m")
+        db.add(kb)
+        await db.flush()
+        scanning = KbImport(kb_id=kb.id, path="/a", status="scanning")
+        finished = KbImport(kb_id=kb.id, path="/b", status="running")
+        active = KbImport(kb_id=kb.id, path="/c", status="running")
+        db.add_all([scanning, finished, active])
+        await db.flush()
+        docs = []
+        for imp, status, sha in ((finished, "ready", "a" * 64), (active, "queued", "b" * 64)):
+            file = File(
+                owner_id=owner, kind="kb_document", filename="x.txt", mime="text/plain",
+                file_type="txt", size=1, sha256=sha, storage_key=f"kb/{sha}", parse_status="ready",
+            )  # fmt: skip
+            db.add(file)
+            await db.flush()
+            doc = KbDocument(
+                kb_id=kb.id, file_id=file.id, title="x", status=status, sha256=sha, import_id=imp.id
+            )
+            db.add(doc)
+            docs.append(doc)
+        await db.commit()
+        last_doc = docs[-1].id
+
+    board = (await admin.get("/api/admin/dashboard")).json()
+    assert board["queues"]["imports_running"] == 2  # сканируется и ждёт документ
+
+    async with app.state.db_sessions() as db:
+        doc = await db.get(KbDocument, last_doc)
+        assert doc is not None
+        doc.status = "ready"
+        await db.commit()
+    board = (await admin.get("/api/admin/dashboard")).json()
+    assert board["queues"]["imports_running"] == 1  # осталось только сканирование
 
 
 async def test_tools_toggle_and_model_visibility(
