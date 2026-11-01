@@ -27,7 +27,16 @@
   `admin/security_router.py` (просмотр — `admin.logins.view`, изменения — `admin.security.manage`,
   аудит). Подсети шире /16 (IPv6 — /48) и свой адрес заблокировать нельзя.
 
+* CLI `python -m app.cli ip list` и `ip unblock <IP или подсеть>` (`app/cli/security.py`) — если
+  админка с заблокированного адреса недоступна; для адреса снимает все блокировки, что его
+  содержат, и счётчик перебора в Redis; аудит `ip.unblock` без автора.
+
 Отказы `locked_*` и `ad_unavailable` счётчики не увеличивают.
+
+**IP клиента** — `auth.deps.client_ip`: `X-Forwarded-For` учитывается только от
+`trusted_proxies` (IP или подсети). В проде — адрес nginx; на дев-стенде — частные сети Docker:
+браузер ходит через прокси Vite с `xfwd`, а `curl` на `localhost:8000` может подставить любой
+адрес для проверки правил.
 
 **Зависит от:** Redis.
 

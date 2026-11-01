@@ -19,7 +19,7 @@
 | `qdrant_url` | str | `http://localhost:6333` | `APP_QDRANT_URL` | HTTP-адрес Qdrant. |
 | `qdrant_api_key` | secret \| null | — | `APP_QDRANT_API_KEY` | API-ключ Qdrant (секрет). |
 | `readiness_timeout_s` | float | 2.0 | `APP_READINESS_TIMEOUT_S` | Тайм-аут каждой проверки /ready, с. |
-| `trusted_proxies` | list[str] | [] | `APP_TRUSTED_PROXIES` | IP прокси (nginx), чьему X-Forwarded-For доверяем при определении IP клиента. |
+| `trusted_proxies` | list[str] | [] | `APP_TRUSTED_PROXIES` | IP или подсети прокси (nginx), чьему X-Forwarded-For доверяем при определении IP клиента. |
 | `logging.level` | DEBUG \| INFO \| WARNING \| ERROR | `INFO` | `APP_LOGGING__LEVEL` | Минимальный уровень логов. |
 | `logging.format` | json \| console | `json` | `APP_LOGGING__FORMAT` | json — для прода (stdout → сборщик логов), console — для разработки. |
 | `auth.providers` | list[ldap \| dev] | ['ldap'] | `APP_AUTH__PROVIDERS` | Провайдеры входа: ldap \| dev. dev запрещён при APP_ENV=prod. |

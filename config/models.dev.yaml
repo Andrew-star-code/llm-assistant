@@ -1,20 +1,27 @@
 # Оверлей для разработки: генеративные роли и реранкер — fake-llm, эмбеддинги — bge-m3 на CPU (TEI).
 # Для ручной проверки на живой модели укажите base_url локального Ollama/llama.cpp (§16.1).
+# container — имя контейнера для логов в инциденте model_health (через docker-proxy).
 models:
   chat:
     base_url: http://fake-llm:8080/v1
     model: fake-chat
+    container: ai-assistant-fake-llm-1
   coder:
     base_url: http://fake-llm:8080/v1
     model: fake-coder
+    container: ai-assistant-fake-llm-1
   utility:
     base_url: http://fake-llm:8080/v1
     model: fake-utility
+    container: ai-assistant-fake-llm-1
   guard:
     base_url: http://fake-llm:8080/v1
     model: fake-guard
+    container: ai-assistant-fake-llm-1
   embed:
     base_url: http://embed:80/v1
+    container: ai-assistant-embed-1
   rerank:
     base_url: http://fake-llm:8080/v1
     model: fake-rerank
+    container: ai-assistant-fake-llm-1

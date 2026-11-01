@@ -172,3 +172,28 @@ def test_cursor_roundtrip() -> None:
     assert decode_cursor(cursor) == ("Иванов", "42")
     with pytest.raises(AppError):
         decode_cursor("@@@")
+
+
+@pytest.mark.parametrize(
+    ("proxies", "peer", "expected"),
+    [
+        ([], "172.18.0.5", "172.18.0.5"),  # прокси не доверен — заголовок игнорируется
+        (["172.18.0.5"], "172.18.0.5", "203.0.113.7"),
+        (["172.16.0.0/12"], "172.18.0.5", "203.0.113.7"),  # подсеть Docker на дев-стенде
+        (["172.16.0.0/12"], "198.51.100.1", "198.51.100.1"),
+    ],
+)
+def test_client_ip_trusts_forwarded_only_from_proxies(
+    proxies: list[str], peer: str, expected: str
+) -> None:
+    from types import SimpleNamespace
+
+    from app.core.config import Settings
+    from app.modules.auth.deps import client_ip
+
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(settings=Settings(trusted_proxies=proxies))),
+        client=SimpleNamespace(host=peer),
+        headers={"x-forwarded-for": "203.0.113.7, 172.18.0.5"},
+    )
+    assert client_ip(request) == expected  # type: ignore[arg-type]

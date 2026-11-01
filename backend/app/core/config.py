@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import sys
 from enum import StrEnum
@@ -563,7 +564,8 @@ class Settings(BaseSettings):
     readiness_timeout_s: float = Field(2.0, gt=0, description="Тайм-аут каждой проверки /ready, с.")
     trusted_proxies: list[str] = Field(
         default_factory=list,
-        description="IP прокси (nginx), чьему X-Forwarded-For доверяем при определении IP клиента.",
+        description="IP или подсети прокси (nginx), чьему X-Forwarded-For доверяем при "
+        "определении IP клиента.",
     )
 
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
@@ -600,6 +602,11 @@ class Settings(BaseSettings):
             target = m.thinking.model_role
             if m.thinking.mode == "separate_model" and target not in self.models:
                 errors.append(f"models.{role}.thinking.model_role: роль {target!r} не описана")
+        for proxy in self.trusted_proxies:
+            try:
+                ipaddress.ip_network(proxy, strict=False)
+            except ValueError:
+                errors.append(f"trusted_proxies: {proxy!r} — не IP и не подсеть")
         if errors:
             raise ValueError("; ".join(errors))
         return self

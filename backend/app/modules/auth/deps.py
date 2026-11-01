@@ -9,6 +9,7 @@ from __future__ import annotations
 import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Annotated
 from uuid import UUID
 
@@ -21,7 +22,7 @@ from app.core.errors import ForbiddenError, UnauthenticatedError
 from app.modules.auth.sessions import SessionData, SessionStore
 from app.modules.rbac import service as rbac
 from app.modules.rbac.permissions import Perm
-from app.modules.security.ipblocks import Blocklist
+from app.modules.security.ipblocks import Blocklist, Network, contains, parse_network
 from app.modules.users.models import User
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -43,12 +44,21 @@ class CurrentUser:
         return str(perm) in self.permissions
 
 
+@lru_cache(maxsize=8)
+def _proxy_networks(proxies: tuple[str, ...]) -> list[Network]:
+    return [parse_network(p) for p in proxies]
+
+
 def client_ip(request: Request) -> str | None:
-    """IP клиента; X-Forwarded-For учитывается только от доверенного прокси (nginx)."""
+    """IP клиента; X-Forwarded-For учитывается только от доверенного прокси (nginx).
+
+    ``trusted_proxies`` — IP или подсети: в проде — адрес nginx, на дев-стенде — сеть Docker
+    (браузер ходит через прокси Vite, он и передаёт адрес браузера).
+    """
     settings: Settings = request.app.state.settings
     peer = request.client.host if request.client else None
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded and peer in settings.trusted_proxies:
+    if forwarded and contains(_proxy_networks(tuple(settings.trusted_proxies)), peer):
         return forwarded.split(",")[0].strip()[:64] or peer
     return peer
 

@@ -23,6 +23,15 @@ def test_dev_overlay_points_to_fake_llm(monkeypatch: pytest.MonkeyPatch) -> None
     assert settings.models["chat"].thinking.mode == "chat_template_kwarg"
     assert settings.models["embed"].dim == 1024
     assert "dev" in settings.auth.providers
+    # Логи упавшей модели в инциденте — через docker-proxy дев-стенда.
+    assert settings.monitoring.docker_url == "http://docker-proxy:2375"
+    assert settings.models["chat"].container == "ai-assistant-fake-llm-1"
+    assert "172.16.0.0/12" in settings.trusted_proxies
+
+
+def test_trusted_proxies_must_be_ip_or_network() -> None:
+    with pytest.raises(ConfigError, match="trusted_proxies: 'nginx' — не IP и не подсеть"):
+        load_settings(trusted_proxies=["10.0.0.1", "nginx"])
 
 
 def test_dev_provider_forbidden_in_prod() -> None:

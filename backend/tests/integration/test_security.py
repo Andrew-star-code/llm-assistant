@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from app.cli.security import _unblock as cli_unblock
 from app.core.config import Settings
 from app.modules.security.rules import off_hours
 from tests.integration.conftest import (
@@ -116,6 +117,14 @@ async def test_manual_blocks_and_trusted_networks(
     assert "без блокировки" in incident["title"]
     blocks = {b["cidr"] for b in (await admin.get("/api/admin/ip-blocks")).json()}
     assert blocks == {"192.0.2.0/24"}
+
+    # CLI снимает блокировку, если админка с этого адреса недоступна: по адресу — все подсети,
+    # что его содержат; процессы api узнают об этом сразу (версия в Redis).
+    assert await cli_unblock(settings, "192.0.2.9") == 0
+    assert (await branch.get("/api/auth/me")).status_code == 200
+    assert (await admin.get("/api/admin/ip-blocks")).json() == []
+    audit = (await admin.get("/api/admin/audit", params={"action": "ip.unblock"})).json()["items"]
+    assert audit[0]["actor_id"] is None and audit[0]["details"]["via"] == "cli"
 
 
 async def test_login_risk_flags_and_review(make_client: Any, infra: Infra, tmp_path: Path) -> None:

@@ -5,9 +5,14 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 // В dev-стенде фронтенд ходит в api через прокси Vite; в проде — через nginx (этап 10).
+// xfwd: прокси передаёт адрес браузера в X-Forwarded-For — иначе для api все пользователи
+// стенда приходили бы с одного IP контейнера frontend (флаги входа, блокировки IP).
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8000";
 const proxy = Object.fromEntries(
-  ["/api", "/health", "/ready"].map((path) => [path, { target: apiTarget, changeOrigin: false }]),
+  ["/api", "/health", "/ready"].map((path) => [
+    path,
+    { target: apiTarget, changeOrigin: false, xfwd: true },
+  ]),
 );
 
 export default defineConfig({

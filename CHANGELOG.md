@@ -21,6 +21,9 @@
     и блокировкой выбранных категорий; fake-llm — сценарий `moderation` и ответы guard-модели;
   - права `admin.incidents.manage`, `admin.security.manage`; README `incidents`, `security`,
     `moderation`.
+  - дев-стенд для проверки: прокси Vite передаёт IP браузера, `trusted_proxies` принимает
+    подсети; сервис `docker-proxy` (Docker API только на чтение) и контейнеры моделей в
+    `models.dev.yaml` — логи упавшей модели в инциденте; CLI `ip list` и `ip unblock`.
 
 - Этап 6 «Админка: переписка, аналитика, настройки» (§19 SPEC):
   - **Переписка**: поиск по всем сообщениям (русская морфология и подстрока, подсветка) с

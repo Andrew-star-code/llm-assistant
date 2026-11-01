@@ -69,8 +69,20 @@ async def _logs(settings: Settings, endpoint: ModelEndpoint) -> dict[str, Any]:
         }
     try:
         return {"container": container, "container_logs": await container_logs(url, container)}
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        note = (
+            f"Контейнер «{container}» не найден (models.<роль>.container)"
+            if status == 404
+            else f"Docker API ответил {status}"
+        )
+        return {"container": container, "container_logs": None, "logs_note": note}
     except (httpx.HTTPError, OSError) as exc:
-        return {"container": container, "container_logs": None, "logs_note": type(exc).__name__}
+        return {
+            "container": container,
+            "container_logs": None,
+            "logs_note": f"Docker API недоступен: {type(exc).__name__}",
+        }
 
 
 async def _recovered(sessions: async_sessionmaker[AsyncSession], role: str, health: Health) -> None:

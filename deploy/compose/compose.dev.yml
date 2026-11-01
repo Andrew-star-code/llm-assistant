@@ -136,6 +136,20 @@ services:
       retries: 180
       start_period: 30s
 
+  docker-proxy:
+    # Docker API только на чтение (§13.5): монитор моделей берёт логи контейнера упавшей модели
+    # для инцидента model_health (monitoring.docker_url в config/app.dev.yaml). Разрешены только
+    # GET /containers/*: остановить, запустить или создать контейнер через прокси нельзя (403).
+    # Порт наружу не публикуется. В проде — такой же прокси в проекте monitoring (этап 10).
+    image: tecnativa/docker-socket-proxy:v0.5.0@sha256:1f5038b54f06c3e18422902cf00ba21803d1c97805aae032e5e6673d532d3459
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      POST: "0"
+      DISABLE_IPV6: "1"       # слушать только IPv4: в сетях Docker без IPv6 haproxy иначе не стартует
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   mock-ad:
     build: ../mock-ad
     image: ai-assistant/mock-ad:${APP_VERSION:-dev}

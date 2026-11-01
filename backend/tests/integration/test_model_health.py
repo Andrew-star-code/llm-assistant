@@ -83,3 +83,17 @@ def test_docker_log_stream_with_and_without_tty() -> None:
         "Engine stopped",
     ]
     assert monitor._demux(b"plain tty output\n") == "plain tty output\n"
+
+
+async def test_logs_note_explains_missing_container(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.config import ModelEndpoint, Settings
+
+    def missing(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"message": "No such container"})
+
+    monkeypatch.setattr(httpx, "AsyncHTTPTransport", lambda **_: httpx.MockTransport(missing))
+    settings = Settings(monitoring={"docker_url": "http://docker-proxy:2375"})
+    endpoint = ModelEndpoint(base_url="http://llm:8000/v1", model="m", container="llm-x")
+    result = await monitor._logs(settings, endpoint)
+    assert result["container_logs"] is None
+    assert result["logs_note"] == "Контейнер «llm-x» не найден (models.<роль>.container)"

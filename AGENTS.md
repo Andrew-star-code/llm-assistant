@@ -32,7 +32,8 @@ RAG по базам знаний трёх уровней, инструмента
 | `make deploy` | Выкатка на сервер — этап 10 |
 
 CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `openapi`, `api-docs`, `db-docs`,
-`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`, `kb list`, `kb import --kb <код> <папка>`.
+`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`, `kb list`, `kb import --kb <код> <папка>`,
+`ip list`, `ip unblock <IP или подсеть>`.
 В дев-стенде: `docker compose … exec api python -m app.cli …`.
 
 Вход на дев-стенде: провайдер dev — кнопки на странице входа (seed из `config/app.dev.yaml`);
@@ -203,6 +204,9 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 - **Блокировки IP проверяются на каждом запросе** (`security.ipblocks.Blocklist` в `current_user` и
   при входе); после изменения блокировок вызывайте `await blocklist.changed()` — иначе другие
   процессы увидят их только через `security.blocklist_cache_s`.
+- **IP клиента на дев-стенде** приходит через прокси Vite (`xfwd`) в `X-Forwarded-For`, которому
+  api верит из частных сетей Docker (`trusted_proxies` в `config/app.dev.yaml`); в проде доверять
+  только адресу nginx. Заблокировали свой адрес — `python -m app.cli ip unblock <IP>`.
 - **Скрытый `report_incident`** всегда в наборе инструментов (сценарий его не убирает), а его
   инструкция — отдельный шаблон `system/moderation.md.j2`, не заменяемый промптом из админки.
 - **Номера цитат** выдаёт `SourceBook` (общая на ответ); не нумеруйте фрагменты в инструментах
