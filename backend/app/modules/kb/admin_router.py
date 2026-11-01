@@ -19,6 +19,8 @@ from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.deps import DbDep, StorageDep
 from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.modules.admin import app_settings
+from app.modules.admin.models import AppSetting
 from app.modules.audit import service as audit
 from app.modules.auth.deps import CurrentUser, client_ip, require, require_any
 from app.modules.files.sniff import UploadRejected
@@ -40,6 +42,8 @@ from app.modules.kb.schemas import (
     KbOut,
     KbUpdate,
     RoleRef,
+    SearchSettingsIn,
+    SearchSettingsOut,
     StatusCounts,
 )
 from app.modules.rag.store import delete_document, qdrant_client
@@ -126,6 +130,46 @@ async def _kb_out(db: AsyncSession, actor: CurrentUser, bases: list[KnowledgeBas
 
 
 # ------------------------------------------------------------------ базы
+
+
+async def _search_settings_out(db: AsyncSession, settings: Settings) -> SearchSettingsOut:
+    row = await db.get(AppSetting, app_settings.RERANK_THRESHOLD)
+    effective = await app_settings.search_settings(db, settings)
+    return SearchSettingsOut(
+        score_threshold=effective.rerank.score_threshold,
+        default_threshold=settings.rag.search.rerank.score_threshold,
+        overridden=row is not None,
+        updated_at=row.updated_at if row is not None else None,
+    )
+
+
+@router.get(
+    "/search-settings", response_model=SearchSettingsOut, operation_id="adminKbSearchSettings"
+)
+async def get_search_settings(request: Request, db: DbDep, _: Owner) -> SearchSettingsOut:
+    """Параметры поиска, которые подбирают на реальных документах (порог реранкера)."""
+    return await _search_settings_out(db, _settings(request))
+
+
+@router.put(
+    "/search-settings", response_model=SearchSettingsOut, operation_id="adminUpdateKbSearchSettings"
+)
+async def update_search_settings(
+    body: SearchSettingsIn, request: Request, db: DbDep, actor: Owner
+) -> SearchSettingsOut:
+    """Новый порог действует со следующего поиска, без перезапуска; null — значение из конфига."""
+    settings = _settings(request)
+    before = (await app_settings.search_settings(db, settings)).rerank.score_threshold
+    await app_settings.set_value(
+        db, app_settings.RERANK_THRESHOLD, body.score_threshold, updated_by=actor.id
+    )
+    await audit.record(
+        db, actor_id=actor.id, action="kb.search_settings", target_type="app_setting",
+        target_id=app_settings.RERANK_THRESHOLD,
+        details={"before": before, "after": body.score_threshold}, ip=client_ip(request),
+    )  # fmt: skip
+    await db.commit()
+    return await _search_settings_out(db, settings)
 
 
 @router.get("", response_model=list[KbOut], operation_id="adminListKb")

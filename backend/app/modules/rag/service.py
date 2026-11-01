@@ -21,6 +21,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
+from app.modules.admin import app_settings
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.incidents import service as incidents
 from app.modules.kb.models import (
@@ -141,11 +142,13 @@ async def run_search(
 ) -> SearchResult:
     from app.modules.rag.store import qdrant_client
 
+    async with ctx.sessions() as db:
+        search_settings = await app_settings.search_settings(db, ctx.settings)
     own = client is None
     qdrant = client or qdrant_client(ctx.settings)
     try:
         result = await search(
-            qdrant, ctx.registry, ctx.settings.rag.search, query=query, bm25_query=bm25_query,
+            qdrant, ctx.registry, search_settings, query=query, bm25_query=bm25_query,
             scope=scope,
         )  # fmt: skip
     finally:

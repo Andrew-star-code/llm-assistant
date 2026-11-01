@@ -388,10 +388,10 @@ class RerankSettings(_Section):
     enabled: bool = Field(True, description="Выключать только в eval и при отладке (§10.4).")
     max_candidates: int = Field(60, gt=0, description="Сколько лучших по RRF уходит в реранкер.")
     score_threshold: float = Field(
-        0.01,
+        0.005,
         ge=0,
         le=1,
-        description="Отсечение по баллу реранкера; подбирается по eval/rag (recommended_threshold)",
+        description="Отсечение по баллу реранкера (админка может переопределить без перезапуска).",
     )
     timeout_s: float = Field(3, gt=0, description="Ждём реранкер не дольше, с.")
 

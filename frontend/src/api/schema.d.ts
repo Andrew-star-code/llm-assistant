@@ -646,6 +646,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/kb/search-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Search Settings
+     * @description Параметры поиска, которые подбирают на реальных документах (порог реранкера).
+     */
+    get: operations["adminKbSearchSettings"];
+    /**
+     * Update Search Settings
+     * @description Новый порог действует со следующего поиска, без перезапуска; null — значение из конфига.
+     */
+    put: operations["adminUpdateKbSearchSettings"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/kb": {
     parameters: {
       query?: never;
@@ -2296,6 +2320,34 @@ export interface components {
       /** Last Message At */
       last_message_at: string | null;
     };
+    /** SearchSettingsIn */
+    SearchSettingsIn: {
+      /**
+       * Score Threshold
+       * @description Новый порог; null — вернуть значение из конфигурации.
+       */
+      score_threshold: number | null;
+    };
+    /** SearchSettingsOut */
+    SearchSettingsOut: {
+      /**
+       * Score Threshold
+       * @description Действующий порог реранкера.
+       */
+      score_threshold: number;
+      /**
+       * Default Threshold
+       * @description Порог из конфигурации (rag.search.rerank).
+       */
+      default_threshold: number;
+      /**
+       * Overridden
+       * @description Порог задан в админке, а не в конфигурации.
+       */
+      overridden: boolean;
+      /** Updated At */
+      updated_at?: string | null;
+    };
     /** SendMessageIn */
     SendMessageIn: {
       /** Content */
@@ -3747,6 +3799,59 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminKbSearchSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchSettingsOut"];
+        };
+      };
+    };
+  };
+  adminUpdateKbSearchSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SearchSettingsIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchSettingsOut"];
+        };
       };
       /** @description Validation Error */
       422: {

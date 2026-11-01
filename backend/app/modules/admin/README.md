@@ -20,7 +20,9 @@
 `test_every_admin_endpoint_requires_permission`. Все действия над чужими данными — в аудит.
 
 `app_settings.first_login_notice` — текст уведомления при первом входе (по умолчанию —
-`auth.first_login_notice` из конфига; редактор — этап 6).
+`auth.first_login_notice` из конфига; редактор — этап 6). `app_settings.search_settings` — параметры
+поиска с поправкой порога реранкера из админки «Базы знаний» (`rag.search.rerank.score_threshold`);
+читается на каждый поиск, без кэша.
 
 **Зависит от:** все модули этапа 1.
 

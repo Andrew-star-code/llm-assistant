@@ -15,12 +15,13 @@ import pytest
 from sqlalchemy import func, select
 
 from app.core.config import Settings
+from app.modules.audit.models import AuditLog
 from app.modules.incidents.models import Incident
 from app.modules.ingestion.parsers import ParsedDocument
 from app.modules.kb.models import KbDocument, KbImport
 from app.modules.rag import search as search_module
 from app.modules.rag.search import Scope, search
-from app.modules.rag.service import build_scope
+from app.modules.rag.service import SearchContext, build_scope, run_search
 from app.modules.rag.store import qdrant_client
 from app.modules.rbac.models import Role
 from app.modules.users.models import User
@@ -298,6 +299,63 @@ async def test_deleted_document_disappears_from_search(stand: Any) -> None:
     result = await run(settings, app, scope, marker, use_rerank=False)
     assert all(c["document_id"] != doc["id"] for c in result.trace["candidates"])
     assert (await petrov.get(f"/api/kb/documents/{doc['id']}")).status_code == 404
+
+
+# ------------------------------------------------------------------ порог реранкера в админке
+
+
+async def test_rerank_threshold_from_admin_applies_without_restart(stand: Any) -> None:
+    settings, app, admin, petrov, _ = await stand()
+    kb_id = await create_kb(admin, uniq("threshold"))
+    marker = uniq("PORTAL").upper()
+    await upload(admin, kb_id, "Порог.md", f"# Порог\n\nКодовое слово {marker}.".encode())
+    scope = await user_scope(app, "petrov")
+    ctx = SearchContext(settings, app.state.models, app.state.db_sessions, None)
+    # Половина слов запроса есть в документе: балл заглушки-реранкера 0,5.
+    query = f"{marker} отсутствующееслово"
+
+    async def found() -> bool:
+        result = await run_search(ctx, scope, query=query)
+        return any(f.title == "Порог" for f in result.fragments)
+
+    current = (await admin.get("/api/admin/kb/search-settings")).json()
+    default = settings.rag.search.rerank.score_threshold
+    assert current == {
+        "score_threshold": default, "default_threshold": default, "overridden": False,
+        "updated_at": None,
+    }  # fmt: skip
+    assert await found()
+
+    response = await admin.request(
+        "PUT", "/api/admin/kb/search-settings", json={"score_threshold": 0.9}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["score_threshold"] == 0.9 and response.json()["overridden"] is True
+    assert not await found()  # тот же процесс, без перезапуска
+
+    bad = await admin.request("PUT", "/api/admin/kb/search-settings", json={"score_threshold": 1.5})
+    assert bad.status_code == 422
+    # Менять порог может только admin.kb.manage.
+    denied = await petrov.request(
+        "PUT", "/api/admin/kb/search-settings", json={"score_threshold": 0.1}
+    )
+    assert denied.status_code == 403
+
+    reset = await admin.request(
+        "PUT", "/api/admin/kb/search-settings", json={"score_threshold": None}
+    )
+    assert reset.json() == current
+    assert await found()
+    async with app.state.db_sessions() as db:
+        actions = (
+            await db.scalars(
+                select(AuditLog.details).where(AuditLog.action == "kb.search_settings")
+            )
+        ).all()
+    assert {"before": default, "after": 0.9} in actions and {
+        "before": 0.9,
+        "after": None,
+    } in actions
 
 
 # ------------------------------------------------------------------ импорт

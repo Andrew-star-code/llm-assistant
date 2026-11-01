@@ -1601,6 +1601,68 @@
         }
       }
     },
+    "/api/admin/kb/search-settings": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Search Settings",
+        "description": "Параметры поиска, которые подбирают на реальных документах (порог реранкера).",
+        "operationId": "adminKbSearchSettings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchSettingsOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Search Settings",
+        "description": "Новый порог действует со следующего поиска, без перезапуска; null — значение из конфига.",
+        "operationId": "adminUpdateKbSearchSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/kb": {
       "get": {
         "tags": [
@@ -6568,6 +6630,67 @@
           "last_message_at"
         ],
         "title": "SearchHit"
+      },
+      "SearchSettingsIn": {
+        "properties": {
+          "score_threshold": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Threshold",
+            "description": "Новый порог; null — вернуть значение из конфигурации."
+          }
+        },
+        "type": "object",
+        "required": [
+          "score_threshold"
+        ],
+        "title": "SearchSettingsIn"
+      },
+      "SearchSettingsOut": {
+        "properties": {
+          "score_threshold": {
+            "type": "number",
+            "title": "Score Threshold",
+            "description": "Действующий порог реранкера."
+          },
+          "default_threshold": {
+            "type": "number",
+            "title": "Default Threshold",
+            "description": "Порог из конфигурации (rag.search.rerank)."
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden",
+            "description": "Порог задан в админке, а не в конфигурации."
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score_threshold",
+          "default_threshold",
+          "overridden"
+        ],
+        "title": "SearchSettingsOut"
       },
       "SendMessageIn": {
         "properties": {

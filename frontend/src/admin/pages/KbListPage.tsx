@@ -3,10 +3,12 @@ import { useState, type SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { SearchSettingsCard } from "@/admin/components/SearchSettingsCard";
 import { Badge, Table, Td } from "@/admin/components/Table";
 import { api, ApiError, unwrap } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { hasPermission, useMe } from "@/features/auth/useMe";
 import { kbKeys } from "@/features/kb/api";
 import { formatDateTime } from "@/lib/format";
 
@@ -14,6 +16,7 @@ import { formatDateTime } from "@/lib/format";
 export function KbListPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { data: me } = useMe();
   const bases = useQuery({
     queryKey: kbKeys.admin,
     queryFn: async () => unwrap(await api.GET("/api/admin/kb")),
@@ -62,6 +65,7 @@ export function KbListPage() {
           </tr>
         ))}
       </Table>
+      {hasPermission(me, "admin.kb.manage") && <SearchSettingsCard />}
       {canCreate && (
         <CreateKbForm
           onCreated={() => {

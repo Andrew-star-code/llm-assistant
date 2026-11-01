@@ -223,6 +223,16 @@
         "running": "indexing",
         "done": "done",
         "error": "error"
+      },
+      "search": {
+        "title": "Search settings",
+        "hint": "Reranker threshold: fragments scoring below it do not reach the answer. Lower finds more but adds noise; higher is stricter but may lose answers. Tune it on real documents: make eval-rag KB=<base codes> QUESTIONS=<questions file> → recommended_threshold. Applies from the next search, no restart needed.",
+        "threshold": "Reranker threshold (0–1)",
+        "fromConfig": "Value from configuration (rag.search.rerank.score_threshold).",
+        "overridden": "Set in admin on {{date}}; configuration has {{value}}.",
+        "save": "Save",
+        "reset": "Restore configuration value ({{value}})",
+        "saved": "Saved — applies from the next search"
       }
     },
     "incidents": {

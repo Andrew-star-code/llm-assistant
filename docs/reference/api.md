@@ -11,6 +11,8 @@
 | GET | `/api/admin/kb` | `adminListKb` | List Bases | 200 |
 | POST | `/api/admin/kb` | `adminCreateKb` | Create Base | 201, 422 |
 | GET | `/api/admin/kb/import-folders` | `adminImportFolders` | Import Folders | 200 |
+| GET | `/api/admin/kb/search-settings` | `adminKbSearchSettings` | Get Search Settings | 200 |
+| PUT | `/api/admin/kb/search-settings` | `adminUpdateKbSearchSettings` | Update Search Settings | 200, 422 |
 | PATCH | `/api/admin/kb/{kb_id}` | `adminUpdateKb` | Update Base | 200, 422 |
 | DELETE | `/api/admin/kb/{kb_id}` | `adminDeleteKb` | Delete Base | 204, 422 |
 | GET | `/api/admin/kb/{kb_id}/documents` | `adminKbDocuments` | List Documents | 200, 422 |

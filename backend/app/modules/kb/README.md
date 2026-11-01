@@ -17,6 +17,7 @@
 | `GET/POST /api/admin/kb`, `PATCH/DELETE /api/admin/kb/{id}` | Базы: создать, название, роли, удалить (`admin.kb.manage`) |
 | `GET/POST /api/admin/kb/{id}/documents`, `DELETE …/{doc}`, `POST …/{doc}/reindex` | Документы базы |
 | `GET /api/admin/kb/import-folders`, `GET/POST /api/admin/kb/{id}/imports` | Массовый импорт из папки внутри `kb.import_root` и его прогресс |
+| `GET/PUT /api/admin/kb/search-settings` | Порог реранкера поверх конфига (`app_settings`), действует со следующего поиска; `null` — значение из конфига (`admin.kb.manage`, аудит `kb.search_settings`) |
 
 Менеджер БЗ (`admin.kb.manage_roles`) видит и наполняет только ролевые базы тех ролей, что есть у него
 самого; создавать базы и менять роли может только `admin.kb.manage`. Все действия админов — в аудит.

@@ -88,4 +88,12 @@ test("админка: разделы «Базы знаний» и «Инциде
   await expect(page.getByRole("heading", { name: "Инциденты" })).toBeVisible();
   await page.getByRole("link", { name: "Базы знаний" }).first().click();
   await expect(page.getByTestId("kb-create-form")).toBeVisible();
+
+  // Порог реранкера меняется без перезапуска и возвращается к значению из конфигурации.
+  const search = page.getByTestId("kb-search-settings");
+  await search.getByLabel("Порог реранкера (0–1)").fill("0.05");
+  await search.getByRole("button", { name: "Сохранить" }).click();
+  await expect(search.getByTestId("kb-search-source")).toContainText("Задан в админке");
+  await search.getByRole("button", { name: /Вернуть из конфигурации/ }).click();
+  await expect(search.getByTestId("kb-search-source")).toContainText("из конфигурации");
 });

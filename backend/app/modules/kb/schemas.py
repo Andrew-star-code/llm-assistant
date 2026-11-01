@@ -102,3 +102,16 @@ class ImportOut(BaseModel):
 class ImportFolder(BaseModel):
     path: str
     files: int
+
+
+class SearchSettingsOut(BaseModel):
+    score_threshold: float = Field(description="Действующий порог реранкера.")
+    default_threshold: float = Field(description="Порог из конфигурации (rag.search.rerank).")
+    overridden: bool = Field(description="Порог задан в админке, а не в конфигурации.")
+    updated_at: datetime | None = None
+
+
+class SearchSettingsIn(BaseModel):
+    score_threshold: float | None = Field(
+        ..., ge=0, le=1, description="Новый порог; null — вернуть значение из конфигурации."
+    )
