@@ -250,23 +250,52 @@ def _fuse(lists: _Lists, settings: SearchSettings) -> list[Candidate]:
     return sorted(candidates.values(), key=lambda c: c.fused, reverse=True)
 
 
+TEI_BATCH = 32  # text-embeddings-inference по умолчанию принимает не больше 32 текстов
+
+
+def _rerank_url(base_url: str, api: str) -> str:
+    url = base_url.rstrip("/")
+    # У TEI нет префикса /v1 у реранка: http://rerank:80/v1 → http://rerank:80/rerank.
+    if api == "tei" and url.endswith("/v1"):
+        url = url[: -len("/v1")]
+    return f"{url}/rerank"
+
+
 async def rerank(
     registry: ModelRegistry, query: str, texts: Sequence[str], timeout_s: float
 ) -> list[float]:
-    """Баллы реранкера в порядке ``texts`` (формат vLLM/Jina ``/v1/rerank``)."""
+    """Баллы реранкера 0..1 в порядке ``texts``.
+
+    Форматы (``models.rerank.api``): ``openai`` — vLLM/Jina ``/v1/rerank`` (``documents`` →
+    ``results[].relevance_score``); ``tei`` — text-embeddings-inference ``/rerank`` (``texts`` →
+    список ``{index, score}``, пакетами по ``TEI_BATCH``, баллы через сигмоиду — тоже 0..1).
+    """
     endpoint = registry.get(RERANK_ROLE)
     headers = {}
     if endpoint.api_key is not None:
         headers["Authorization"] = f"Bearer {endpoint.api_key.get_secret_value()}"
+    url = _rerank_url(endpoint.base_url, endpoint.api)
+    scores = [0.0] * len(texts)
     async with httpx.AsyncClient(timeout=timeout_s) as http:
+        if endpoint.api == "tei":
+            for start in range(0, len(texts), TEI_BATCH):
+                batch = list(texts[start : start + TEI_BATCH])
+                response = await http.post(
+                    url,
+                    json={"query": query, "texts": batch, "truncate": True, "raw_scores": False},
+                    headers=headers,
+                )
+                response.raise_for_status()
+                for item in response.json():
+                    scores[start + int(item["index"])] = float(item["score"])
+            return scores
         response = await http.post(
-            f"{endpoint.base_url.rstrip('/')}/rerank",
+            url,
             json={"model": endpoint.model, "query": query, "documents": list(texts)},
             headers=headers,
         )
         response.raise_for_status()
         body = response.json()
-    scores = [0.0] * len(texts)
     for item in body.get("results", []):
         scores[int(item["index"])] = float(item.get("relevance_score", item.get("score", 0.0)))
     return scores

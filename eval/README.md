@@ -16,3 +16,47 @@
 эмбеддинги и реранкер — заглушки fake-llm. По eval подбираются порог реранкера, глубина prefetch и
 `rag.search.bm25.avg_len`. Отчёт `eval/scenarios/report.json` смотрят вручную выборочно (ответ, вердикт судьи); принятый
 отчёт копируют в `baseline.json`. Прогон обязателен при смене модели или промптов (`config/prompts/`).
+
+## Прогон `eval/rag` на рабочей станции (Windows + WSL2)
+
+Нужны только эмбеддинги и реранкер — те же bge-m3 и bge-reranker-v2-m3, что на сервере; чат-модель
+не используется. Работает на CPU, видеокарта не обязательна.
+
+1. Docker Desktop с интеграцией WSL2 (Settings → Resources → WSL integration), в дистрибутиве WSL —
+   `git`, `make`, `uv`, Node 22 и pnpm. Репозиторий клонируйте **в файловую систему WSL**
+   (`~/src/llm-assistant`), а не в `/mnt/c/…`: там медленный ввод-вывод и проблемы с правами.
+2. В Docker Desktop дайте WSL не меньше 8 ГБ памяти (`%UserProfile%\.wslconfig`, `memory=12GB`).
+3. Подняв стенд, запустите реранкер (первый раз скачиваются веса ~2,3 ГБ) и подключите его к api:
+
+   ```bash
+   make dev-up
+   ```
+
+   ```bash
+   make dev-models-up
+   ```
+
+   ```bash
+   cp deploy/compose/api.local.env.example deploy/compose/api.local.env
+   ```
+
+   Раскомментируйте в `api.local.env` блок «Настоящий реранкер», затем:
+
+   ```bash
+   docker compose --env-file deploy/compose/.env -f deploy/compose/docker-compose.yml -f deploy/compose/compose.dev.yml up -d api
+   ```
+
+4. Прогон (на CPU — минут 10–20: реранк 48 вопросов по 60 кандидатов):
+
+   ```bash
+   make eval-rag
+   ```
+
+   Первой строкой скрипт печатает, на каких моделях идёт прогон (`BAAI/bge-m3`, реранкер
+   `BAAI/bge-reranker-v2-m3 (tei)`), — если там fake-модели, `api.local.env` не подхватился.
+   Тайм-аут реранкера в eval — 120 с (`--rerank-timeout`): eval меряет качество, а не скорость. Если
+   реранкер всё же не ответил, `--check` падает с «стадия rerank пропущена», а не выдаёт ложную
+   победу гибрида без реранкера.
+5. Результат (таблица и промахи рабочей конфигурации) пришлите или занесите в `docs/status.md` у
+   критерия этапа 4.
+

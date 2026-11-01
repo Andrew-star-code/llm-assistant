@@ -160,5 +160,6 @@
 | `models.<роль>.sampling.default.presence_penalty` | float \| null | null | — |  |
 | `models.<роль>.sampling.default.repetition_penalty` | float \| null | null | — |  |
 | `models.<роль>.dim` | int \| null | null | — | Размерность векторов (для embed). |
+| `models.<роль>.api` | openai \| tei | `openai` | — | Формат API реранкера: openai — vLLM/Jina `POST {base_url}/rerank` (documents → results); tei — text-embeddings-inference `POST /rerank` (texts → список). |
 | `models.<роль>.tokenizer` | Path \| null | null | — | Локальный tokenizer.json модели для точного подсчёта токенов (§8.3); без него — оценка по длине текста. |
 | `models.<роль>.timeout_s` | float | 600 | — | Тайм-аут запроса к модели, с. |

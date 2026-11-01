@@ -280,3 +280,12 @@ def test_rerank_matches_word_forms() -> None:
     from fake_llm.app import overlap_score
 
     assert overlap_score("договорам поставки", "Типовой договор поставок") == 1.0
+
+
+async def test_rerank_tei_format(base_url: str) -> None:
+    async with httpx.AsyncClient(base_url=base_url) as http:
+        response = await http.post(
+            "/rerank",
+            json={"query": "договор поставки", "texts": ["про отпуск", "договор поставки"]},
+        )
+    assert response.json() == [{"index": 1, "score": 1.0}, {"index": 0, "score": 0.0}]

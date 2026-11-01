@@ -391,3 +391,26 @@ async def test_kb_manager_sees_only_own_role_bases(stand: Any) -> None:
     )
     assert created.status_code == 403
     await upload(petrov, accounting, "Акт.md", "# Акт\n\nАкт сверки.".encode())
+
+
+async def test_tei_reranker_format_in_batches(
+    stand: Any, fake_llm_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Реранкер text-embeddings-inference: `/rerank` без /v1, поле texts, пакеты по TEI_BATCH."""
+    models = {
+        "rerank": {"base_url": fake_llm_url, "model": "BAAI/bge-reranker-v2-m3", "api": "tei"}
+    }
+    settings, app, admin, _, _ = await stand(models=models)
+    monkeypatch.setattr(search_module, "TEI_BATCH", 2)  # 5 кандидатов → 3 запроса
+    kb_id = await create_kb(admin, uniq("tei"))
+    marker = uniq("ТЕИ").upper()
+    for i in range(5):
+        await upload(
+            admin, kb_id, f"Док {i}.md", f"# Док {i}\n\nОбщий текст {i} {marker}.".encode()
+        )
+    scope = await user_scope(app, "petrov")
+    result = await run(settings, app, scope, f"текст 3 {marker}")
+    assert result.trace["stages"]["rerank"] == "ok"
+    pool = [c for c in result.trace["candidates"] if c["status"] != "beyond_rerank_pool"]
+    assert len(pool) == 5 and all(c["rerank"] is not None for c in pool)
+    assert result.fragments[0].title == "Док 3"  # лучший балл реранкера — на своём месте

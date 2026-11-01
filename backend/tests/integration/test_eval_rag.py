@@ -42,3 +42,6 @@ async def test_eval_rag_reports_four_configs(
     assert configs["bm25"]["word_form"]["hit@5"] == 1.0
     assert configs["hybrid"]["exact_id"]["hit@5"] == 1.0
     assert "|" in run.render(report)
+    # Все стадии отработали — иначе --check считает сравнение недействительным.
+    assert report["degraded"] == {}
+    assert not [p for p in run.check(report) if "пропущена" in p]

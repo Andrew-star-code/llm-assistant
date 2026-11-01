@@ -47,3 +47,28 @@
 
 Любой OpenAI-совместимый сервер (Ollama, llama.cpp) — через `deploy/compose/api.local.env`
 (см. README). Для детерминированных тестов — fake-llm (`services/fake-llm`).
+
+## Реранкер: vLLM или text-embeddings-inference
+
+Клиент реранкера понимает два формата — поле `api` у роли `rerank`:
+
+| `api` | Сервер | Запрос |
+| --- | --- | --- |
+| `openai` (по умолчанию) | vLLM, Jina-совместимые | `POST {base_url}/rerank` (`base_url` с `/v1`): `documents` → `results[].relevance_score` |
+| `tei` | text-embeddings-inference | `POST /rerank` (`/v1` в `base_url` отбрасывается): `texts` → `[{index, score}]`, пакетами по 32 |
+
+Оба дают балл 0..1, порог `rag.search.rerank.score_threshold` к ним одинаково применим. На дев-стенде
+настоящий реранкер поднимает `make dev-models-up` (TEI на CPU, профиль `models`), подключение — через
+`deploy/compose/api.local.env` (образец — `api.local.env.example`):
+
+```dotenv
+APP_MODELS__RERANK__BASE_URL=http://rerank:80
+APP_MODELS__RERANK__MODEL=BAAI/bge-reranker-v2-m3
+APP_MODELS__RERANK__API=tei
+```
+
+На GPU (в том числе в WSL2): образ TEI нужен под архитектуру видеокарты — тег по таблице «Docker
+Images» в README text-embeddings-inference (RTX 50xx — сборка для compute capability 12.0), в сервис
+добавить `gpus: all`, digest закрепить по правилам репозитория. Модели те же — меняется только
+скорость.
+

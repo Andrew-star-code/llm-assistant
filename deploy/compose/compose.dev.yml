@@ -98,6 +98,26 @@ services:
       retries: 60
       start_period: 30s
 
+  rerank:
+    # Настоящий реранкер bge-reranker-v2-m3 в text-embeddings-inference (CPU) — для `make eval-rag`
+    # и ручной проверки поиска. Не входит в `make dev-up`: `make dev-models-up` (профиль models).
+    # Подключение api — deploy/compose/api.local.env (см. api.local.env.example), формат API — tei.
+    profiles: [models]
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9.4@sha256:2538ea1c9640d3763b15af668039d24172d063b42337b0c27796fc2be180c78d
+    restart: unless-stopped
+    command: ["--model-id", "BAAI/bge-reranker-v2-m3", "--port", "80", "--max-client-batch-size", "64"]
+    environment:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    volumes:
+      - embed-cache:/data
+    ports: ["127.0.0.1:8083:80"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 90
+      start_period: 30s
+
   mock-ad:
     build: ../mock-ad
     image: ai-assistant/mock-ad:${APP_VERSION:-dev}

@@ -100,6 +100,9 @@ async def evaluate(settings: Settings) -> dict[str, Any]:
         scope = Scope(kb_ids=(EVAL_KB,), kb_collection=COLLECTION)
         scores: dict[str, dict[str, Score]] = {c: defaultdict(Score) for c in CONFIGS}
         misses: dict[str, list[str]] = defaultdict(list)
+        # Пропущенные стадии (например, реранкер не ответил) — иначе «гибрид + реранкер» молча
+        # превращается в гибрид без реранкера и сравнение теряет смысл.
+        degraded: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
         client = qdrant_client(settings)
         try:
             for item in questions:
@@ -114,6 +117,8 @@ async def evaluate(settings: Settings) -> dict[str, Any]:
                         use_bm25=flags["use_bm25"],
                         use_rerank=flags["use_rerank"],
                     )
+                    for stage in result.degraded:
+                        degraded[config][stage] += 1
                     ranked: list[str] = []
                     for fragment in result.fragments:
                         name = names.get(fragment.document_id, "?")
@@ -145,13 +150,22 @@ async def evaluate(settings: Settings) -> dict[str, Any]:
             for config, buckets in scores.items()
         },
         "misses": dict(misses),
+        "degraded": {c: dict(stages) for c, stages in degraded.items()},
+        "models": {
+            "embed": settings.models["embed"].model,
+            "rerank": f"{settings.models['rerank'].model} ({settings.models['rerank'].api})",
+        },
     }
 
 
 def check(report: dict[str, Any]) -> list[str]:
     """Рабочая конфигурация не хуже остальных по hit@5 и MRR (§10.6)."""
     working = report["configs"][WORKING]["all"]
-    problems = []
+    problems = [
+        f"{config}: стадия {stage} пропущена в {count} запросах — сравнение недействительно"
+        for config, stages in report.get("degraded", {}).items()
+        for stage, count in stages.items()
+    ]
     for config, buckets in report["configs"].items():
         if config == WORKING:
             continue
@@ -179,8 +193,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="Ошибка, если рабочая хуже других")
     parser.add_argument("--json", type=Path, help="Сохранить отчёт в JSON")
+    parser.add_argument(
+        "--rerank-timeout",
+        type=float,
+        default=120,
+        help="Тайм-аут реранкера, с: eval меряет качество, а не скорость (CPU — медленно)",
+    )
     args = parser.parse_args(argv)
-    report = asyncio.run(evaluate(get_settings()))
+    settings = get_settings()
+    settings.rag.search.rerank.timeout_s = args.rerank_timeout
+    report = asyncio.run(evaluate(settings))
+    print(f"Модели: {report['models']['embed']}, реранкер {report['models']['rerank']}")
     print(render(report))
     for miss in report["misses"].get(WORKING, []):
         print(f"  промах {WORKING}: {miss}")

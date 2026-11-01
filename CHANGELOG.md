@@ -6,6 +6,12 @@
 
 ### Added
 
+- Реранкер в формате text-embeddings-inference (`models.rerank.api: tei`): `/rerank` с полем `texts`,
+  пакетами по 32; сервис `rerank` (TEI, bge-reranker-v2-m3) в профиле `models` дев-стенда
+  (`make dev-models-up`), `deploy/compose/api.local.env.example`; `eval/rag` печатает модели прогона,
+  ждёт реранкер до 120 с (`--rerank-timeout`) и проваливает `--check`, если стадия пропущена;
+  инструкция прогона на рабочей станции с WSL2 (`eval/README.md`).
+
 - Этап 5 «Сценарии» (§19 SPEC):
   - сценарии в БД (миграция 0006): промпт (Jinja2 в песочнице), модель, thinking по умолчанию,
     инструменты, базы знаний, режим RAG, роли, «нужно вложение», примеры запросов, иконка, порядок;

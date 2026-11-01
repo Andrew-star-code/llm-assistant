@@ -11,7 +11,7 @@ UV          := uv run --frozen
 PNPM        := pnpm --dir frontend
 PY_SOURCES  := backend services scripts eval
 
-.PHONY: help install env dev-up dev-down dev-reset dev-logs dev-ps migrate \
+.PHONY: help install env dev-up dev-models-up dev-down dev-reset dev-logs dev-ps migrate \
         lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios gen-api docs-config docs-db \
         docs-check \
         images test-worker check deploy
@@ -39,11 +39,16 @@ dev-up: env ## Поднять дев-стенд с нуля одной кома�
 	@echo "  fake-llm:  http://localhost:8081/v1         embed: http://localhost:8082"
 	@echo "  mock-AD:   ldaps://localhost:636            Qdrant: http://localhost:6333/dashboard"
 
+dev-models-up: env ## Настоящий реранкер bge-reranker-v2-m3 (TEI, CPU; ~2,3 ГБ весов) — для eval-rag
+	$(COMPOSE) --profile models up -d --wait --wait-timeout 1800 rerank
+	@echo "Подключите его к api: deploy/compose/api.local.env по образцу api.local.env.example,"
+	@echo "затем: $(COMPOSE) up -d api"
+
 dev-down: ## Остановить дев-стенд (данные сохраняются)
-	$(COMPOSE) down
+	$(COMPOSE) --profile models down
 
 dev-reset: ## Остановить дев-стенд и удалить его данные (тома)
-	$(COMPOSE) down -v
+	$(COMPOSE) --profile models down -v
 
 dev-logs: ## Логи дев-стенда (S=<сервис> — только один)
 	$(COMPOSE) logs -f --tail=200 $(S)

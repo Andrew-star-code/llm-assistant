@@ -262,6 +262,11 @@ class ModelEndpoint(_Section):
     reasoning_history: Literal["model_default", "drop", "keep"] = "model_default"
     sampling: Sampling = Field(default_factory=Sampling)
     dim: int | None = Field(None, gt=0, description="Размерность векторов (для embed).")
+    api: Literal["openai", "tei"] = Field(
+        "openai",
+        description="Формат API реранкера: openai — vLLM/Jina `POST {base_url}/rerank` "
+        "(documents → results); tei — text-embeddings-inference `POST /rerank` (texts → список).",
+    )
     tokenizer: Path | None = Field(
         None,
         description="Локальный tokenizer.json модели для точного подсчёта токенов (§8.3); "

@@ -139,10 +139,19 @@ def create_app(settings: FakeSettings | None = None) -> FastAPI:
         }
 
     @app.post("/v1/rerank")
-    @app.post("/rerank")
-    async def rerank(request: Request) -> dict[str, Any]:
+    @app.post("/rerank", response_model=None)
+    async def rerank(request: Request) -> dict[str, Any] | list[dict[str, Any]]:
         body: dict[str, Any] = await request.json()
         query: str = body.get("query", "")
+        if "texts" in body:
+            # Формат text-embeddings-inference: список {index, score}, лучшие сверху.
+            texts: list[str] = body["texts"]
+            ranked = sorted(
+                ({"index": i, "score": overlap_score(query, t)} for i, t in enumerate(texts)),
+                key=lambda item: item["score"],
+                reverse=True,
+            )
+            return ranked
         documents = [
             d if isinstance(d, str) else d.get("text", "") for d in body.get("documents", [])
         ]

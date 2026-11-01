@@ -59,7 +59,8 @@ make check
 ## Ручная проверка на живой модели
 
 Без GPU можно подключить маленькую модель через Ollama или llama.cpp: достаточно OpenAI-совместимого
-адреса (§16.1 SPEC). Создайте `deploy/compose/api.local.env` (в git не попадает) и перезапустите api:
+адреса (§16.1 SPEC). Создайте `deploy/compose/api.local.env` (в git не попадает; образец —
+`api.local.env.example`) и перезапустите api:
 
 ```dotenv
 APP_MODELS__CHAT__BASE_URL=http://host.docker.internal:11434/v1
