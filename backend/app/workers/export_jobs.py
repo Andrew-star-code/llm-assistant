@@ -3,6 +3,7 @@
 * ``export_job`` — собирает выгрузку (JSON, XLSX, DOCX, PDF) и кладёт файл, доступный только
   заказавшему, на ``exports.ttl_days``. Сбой — статус ``error`` с причиной и инцидент.
 * ``cleanup_exports_job`` — удаляет файлы истёкших выгрузок.
+* ``models_health_job`` — монитор здоровья моделей раз в минуту (``llm.monitor``).
 * ``retention_job`` — физически стирает чаты, удалённые пользователями раньше срока хранения
   (настройка админки или ``retention.deleted_days``; 0 — выключено).
 """
@@ -206,3 +207,18 @@ async def retention_job(settings: Settings) -> int:
     if ids:
         log.info("worker.retention_purged", chats=len(ids), days=days)
     return len(ids)
+
+
+async def models_health_job(settings: Settings) -> int:
+    """Проверка моделей; возвращает число недоступных."""
+    from redis.asyncio import Redis
+
+    from app.modules.llm.monitor import check_models
+
+    redis = Redis.from_url(settings.redis_url.get_secret_value())
+    try:
+        async with worker_context(settings) as ctx:
+            results = await check_models(settings, ctx.sessions, redis)
+    finally:
+        await redis.aclose()
+    return sum(1 for h in results if not h.ok)

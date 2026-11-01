@@ -273,6 +273,9 @@ class ModelEndpoint(_Section):
         "без него — оценка по длине текста.",
     )
     timeout_s: float = Field(600, gt=0, description="Тайм-аут запроса к модели, с.")
+    container: str | None = Field(
+        None, description="Имя контейнера модели — для логов в инциденте model_health."
+    )
 
 
 REQUIRED_MODEL_ROLES = ("chat", "utility", "embed", "rerank")
@@ -419,6 +422,15 @@ class MonitoringSettings(_Section):
         None, description="Prometheus с метриками DCGM (GPU); пусто — блок GPU без данных."
     )
     timeout_s: float = Field(2.0, gt=0, description="Тайм-аут запроса к Prometheus, с.")
+    model_health_failures: int = Field(
+        2, ge=1, description="Сколько проверок модели подряд должно упасть до инцидента."
+    )
+    model_health_timeout_s: float = Field(5.0, gt=0, description="Тайм-аут проверки модели, с.")
+    docker_url: str | None = Field(
+        None,
+        description="Docker API только на чтение (unix:///var/run/docker.sock или "
+        "http://docker-proxy:2375): логи контейнера модели в инциденте; пусто — без логов.",
+    )
 
 
 class Bm25Settings(_Section):

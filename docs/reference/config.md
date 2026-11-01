@@ -140,6 +140,9 @@
 | `retention.deleted_days` | int | 0 | `APP_RETENTION__DELETED_DAYS` | Через сколько дней удалённые чаты стираются физически; 0 — никогда. |
 | `monitoring.prometheus_url` | str \| null | null | `APP_MONITORING__PROMETHEUS_URL` | Prometheus с метриками DCGM (GPU); пусто — блок GPU без данных. |
 | `monitoring.timeout_s` | float | 2.0 | `APP_MONITORING__TIMEOUT_S` | Тайм-аут запроса к Prometheus, с. |
+| `monitoring.model_health_failures` | int | 2 | `APP_MONITORING__MODEL_HEALTH_FAILURES` | Сколько проверок модели подряд должно упасть до инцидента. |
+| `monitoring.model_health_timeout_s` | float | 5.0 | `APP_MONITORING__MODEL_HEALTH_TIMEOUT_S` | Тайм-аут проверки модели, с. |
+| `monitoring.docker_url` | str \| null | null | `APP_MONITORING__DOCKER_URL` | Docker API только на чтение (unix:///var/run/docker.sock или http://docker-proxy:2375): логи контейнера модели в инциденте; пусто — без логов. |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`
@@ -176,3 +179,4 @@
 | `models.<роль>.api` | openai \| tei | `openai` | — | Формат API реранкера: openai — vLLM/Jina `POST {base_url}/rerank` (documents → results); tei — text-embeddings-inference `POST /rerank` (texts → список). |
 | `models.<роль>.tokenizer` | Path \| null | null | — | Локальный tokenizer.json модели для точного подсчёта токенов (§8.3); без него — оценка по длине текста. |
 | `models.<роль>.timeout_s` | float | 600 | — | Тайм-аут запроса к модели, с. |
+| `models.<роль>.container` | str \| null | null | — | Имя контейнера модели — для логов в инциденте model_health. |
