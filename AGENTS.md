@@ -164,6 +164,10 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 - **Воркер в тестах — eager**: `worker.eager=true` выполняет задачу в потоке api без Celery и
   брокера; в проде api только ставит задачу. Бинарники (LibreOffice, Tesseract) есть только в образе
   воркера — код api не должен вызывать их напрямую (`preview_pdf` и OCR — в задачах воркера).
+  Eager скрывает то, чего нет в процессе воркера: модели SQLAlchemy регистрирует `import app.models`
+  в `workers/jobs.py` — новая модель без него ломает задачи только на настоящем Celery
+  (ловят `test_worker_imports.py` и `worker check`). Новые задачи оборачивайте страховкой, как
+  `parse_job`: сбой → статус «ошибка» и инцидент `worker_failed`, а не вечное «в обработке».
 - **Файлы инструментов — только из вложений чата**: `ToolContext.attachments` строит сервер; аргумент
   модели `file` лишь выбирает из этого списка. Права на поиск в Qdrant — фильтр по id этих файлов.
 - **`.mjs` в nginx**: воркер pdf.js — ES-модуль; без `application/javascript` для `.mjs`
