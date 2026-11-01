@@ -1040,6 +1040,64 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/exports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Exports
+     * @description Свои выгрузки, свежие сверху.
+     */
+    get: operations["adminListExports"];
+    put?: never;
+    /**
+     * Create Export
+     * @description Выгрузка одного чата или выборки по фильтру — фоновой задачей воркера.
+     */
+    post: operations["adminCreateExport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/exports/{export_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Export */
+    get: operations["adminGetExport"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/exports/{export_id}/download": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download Export */
+    get: operations["adminDownloadExport"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/users": {
     parameters: {
       query?: never;
@@ -1615,6 +1673,55 @@ export interface components {
        */
       messages: components["schemas"]["MessageOut"][];
     };
+    /**
+     * ChatFilter
+     * @description Фильтр переписки: тот же для поиска, списка чатов и выгрузки по выборке.
+     */
+    ChatFilter: {
+      /**
+       * Q
+       * @description Слова или подстрока в сообщениях.
+       */
+      q?: string | null;
+      /** User Id */
+      user_id?: string | null;
+      /** Department */
+      department?: string | null;
+      /**
+       * Date From
+       * @description С этой даты включительно (часовой пояс чата).
+       */
+      date_from?: string | null;
+      /**
+       * Date To
+       * @description По эту дату включительно.
+       */
+      date_to?: string | null;
+      /** Scenario Id */
+      scenario_id?: string | null;
+      /** Model */
+      model?: string | null;
+      /**
+       * Deleted
+       * @description true — только удалённое, false — без него.
+       */
+      deleted?: boolean | null;
+      /**
+       * Disliked
+       * @description С дизлайком.
+       */
+      disliked?: boolean | null;
+      /**
+       * Incident
+       * @description С инцидентом.
+       */
+      incident?: boolean | null;
+      /**
+       * Attachments
+       * @description С вложениями пользователя.
+       */
+      attachments?: boolean | null;
+    };
     /** ChatListItem */
     ChatListItem: {
       /**
@@ -1798,6 +1905,62 @@ export interface components {
       created_at: string;
       /** Indexed At */
       indexed_at: string | null;
+    };
+    /** ExportIn */
+    ExportIn: {
+      /**
+       * Format
+       * @enum {string}
+       */
+      format: "json" | "xlsx" | "docx" | "pdf";
+      /**
+       * Chat Id
+       * @description Один чат; иначе — выборка по фильтру.
+       */
+      chat_id?: string | null;
+      /** @description Фильтр раздела «Переписка». */
+      filter?: components["schemas"]["ChatFilter"] | null;
+    };
+    /** ExportOut */
+    ExportOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Format
+       * @enum {string}
+       */
+      format: "json" | "xlsx" | "docx" | "pdf";
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "queued" | "running" | "ready" | "error" | "expired";
+      /** Filter */
+      filter: {
+        [key: string]: unknown;
+      };
+      /** Error */
+      error: string | null;
+      /** Chats */
+      chats: number | null;
+      /** Messages */
+      messages: number | null;
+      /** Filename */
+      filename: string | null;
+      /** Size */
+      size: number | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Finished At */
+      finished_at: string | null;
+      /** Expires At */
+      expires_at: string | null;
     };
     /** FeedbackIn */
     FeedbackIn: {
@@ -5089,6 +5252,121 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PurgeOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListExports: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExportOut"][];
+        };
+      };
+    };
+  };
+  adminCreateExport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExportIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExportOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminGetExport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        export_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExportOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDownloadExport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        export_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": unknown;
         };
       };
       /** @description Validation Error */

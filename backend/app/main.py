@@ -37,6 +37,7 @@ from app.modules.chats.router import router as chats_router
 from app.modules.completions.generation import GenerationManager
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.router import router as completions_router
+from app.modules.exports.router import router as exports_router
 from app.modules.feedback.router import router as feedback_router
 from app.modules.files.router import router as files_router
 from app.modules.incidents.router import router as incidents_router
@@ -204,6 +205,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(scenarios_router)
     api.include_router(scenarios_admin_router)
     api.include_router(admin_chats_router)
+    api.include_router(exports_router)
     api.include_router(admin_router)
     app.include_router(api)
 

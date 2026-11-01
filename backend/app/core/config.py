@@ -369,6 +369,32 @@ class WorkerSettings(_Section):
     eager: bool = Field(False, description="Выполнять задачи в процессе api (только тесты).")
 
 
+class ExportsSettings(_Section):
+    """Выгрузки переписки из админки (§13.3)."""
+
+    ttl_days: int = Field(7, gt=0, description="Сколько дней хранится файл выгрузки.")
+    max_messages: int = Field(
+        100_000, gt=0, description="Предел сообщений в одной выгрузке (больше — сузьте фильтр)."
+    )
+
+
+class RetentionSettings(_Section):
+    """Физическая очистка удалённого пользователями (§14); срок можно переопределить в админке."""
+
+    deleted_days: int = Field(
+        0, ge=0, description="Через сколько дней удалённые чаты стираются физически; 0 — никогда."
+    )
+
+
+class MonitoringSettings(_Section):
+    """Метрики для дашборда админки (§13.2, §16.6)."""
+
+    prometheus_url: str | None = Field(
+        None, description="Prometheus с метриками DCGM (GPU); пусто — блок GPU без данных."
+    )
+    timeout_s: float = Field(2.0, gt=0, description="Тайм-аут запроса к Prometheus, с.")
+
+
 class Bm25Settings(_Section):
     """BM25 одинаков при записи и поиске (§10.2); после смены — пересчитать BM25-векторы."""
 
@@ -501,6 +527,9 @@ class Settings(BaseSettings):
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     rag: RagSettings = Field(default_factory=RagSettings)
     kb: KbSettings = Field(default_factory=KbSettings)
+    exports: ExportsSettings = Field(default_factory=ExportsSettings)
+    retention: RetentionSettings = Field(default_factory=RetentionSettings)
+    monitoring: MonitoringSettings = Field(default_factory=MonitoringSettings)
     models: dict[str, ModelEndpoint] = Field(
         default_factory=dict, description="Реестр моделей по ролям (config/models.yaml)."
     )

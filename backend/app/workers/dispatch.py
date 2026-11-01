@@ -10,7 +10,7 @@ import asyncio
 from typing import Any
 
 from app.core.config import Settings
-from app.workers import jobs, kb_jobs
+from app.workers import export_jobs, jobs, kb_jobs
 
 
 class TaskTimeout(Exception):  # noqa: N818
@@ -59,6 +59,13 @@ class Dispatcher:
             )
             return
         await asyncio.to_thread(self._client().send_task, "kb.import", args=[import_id], queue="kb")
+
+    async def export(self, export_id: str) -> None:
+        """Выгрузка переписки (очередь ``files``: pandoc и LibreOffice — в образе воркера)."""
+        if self.settings.worker.eager:
+            await asyncio.to_thread(asyncio.run, export_jobs.export_job(export_id, self.settings))
+            return
+        await asyncio.to_thread(self._client().send_task, "exports.build", args=[export_id])
 
     async def generate(self, spec: dict[str, Any]) -> dict[str, Any]:
         """Генерация файла в воркере (pandoc, LibreOffice); ждём результат."""

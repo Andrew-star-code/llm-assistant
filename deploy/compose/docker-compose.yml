@@ -129,6 +129,24 @@ services:
       worker: {condition: service_started}
     logging: *default-logging
 
+  scheduler:
+    # Плановые задачи (§13.3, §14): очистка истёкших выгрузок и физическое удаление чатов после
+    # срока хранения. Celery beat только ставит задачи в очередь files — выполняет их worker.
+    image: ai-assistant/api:${APP_VERSION:-dev}
+    pull_policy: never
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "beat",
+              "--schedule", "/tmp/celerybeat-schedule", "--loglevel", "INFO"]
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+      APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      OTEL_SDK_DISABLED: "true"
+    depends_on:
+      redis: {condition: service_healthy}
+      worker: {condition: service_started}
+    logging: *default-logging
+
   migrate:
     # Одноразовый запуск миграций Alembic перед стартом api (в проде — make migrate, §16.2).
     image: ai-assistant/api:${APP_VERSION:-dev}

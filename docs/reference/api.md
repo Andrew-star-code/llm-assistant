@@ -12,6 +12,10 @@
 | GET | `/api/admin/chats/{chat_id}` | `adminGetChat` | Get Chat | 200, 422 |
 | POST | `/api/admin/chats/{chat_id}/purge` | `adminPurgeChat` | Purge | 200, 422 |
 | POST | `/api/admin/chats/{chat_id}/restore` | `adminRestoreChat` | Restore Chat | 200, 422 |
+| GET | `/api/admin/exports` | `adminListExports` | List Exports | 200 |
+| POST | `/api/admin/exports` | `adminCreateExport` | Create Export | 202, 422 |
+| GET | `/api/admin/exports/{export_id}` | `adminGetExport` | Get Export | 200, 422 |
+| GET | `/api/admin/exports/{export_id}/download` | `adminDownloadExport` | Download Export | 200, 422 |
 | GET | `/api/admin/incidents` | `adminListIncidents` | List Incidents | 200, 422 |
 | GET | `/api/admin/kb` | `adminListKb` | List Bases | 200 |
 | POST | `/api/admin/kb` | `adminCreateKb` | Create Base | 201, 422 |

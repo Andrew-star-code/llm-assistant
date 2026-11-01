@@ -127,6 +127,11 @@
 | `kb.personal_quota.max_documents` | int | 100 | `APP_KB__PERSONAL_QUOTA__MAX_DOCUMENTS` | Документов в личной базе. |
 | `kb.personal_quota.max_mb` | int | 500 | `APP_KB__PERSONAL_QUOTA__MAX_MB` | Объём личной базы, МБ. |
 | `kb.import_root` | Path | `/srv/import` | `APP_KB__IMPORT_ROOT` | Корень папок для массового импорта; путь импорта не может выйти за него. |
+| `exports.ttl_days` | int | 7 | `APP_EXPORTS__TTL_DAYS` | Сколько дней хранится файл выгрузки. |
+| `exports.max_messages` | int | 100000 | `APP_EXPORTS__MAX_MESSAGES` | Предел сообщений в одной выгрузке (больше — сузьте фильтр). |
+| `retention.deleted_days` | int | 0 | `APP_RETENTION__DELETED_DAYS` | Через сколько дней удалённые чаты стираются физически; 0 — никогда. |
+| `monitoring.prometheus_url` | str \| null | null | `APP_MONITORING__PROMETHEUS_URL` | Prometheus с метриками DCGM (GPU); пусто — блок GPU без данных. |
+| `monitoring.timeout_s` | float | 2.0 | `APP_MONITORING__TIMEOUT_S` | Тайм-аут запроса к Prometheus, с. |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`

@@ -4,6 +4,7 @@ from app.modules.admin.models import AppSetting
 from app.modules.audit.models import AuditLog
 from app.modules.auth.models import UserSession
 from app.modules.chats.models import Chat, Folder, Message
+from app.modules.exports.models import Export
 from app.modules.feedback.models import Feedback
 from app.modules.files.models import File
 from app.modules.incidents.models import Incident
@@ -19,6 +20,7 @@ __all__ = [
     "AppSetting",
     "AuditLog",
     "Chat",
+    "Export",
     "Feedback",
     "File",
     "Folder",

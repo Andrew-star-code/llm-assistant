@@ -43,6 +43,23 @@
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 
+## `exports`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `requested_by` | UUID | not null | → users.id, index |
+| `filter` | JSONB | not null |  |
+| `format` | VARCHAR(8) | not null |  |
+| `status` | VARCHAR(16) | not null |  |
+| `error` | TEXT | null |  |
+| `file_id` | UUID | null | → files.id, index |
+| `chats` | INTEGER | null |  |
+| `messages` | INTEGER | null |  |
+| `finished_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `expires_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
 ## `feedback`
 
 | Колонка | Тип | NULL | Ключи и индексы |

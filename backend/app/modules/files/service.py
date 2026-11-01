@@ -42,9 +42,12 @@ def file_out(row: File) -> FileOut:
 
 
 async def get_file(db: AsyncSession, user_id: UUID, file_id: UUID) -> File:
-    """Файл пользователя; чужой или удалённый — 404 (IDOR, §18.2)."""
+    """Файл пользователя; чужой или удалённый — 404 (IDOR, §18.2).
+
+    Файлы выгрузок (``export``) отдаёт только раздел выгрузок — со сроком хранения и аудитом.
+    """
     row = await db.get(File, file_id)
-    if row is None or row.owner_id != user_id or row.deleted_at is not None:
+    if row is None or row.owner_id != user_id or row.deleted_at is not None or row.kind == "export":
         raise NotFoundError("Файл не найден")
     return row
 

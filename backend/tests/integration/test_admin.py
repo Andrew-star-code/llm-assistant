@@ -43,6 +43,7 @@ async def test_bootstrap_admin_sees_admin_and_ordinary_user_gets_403(
 
 def _admin_routes() -> list[APIRoute]:
     from app.modules.admin.chats_router import router as admin_chats_router
+    from app.modules.exports.router import router as exports_router
     from app.modules.incidents.router import router as incidents_router
     from app.modules.kb.admin_router import router as kb_admin_router
     from app.modules.scenarios.admin_router import router as scenarios_admin_router
@@ -50,6 +51,7 @@ def _admin_routes() -> list[APIRoute]:
     routers = (
         admin_router,
         admin_chats_router,
+        exports_router,
         kb_admin_router,
         incidents_router,
         scenarios_admin_router,
@@ -76,7 +78,7 @@ async def test_every_admin_endpoint_requires_permission(
     for route in routes:
         path = "/api" + re.sub(r"\{[a-z_]+\}", dummy, route.path)
         for method in route.methods or set():
-            body = {"reason": "x", "role_ids": [], "login": "x", "confirm": "x"}
+            body = {"reason": "x", "role_ids": [], "login": "x", "confirm": "x", "format": "json"}
             response = await user.request(method, path, json=body)
             assert response.status_code == 403, (method, path, response.text)
 

@@ -16,7 +16,7 @@ from celery import Celery, signals
 
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
-from app.workers import jobs, kb_jobs
+from app.workers import export_jobs, jobs, kb_jobs
 
 QUEUE = "files"
 KB_QUEUE = "kb"
@@ -42,6 +42,11 @@ def make_celery(settings: Settings) -> Celery:
         task_time_limit=settings.files.parse_timeout_seconds + 60,
         broker_connection_retry_on_startup=True,
         worker_hijack_root_logger=False,
+        # Плановые задачи — сервис scheduler (celery beat); выполняет их воркер очереди files.
+        beat_schedule={
+            "exports-cleanup": {"task": "exports.cleanup", "schedule": 3600.0},
+            "retention-purge": {"task": "retention.purge", "schedule": 6 * 3600.0},
+        },
     )
     return app
 
@@ -66,6 +71,21 @@ def requeue_files_task() -> int:
         celery_app.send_task("files.parse", args=[file_id], queue=QUEUE)
 
     return asyncio.run(jobs.requeue_files_job(get_settings(), enqueue))
+
+
+@celery_app.task(name="exports.build")  # type: ignore[untyped-decorator]
+def export_task(export_id: str) -> None:
+    asyncio.run(export_jobs.export_job(export_id, get_settings()))
+
+
+@celery_app.task(name="exports.cleanup")  # type: ignore[untyped-decorator]
+def cleanup_exports_task() -> int:
+    return asyncio.run(export_jobs.cleanup_exports_job(get_settings()))
+
+
+@celery_app.task(name="retention.purge")  # type: ignore[untyped-decorator]
+def retention_task() -> int:
+    return asyncio.run(export_jobs.retention_job(get_settings()))
 
 
 @celery_app.task(name="files.generate")  # type: ignore[untyped-decorator]

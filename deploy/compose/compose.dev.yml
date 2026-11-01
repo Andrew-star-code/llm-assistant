@@ -64,6 +64,13 @@ services:
       - ${KB_IMPORT_DIR:-./import}:/srv/import:ro
     extra_hosts: ["host.docker.internal:host-gateway"]
 
+  scheduler:
+    environment:
+      APP_ENV: dev
+    volumes:
+      - ../../backend/app:/srv/backend/app:ro
+      - ../../config:/srv/config:ro
+
   migrate:
     volumes:
       - ../../backend/app:/srv/backend/app:ro
