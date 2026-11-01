@@ -1,0 +1,20 @@
+# Встроенный сценарий (§8.7). При старте попадает в БД, если сценария с таким кодом ещё нет;
+# дальше его правят в админке «Сценарии» — этот файл правки не перезаписывает.
+code: contract_review
+name: Анализ договоров
+description: Риски, сроки, обязательства и спорные пункты
+icon: file-signature
+roles: [legal, management]          # коды ролей; пусто — всем
+model_role: chat
+thinking_default: true
+prompt_template: scenarios/contract_review.md.j2
+tools: [list_attachments, read_document, get_document_outline, search_in_documents, search_knowledge_base, create_document]
+knowledge_bases: [legal-templates, legal-practice]
+rag_mode: auto
+requires_attachment: true
+attachment_hint: Приложите договор (DOCX или PDF)
+starter_prompts:
+  - Найди риски для нас в этом договоре
+  - Сравни с нашим типовым договором поставки
+  - Составь таблицу сроков и обязательств сторон
+sort_order: 10

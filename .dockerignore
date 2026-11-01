@@ -1,0 +1,14 @@
+.git
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+deploy/compose/.env
+deploy/compose/secrets
+data
+storage

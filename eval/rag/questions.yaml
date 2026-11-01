@@ -1,0 +1,65 @@
+# Вопросы для оценки RAG (§10.6): ожидаемый документ — имя файла в corpus/ без расширения.
+# Типы: exact_id — точные номера и коды; word_form — другие словоформы; paraphrase — перефраз;
+# english — английские термины. Добавляя документы, добавляйте и вопросы всех типов.
+questions:
+  # --- точные идентификаторы
+  - {q: "17-42/Б", expected: [supply_contract], type: exact_id}
+  - {q: "условия по договору № 17-42/Б", expected: [supply_contract], type: exact_id}
+  - {q: "А-2024/118", expected: [lease_contract], type: exact_id}
+  - {q: "приказ 245-П", expected: [order_bonus], type: exact_id}
+  - {q: "форма ЮР-07", expected: [nda], type: exact_id}
+  - {q: "форма Т-9", expected: [business_trip], type: exact_id}
+  - {q: "ТОРГ-12", expected: [supply_contract], type: exact_id}
+  - {q: "security@company.local", expected: [security_incident], type: exact_id}
+  - {q: "телефон 1234 служба безопасности", expected: [security_incident], type: exact_id}
+  - {q: "1С:Документооборот заявка", expected: [procurement], type: exact_id}
+  - {q: "ООО «Бизнес-Центр Север»", expected: [lease_contract], type: exact_id}
+  - {q: "ООО «Ромашка»", expected: [supply_contract], type: exact_id}
+  # --- другие словоформы
+  - {q: "отпусков сотрудникам", expected: [vacation], type: word_form}
+  - {q: "командировками и суточными", expected: [business_trip], type: word_form}
+  - {q: "договором поставки мебели", expected: [supply_contract], type: word_form}
+  - {q: "арендной платой за офисы", expected: [lease_contract], type: word_form}
+  - {q: "паролями учётных записей", expected: [it_password], type: word_form}
+  - {q: "принтерами и сканированием", expected: [it_printer], type: word_form}
+  - {q: "больничным листом", expected: [sick_leave], type: word_form}
+  - {q: "закупками свыше ста тысяч", expected: [procurement], type: word_form}
+  - {q: "наставниками новичков", expected: [onboarding], type: word_form}
+  - {q: "столовой и питанием", expected: [canteen], type: word_form}
+  - {q: "премиями отделу продаж", expected: [order_bonus], type: word_form}
+  - {q: "дистанционной работой сотрудников", expected: [remote_work], type: word_form}
+  # --- перефразы
+  - {q: "сколько дней можно отдыхать в году", expected: [vacation], type: paraphrase}
+  - {q: "сколько денег дают в день в поездке по работе", expected: [business_trip], type: paraphrase}
+  - {q: "какая неустойка если мебель привезут поздно", expected: [supply_contract], type: paraphrase}
+  - {q: "сколько стоит метр помещения в месяц", expected: [lease_contract], type: paraphrase}
+  - {q: "как часто нужно менять пароль", expected: [it_password], type: paraphrase}
+  - {q: "что делать если пришло подозрительное письмо", expected: [security_incident], type: paraphrase}
+  - {q: "можно ли работать из дома", expected: [remote_work], type: paraphrase}
+  - {q: "что делать если заболел", expected: [sick_leave], type: paraphrase}
+  - {q: "сколько компенсируют на обед", expected: [canteen], type: paraphrase}
+  - {q: "кто помогает новому человеку в первые месяцы", expected: [onboarding], type: paraphrase}
+  - {q: "сколько можно потратить на ужин с партнёрами", expected: [expenses], type: paraphrase}
+  - {q: "нужно ли подписывать соглашение о конфиденциальности с поставщиком", expected: [nda], type: paraphrase}
+  # --- английские термины
+  - {q: "OpenVPN", expected: [it_vpn], type: english}
+  - {q: "2FA код не принимается", expected: [it_vpn], type: english}
+  - {q: "TLS handshake failed", expected: [it_vpn], type: english}
+  - {q: "Secure Print", expected: [it_printer], type: english}
+  - {q: "Paper Jam", expected: [it_printer], type: english}
+  - {q: "Software Center драйверы", expected: [it_printer], type: english}
+  - {q: "ransomware", expected: [security_incident], type: english}
+  - {q: "malware что делать", expected: [security_incident], type: english}
+  - {q: "NDA срок действия", expected: [nda], type: english}
+  - {q: "Wi-Fi гостевой", expected: [it_password], type: english}
+  - {q: "PDF сканы на почту", expected: [it_printer], type: english}
+  - {q: "VPN не подключается", expected: [it_vpn], type: english}
+  # --- ответа в корпусе нет: рядом с темами корпуса и совсем мимо
+  - {q: "где парковаться сотрудникам на служебной машине", expected: [], type: no_answer}
+  - {q: "как заказать визитки", expected: [], type: no_answer}
+  - {q: "корпоративная ипотека для сотрудников", expected: [], type: no_answer}
+  - {q: "покрывает ли ДМС стоматологию", expected: [], type: no_answer}
+  - {q: "план эвакуации при пожаре", expected: [], type: no_answer}
+  - {q: "как задеплоить сервис в Kubernetes", expected: [], type: no_answer}
+  - {q: "рецепт борща", expected: [], type: no_answer}
+  - {q: "курс биткоина сегодня", expected: [], type: no_answer}

@@ -1,0 +1,57 @@
+# Поведение приложения (§16.4). Секреты здесь НЕ хранятся — только в .env и /run/secrets.
+# Поверх этого файла накладывается app.<APP_ENV>.yaml, затем переменные окружения APP_*.
+# Справочник всех параметров: docs/reference/config.md (make docs-config).
+
+app_name: ИИ-ассистент
+
+logging:
+  level: INFO
+  format: json
+
+auth:
+  providers: [ldap]                # ldap | dev (dev в prod запрещён); kerberos — FUTURE
+  bootstrap_admins: []             # TODO(question): логины первых superadmin — уточнить при деплое (§21)
+  session:
+    idle_timeout_minutes: 480
+    absolute_timeout_hours: 168
+  bruteforce:
+    per_login: {max_failures: 5, window_minutes: 15, lock_minutes: 15}
+    per_ip: {max_failures: 20, window_minutes: 15, lock_minutes: 60}
+
+ldap:
+  # TODO(question): адреса контроллеров и сервисная учётка — уточнить при деплое (§21)
+  urls: ["ldaps://dc1.corp.local:636", "ldaps://dc2.corp.local:636"]
+  start_tls: false
+  ca_cert_file: /run/secrets/corp_ca.pem
+  bind_dn: "CN=svc-ai-assistant,OU=Service Accounts,DC=corp,DC=local"
+  bind_password_file: /run/secrets/ldap_bind_password
+  base_dn: "DC=corp,DC=local"
+  user_filter: "(&(objectCategory=person)(objectClass=user)(sAMAccountName={username}))"
+  upn_suffix: "corp.local"
+  netbios_domain: "CORP"
+  access_group: ""                 # пусто — пускать всех включённых пользователей домена
+  nested_groups: true
+  # Отдел из AD у заказчика не заполнен (решение 57): роли назначают вручную в админке «Роли» —
+  # массово, списком логинов. Правила ниже срабатывают, только если атрибут department есть.
+  department_roles:
+    auto: true                     # роль «Отдел: <название>» из атрибута department
+    rules:
+      - {attribute: department, equals: "Юридический отдел", roles: [legal]}
+      - {attribute: department, contains: "ИТ", roles: [it]}
+  group_roles: []
+  sync_interval_minutes: 60
+
+chat:
+  company_name: "ООО «Корпорация»"  # TODO(question): название компании для системного промпта
+  timezone: Europe/Moscow
+
+rag:
+  search:
+    rerank:
+      # Стартовое значение — с уклоном в шумный поиск: ниже самого низкого балла верного фрагмента
+      # на тестовом корпусе eval/rag (0,011; с 0,2 терялось 7 из 48 ответов). Лишние фрагменты
+      # модель отбрасывает по содержанию, а потерянный ответ не вернуть. Подбирается на реальных
+      # документах: `make eval-rag KB=<коды баз> QUESTIONS=<файл>` → recommended_threshold, затем
+      # админка «Базы знаний» → «Параметры поиска» (действует без перезапуска, перекрывает это
+      # значение) или здесь.
+      score_threshold: 0.005

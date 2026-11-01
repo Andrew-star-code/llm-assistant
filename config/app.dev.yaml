@@ -1,0 +1,42 @@
+# Оверлей для локальной разработки (APP_ENV=dev): mock-AD из deploy/mock-ad, вход dev без пароля.
+logging:
+  level: DEBUG
+  format: console
+
+auth:
+  providers: [dev, ldap]
+  bootstrap_admins: [ivanov]
+  session:
+    cookie_secure: false             # дев-стенд работает по http://localhost
+  # Seed-пользователи провайдера dev — те же, что в mock-AD (deploy/mock-ad/README.md),
+  # чтобы e2e и ручная проверка не зависели от AD.
+  dev_users:
+    - {login: ivanov, last_name: Иванов, first_name: Иван, middle_name: Петрович,
+       title: Руководитель ИТ-отдела, department: ИТ-отдел, company: ООО «Корпорация»,
+       office: "Москва, офис 1", email: ivanov@corp.local, phone: "+7 (495) 100-10-01",
+       mobile: "+7 (900) 100-10-01", groups: ["CN=AI-Admins,CN=Users,DC=corp,DC=local"]}
+    - {login: kim, last_name: Ким, first_name: Александр,
+       title: Инженер технической поддержки, department: ИТ-отдел, company: ООО «Корпорация»,
+       office: "Москва, офис 1", email: kim@corp.local, phone: "+7 (495) 100-10-02",
+       mobile: "+7 (900) 100-10-02", manager: ivanov,
+       groups: ["CN=AI-Assistant-Users,CN=Users,DC=corp,DC=local"]}
+    - {login: smirnova, last_name: Смирнова, first_name: Анна, middle_name: Викторовна,
+       title: Главный бухгалтер, department: Бухгалтерия, company: ООО «Корпорация»,
+       office: "Москва, офис 1", email: smirnova@corp.local, phone: "+7 (495) 100-20-01",
+       groups: ["CN=AI-Assistant-Users,CN=Users,DC=corp,DC=local"]}
+    - {login: petrov, last_name: Петров, first_name: Сергей, middle_name: Алексеевич,
+       title: Бухгалтер, department: Бухгалтерия, company: ООО «Корпорация»,
+       office: "Москва, офис 1", email: petrov@corp.local, phone: "+7 (495) 100-20-02",
+       manager: smirnova, groups: ["CN=AI-Assistant-Users,CN=Users,DC=corp,DC=local"]}
+    - {login: sidorova, last_name: Сидорова, first_name: Елена, middle_name: Николаевна,
+       title: Юрисконсульт, department: Юридический отдел, company: ООО «Корпорация»,
+       office: "Москва, офис 1", email: sidorova@corp.local, phone: "+7 (495) 100-30-01",
+       groups: ["CN=AI-Assistant-Users,CN=Users,DC=corp,DC=local"]}
+
+ldap:
+  urls: ["ldaps://dc1.corp.local:636"]
+  ca_cert_file: /run/mock-ad/ca.pem            # mock-AD выкладывает свой CA в общий том
+  bind_password_file: /run/secrets/ldap_bind_password
+
+storage:
+  root: /srv/storage

@@ -1,0 +1,34 @@
+# modules/users
+
+> Статус: реализовано на этапе 1 (§6.5, §11.1).
+
+**Назначение:** пользователи и профиль. Источник правды для атрибутов — AD; запись создаётся и
+обновляется при входе и синхронизации (ключ — `objectGUID`).
+
+**Публичный интерфейс:**
+
+| Эндпоинт / сервис | Назначение |
+| --- | --- |
+| `GET /api/profile` | Профиль: ФИО, должность, отдел, компания, офис, телефоны, руководитель, роли, форма обращения |
+| `PATCH /api/profile/settings` | Форма обращения и тема (меняются только переданные поля) |
+| `GET /api/profile/photo` | Фото из AD (`thumbnailPhoto`) |
+| `service.upsert_from_directory` | Создать/обновить пользователя по данным каталога, сохранить фото |
+| `naming.address` | Как ассистент обращается к пользователю (§11.1) |
+| `sync.sync_all` | Синхронизация с AD: атрибуты, фото, роли; отключённых — `ad_disabled` и разлогинить |
+
+**ФИО и обращение:** отчество из `middleName`, иначе — из `displayName` по шаблону
+`ldap.attributes.display_name_pattern`, если фамилия и имя совпали. Формы: «Имя Отчество» (по
+умолчанию, `users.default_address_form`), «Имя», «Фамилия Имя Отчество», «на вы» без имени.
+Без отчества — по имени.
+
+**Синхронизация:** фоновой задачей api каждые `ldap.sync_interval_minutes` под Redis-блокировкой
+(`lock:ad-sync`) и командой `python -m app.cli ad sync`. TODO(stage-3): перенести в Celery beat.
+
+**Зависит от:** `auth` (провайдеры, сессии), `rbac`; `core/storage` для фото.
+
+**Точки расширения:** новое поле профиля из AD — маппинг `ldap.attributes` + поле `DirectoryUser`
++ колонка и миграция + `schemas.Profile` + `features/profile/` (см. `docs/guides/ad-setup.md`).
+
+**Данные:** таблица `users`; файлы `photos/<user_id>` в хранилище.
+
+**Тесты:** `backend/tests/unit/test_auth_units.py` (ФИО), `backend/tests/integration/test_auth_*.py`.

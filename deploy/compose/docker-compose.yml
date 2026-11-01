@@ -1,0 +1,171 @@
+# Базовый compose: хранилища и api. Разработка — вместе с compose.dev.yml (make dev-up).
+# Прод разбивается на отдельные проекты app/data/models/monitoring на этапе 10 (§16.2).
+# Образы сторонних сервисов закреплены по digest (§4).
+name: ai-assistant
+
+x-logging: &default-logging
+  driver: json-file
+  options: {max-size: "20m", max-file: "5"}
+
+services:
+  postgres:
+    image: postgres:17.11-bookworm@sha256:839fbb5a4942a7758dd93e18b42ea5649807491a0545b5eeeb8f0b8bb11857a5
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-assistant}
+      POSTGRES_USER: ${POSTGRES_USER:-assistant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в deploy/compose/.env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *default-logging
+
+  redis:
+    image: redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?задайте REDIS_PASSWORD}"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    logging: *default-logging
+
+  qdrant:
+    # Нужен Qdrant ≥ 1.15.3 для серверного BM25 (§10.2); переход на 1.20 — после eval.
+    image: qdrant/qdrant:v1.19.2@sha256:b7b0444c4c351c970b98e90a6f89c2ee4287c65b44e52b4cb503fa5b2aa927ad
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?задайте QDRANT_API_KEY}
+      QDRANT__TELEMETRY_DISABLED: "true"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && printf \"GET /readyz HTTP/1.0\\r\\n\\r\\n\" >&3 && grep -q \"200 OK\" <&3'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *default-logging
+
+  api:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+      target: api
+    image: ai-assistant/api:${APP_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+      APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_QDRANT_API_KEY: ${QDRANT_API_KEY}
+      HF_HUB_OFFLINE: "1"
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - api-storage:/srv/storage
+      - ${KB_IMPORT_DIR:-./import}:/srv/import:ro   # список папок для импорта в админке
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      qdrant: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+    logging: *default-logging
+
+  worker:
+    # Воркер файлов (§4): разбор вложений и генерация DOCX/PDF/XLSX/PPTX. Тот же код, что у api,
+    # плюс LibreOffice, Tesseract и шрифты. Хранилище файлов — общий с api том.
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+      target: worker
+    image: ai-assistant/worker:${APP_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+      APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_QDRANT_API_KEY: ${QDRANT_API_KEY}
+      HF_HUB_OFFLINE: "1"
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - api-storage:/srv/storage
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      qdrant: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+    logging: *default-logging
+
+  worker-kb:
+    # Индексация баз знаний и массовый импорт (§10.3) — своя очередь, чтобы многочасовой импорт
+    # не задерживал файлы пользователей. Папка импорта — только чтение.
+    image: ai-assistant/worker:${APP_VERSION:-dev}
+    pull_policy: never
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "-Q", "kb", "-c", "2",
+              "--without-gossip", "--without-mingle", "-n", "kb@%h"]
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+      APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_QDRANT_API_KEY: ${QDRANT_API_KEY}
+      HF_HUB_OFFLINE: "1"
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - api-storage:/srv/storage
+      - ${KB_IMPORT_DIR:-./import}:/srv/import:ro
+    depends_on:
+      worker: {condition: service_started}
+    logging: *default-logging
+
+  scheduler:
+    # Плановые задачи (§13.3, §14): очистка истёкших выгрузок и физическое удаление чатов после
+    # срока хранения. Celery beat только ставит задачи в очередь files — выполняет их worker.
+    image: ai-assistant/api:${APP_VERSION:-dev}
+    pull_policy: never
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "beat",
+              "--schedule", "/tmp/celerybeat-schedule", "--loglevel", "INFO"]
+    # Образ api: его HEALTHCHECK обращается к порту 8000, который beat не слушает, и `up --wait`
+    # падает на работающем сервисе. У воркера он отключён в Dockerfile (`HEALTHCHECK NONE`).
+    healthcheck:
+      disable: true
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+      APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      OTEL_SDK_DISABLED: "true"
+    depends_on:
+      redis: {condition: service_healthy}
+      worker: {condition: service_started}
+    logging: *default-logging
+
+  migrate:
+    # Одноразовый запуск миграций Alembic перед стартом api (в проде — make migrate, §16.2).
+    image: ai-assistant/api:${APP_VERSION:-dev}
+    pull_policy: never
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+    logging: *default-logging
+
+volumes:
+  api-storage:
+  postgres-data:
+  redis-data:
+  qdrant-data:
