@@ -1,20 +1,37 @@
 # modules/incidents
 
-> Статус: минимум — этап 4 (запись с группировкой и список в админке); полностью — этап 7 (§12.5, §13.5).
+> Статус: реализовано на этапах 4 и 7 (§13.5).
 
-**Назначение:** инциденты: системные ошибки, деградация поиска (`rag_degraded`), ошибки индексации
-(`kb_index`), сбои задач воркера (`worker_failed`); дальше — скрытые репорты модели, вердикты guard-модели, безопасность, здоровье моделей.
+**Назначение:** инциденты с группировкой по отпечатку, жизненным циклом и комментариями.
+
+**Типы:** `system_error` — необработанная ошибка API или генерации (стек, request_id, эндпоинт,
+пользователь, лог запроса до 200 строк, последние строки лога процесса — `incidents/errors.py`,
+`core/log_capture.py`); `model_report` — скрытый репорт модели (§9.6); `guard` — вердикт
+guard-модели; `security` — правила входов и всплеск запросов (§13.4); `model_health` — модель не
+отвечает (`llm/monitor.py`, логи контейнера); `rag_degraded`, `kb_index`, `worker_failed`.
 
 **Публичный интерфейс:** `service.report(sessions, type=…, severity=…, title=…, fingerprint=…,
-throttle_s=…)` — открытый инцидент с тем же отпечатком получает +1 к счётчику, решённый открывается
-снова; `throttle_s` (отметка в Redis) ограничивает частоту записи из горячего пути.
-`GET /api/admin/incidents?status=&type=` (`admin.incidents.view`).
+throttle_s=…)` и `service.upsert(db, …)` в чужой транзакции — открытый инцидент с тем же отпечатком
+получает +1 к счётчику, решённый открывается снова, «ложное срабатывание» только считает повторы;
+`errors.report_exception(...)` — `system_error` из исключения (отпечаток без чисел, id и адресов).
 
-**Зависит от:** Redis (ограничение частоты).
+| Эндпоинт | Право |
+| --- | --- |
+| `GET /api/admin/incidents?status=open|new|…&type=&severity=&q=&cursor=` | `admin.incidents.view` |
+| `GET /api/admin/incidents/summary` — новые (и high/critical) для счётчика в меню | `admin.incidents.view` |
+| `GET /api/admin/incidents/{id}`, `GET …/assignees` | `admin.incidents.view` |
+| `PATCH /api/admin/incidents/{id}` (статус, ответственный, решение), `POST …/{id}/comments` | `admin.incidents.manage` (аудит) |
 
-**Точки расширения:** новый тип — строка `type` + фильтр в админке; карточка, назначение, комментарии,
-захват логов — этап 7.
+Уведомления — только в админке: счётчик новых в меню (high и critical подсвечены) и блок на
+дашборде. Почта и мессенджеры — FUTURE.
 
-**Данные:** `incidents` (`incident_comments` — этап 7).
+**Зависит от:** Redis (ограничение частоты), `users`, `audit`.
 
-**Тесты:** `backend/tests/integration/test_rag.py::test_reranker_down_rrf_order_and_incident`.
+**Точки расширения:** новый тип — строка `type`, подпись в i18n `admin.incidents.types.*` и вид
+полезной нагрузки в `frontend/src/admin/pages/IncidentPage.tsx`.
+
+**Данные:** `incidents`, `incident_comments`.
+
+**Тесты:** `backend/tests/integration/test_incidents.py`, `test_security.py`, `test_moderation.py`,
+`test_model_health.py`, `backend/tests/unit/test_incident_errors.py`,
+`frontend/tests/unit/incidents.test.tsx`, `frontend/tests/e2e/admin-incidents.spec.ts`.
