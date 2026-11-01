@@ -54,3 +54,12 @@ questions:
   - {q: "Wi-Fi гостевой", expected: [it_password], type: english}
   - {q: "PDF сканы на почту", expected: [it_printer], type: english}
   - {q: "VPN не подключается", expected: [it_vpn], type: english}
+  # --- ответа в корпусе нет: рядом с темами корпуса и совсем мимо
+  - {q: "где парковаться сотрудникам на служебной машине", expected: [], type: no_answer}
+  - {q: "как заказать визитки", expected: [], type: no_answer}
+  - {q: "корпоративная ипотека для сотрудников", expected: [], type: no_answer}
+  - {q: "покрывает ли ДМС стоматологию", expected: [], type: no_answer}
+  - {q: "план эвакуации при пожаре", expected: [], type: no_answer}
+  - {q: "как задеплоить сервис в Kubernetes", expected: [], type: no_answer}
+  - {q: "рецепт борща", expected: [], type: no_answer}
+  - {q: "курс биткоина сегодня", expected: [], type: no_answer}

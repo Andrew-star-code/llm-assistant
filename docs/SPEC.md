@@ -894,7 +894,7 @@ rag:
     prefetch: {dense: 40, bm25: 40}
     fusion: rrf                # rrf | dbsf — менять только по результатам eval
     bm25: {provider: qdrant, model: qdrant/bm25, language: russian, avg_len: 400}   # provider: qdrant | fastembed
-    rerank: {enabled: true, max_candidates: 60, score_threshold: 0.2, timeout_s: 3}
+    rerank: {enabled: true, max_candidates: 60, score_threshold: 0.01, timeout_s: 3}   # порог — по eval/rag (§10.6)
     max_per_document: 3
     final_k: 8
     neighbors: 1               # соседних чанков с каждой стороны

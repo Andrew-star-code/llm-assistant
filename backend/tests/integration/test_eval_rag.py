@@ -45,3 +45,34 @@ async def test_eval_rag_reports_four_configs(
     # Все стадии отработали — иначе --check считает сравнение недействительным.
     assert report["degraded"] == {}
     assert not [p for p in run.check(report) if "пропущена" in p]
+    # Вопросы без ответа — отдельно от hit@5/MRR; порог подбирается по трассе рабочей конфигурации.
+    assert report["no_answer"]["hybrid+rerank"]["n"] == 8
+    assert [r["threshold"] for r in report["threshold_sweep"]] == list(run.SWEEP)
+    assert report["recommended_threshold"] in run.SWEEP
+    assert "Порог реранкера" in run.render_sweep(report)
+
+
+def test_threshold_sweep_reselects_from_trace(infra: Infra, tmp_path: Path) -> None:
+    run = load_eval()
+    settings = chat_settings(infra, tmp_path, "http://unused")
+    settings.rag.search.final_k = 3
+    settings.rag.search.max_per_document = 2
+
+    def cand(doc: str, score: float | None) -> dict[str, Any]:
+        return {"document_id": doc, "rerank": score}
+
+    # Правильный документ b — с низким баллом (как у настоящего реранкера на коротких запросах).
+    answerable = [cand("a", 0.9), cand("a", 0.8), cand("a", 0.7), cand("b", 0.015), cand("c", None)]
+    noise = [cand("a", 0.02), cand("c", 0.004)]
+    # Не больше двух фрагментов на документ.
+    assert run.reselect(answerable, 0.0, settings) == ["a", "b"]
+    assert run.reselect(answerable, 0.02, settings) == ["a"]
+    names = {"a": "A", "b": "B", "c": "C"}
+    traces = [
+        ({"q": "1", "expected": ["B"], "type": "paraphrase"}, answerable),
+        ({"q": "2", "expected": [], "type": "no_answer"}, noise),
+    ]
+    rows = {r["threshold"]: r for r in run.sweep(traces, names, settings)}
+    assert rows[0.01]["hit@5"] == 1.0 and rows[0.01]["empty_no_answer"] == "0/1"
+    assert rows[0.02]["hit@5"] == 0.0 and rows[0.03]["empty_no_answer"] == "1/1"
+    assert run.recommend(list(rows.values())) == 0.01

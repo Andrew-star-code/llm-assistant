@@ -42,3 +42,11 @@ ldap:
 chat:
   company_name: "ООО «Корпорация»"  # TODO(question): название компании для системного промпта
   timezone: Europe/Moscow
+
+rag:
+  search:
+    rerank:
+      # Подобран по eval/rag (`recommended_threshold`): bge-reranker-v2-m3 даёт верным фрагментам
+      # на коротких запросах баллы от 0,011, а стартовый 0,2 терял 7 из 48 ответов (hit@5 0,854).
+      # Пересчитывать при смене реранкера, эмбеддингов или чанкинга (§10.6).
+      score_threshold: 0.01

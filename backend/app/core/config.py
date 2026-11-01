@@ -387,7 +387,12 @@ class Bm25Settings(_Section):
 class RerankSettings(_Section):
     enabled: bool = Field(True, description="Выключать только в eval и при отладке (§10.4).")
     max_candidates: int = Field(60, gt=0, description="Сколько лучших по RRF уходит в реранкер.")
-    score_threshold: float = Field(0.2, ge=0, le=1, description="Отсечение по баллу реранкера.")
+    score_threshold: float = Field(
+        0.01,
+        ge=0,
+        le=1,
+        description="Отсечение по баллу реранкера; подбирается по eval/rag (recommended_threshold)",
+    )
     timeout_s: float = Field(3, gt=0, description="Ждём реранкер не дольше, с.")
 
 

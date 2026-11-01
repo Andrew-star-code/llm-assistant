@@ -57,7 +57,9 @@
 | `openai` (по умолчанию) | vLLM, Jina-совместимые | `POST {base_url}/rerank` (`base_url` с `/v1`): `documents` → `results[].relevance_score` |
 | `tei` | text-embeddings-inference | `POST /rerank` (`/v1` в `base_url` отбрасывается): `texts` → `[{index, score}]`, пакетами по 32 |
 
-Оба дают балл 0..1, порог `rag.search.rerank.score_threshold` к ним одинаково применим. На дев-стенде
+Оба дают балл 0..1, порог `rag.search.rerank.score_threshold` к ним одинаково применим, но сам порог
+зависит от модели: после смены реранкера его заново подбирают по `make eval-rag`
+(`recommended_threshold`, см. [eval/README.md](../../eval/README.md)). На дев-стенде
 настоящий реранкер поднимает `make dev-models-up` (TEI на CPU, профиль `models`), подключение — через
 `deploy/compose/api.local.env` (образец — `api.local.env.example`):
 
@@ -71,4 +73,8 @@ APP_MODELS__RERANK__API=tei
 Images» в README text-embeddings-inference (RTX 50xx — сборка для compute capability 12.0), в сервис
 добавить `gpus: all`, digest закрепить по правилам репозитория. Модели те же — меняется только
 скорость.
+
+На CPU реранк 60 кандидатов идёт ~5 с — для чата поднимите `APP_RAG__SEARCH__RERANK__TIMEOUT_S=15`
+(есть в образце). Память: TEI на CPU держит bge-m3 в ~12 ГБ, реранкер — ~2,2 ГБ (до 7 ГБ при
+прогреве), поэтому реранкер стартует после готового embed и не перезапускается вместе с Docker.
 

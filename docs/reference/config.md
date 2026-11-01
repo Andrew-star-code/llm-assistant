@@ -109,7 +109,7 @@
 | `rag.search.bm25.avg_len` | float | 400 | `APP_RAG__SEARCH__BM25__AVG_LEN` | Средняя длина чанка в словах (подбирается на выборке и eval). |
 | `rag.search.rerank.enabled` | bool | true | `APP_RAG__SEARCH__RERANK__ENABLED` | Выключать только в eval и при отладке (§10.4). |
 | `rag.search.rerank.max_candidates` | int | 60 | `APP_RAG__SEARCH__RERANK__MAX_CANDIDATES` | Сколько лучших по RRF уходит в реранкер. |
-| `rag.search.rerank.score_threshold` | float | 0.2 | `APP_RAG__SEARCH__RERANK__SCORE_THRESHOLD` | Отсечение по баллу реранкера. |
+| `rag.search.rerank.score_threshold` | float | 0.01 | `APP_RAG__SEARCH__RERANK__SCORE_THRESHOLD` | Отсечение по баллу реранкера; подбирается по eval/rag (recommended_threshold) |
 | `rag.search.rerank.timeout_s` | float | 3 | `APP_RAG__SEARCH__RERANK__TIMEOUT_S` | Ждём реранкер не дольше, с. |
 | `rag.search.max_per_document` | int | 3 | `APP_RAG__SEARCH__MAX_PER_DOCUMENT` | Не больше фрагментов с одного документа. |
 | `rag.search.final_k` | int | 8 | `APP_RAG__SEARCH__FINAL_K` | Итоговое число фрагментов. |
