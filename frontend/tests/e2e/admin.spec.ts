@@ -14,7 +14,9 @@ test("админ: пользователи, блокировка с аудито
   await devLogin(page, "ivanov");
   await page.getByTestId("user-menu").click();
   await page.getByRole("menuitem", { name: "Админка" }).click();
-  await expect(page).toHaveURL(/\/admin\/users$/);
+  // Первый раздел админа — дашборд (этап 6).
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
+  await page.getByRole("link", { name: "Пользователи" }).click();
 
   await page.getByLabel("Поиск по ФИО, логину, отделу или должности").fill("Ким");
   await page.getByRole("link", { name: "Ким Александр" }).click();

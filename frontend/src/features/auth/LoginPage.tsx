@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMe, useSetMe } from "@/features/auth/useMe";
 import { ThemeToggle } from "@/features/theme/ThemeToggle";
+import { useBranding } from "@/features/system/useBranding";
 
 type Provider = "ldap" | "dev";
 
@@ -26,6 +27,7 @@ function useLogin() {
 /** Страница входа (§6.1): логин и пароль домена; в разработке — быстрый вход провайдером dev. */
 export function LoginPage() {
   const { t } = useTranslation();
+  const branding = useBranding();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
@@ -74,8 +76,12 @@ export function LoginPage() {
       <main className="flex flex-1 items-start justify-center px-4 pt-[10vh]">
         <div className="w-full max-w-sm rounded-xl border border-border bg-background p-8 shadow-sm">
           <div className="mb-6 flex flex-col items-center gap-2 text-center">
-            <Bot className="size-10 text-primary" />
-            <h1 className="text-xl font-semibold">{t("app.name")}</h1>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt="" className="h-10 w-auto" />
+            ) : (
+              <Bot className="size-10 text-primary" />
+            )}
+            <h1 className="text-xl font-semibold">{branding.name}</h1>
             <p className="text-sm text-muted-foreground">{t("login.subtitle")}</p>
           </div>
 

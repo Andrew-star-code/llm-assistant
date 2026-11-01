@@ -2,14 +2,22 @@ import { createBrowserRouter, type RouteObject } from "react-router";
 
 import { AdminLayout } from "@/admin/AdminLayout";
 import { AdDiagnosticsPage } from "@/admin/pages/AdDiagnosticsPage";
+import { AdminChatPage } from "@/admin/pages/AdminChatPage";
 import { AdminHomePage } from "@/admin/pages/AdminHomePage";
 import { AuditPage } from "@/admin/pages/AuditPage";
+import { ChatsPage } from "@/admin/pages/ChatsPage";
+import { DashboardPage } from "@/admin/pages/DashboardPage";
+import { ExportsPage } from "@/admin/pages/ExportsPage";
+import { FeedbackPage } from "@/admin/pages/FeedbackPage";
 import { IncidentsPage } from "@/admin/pages/IncidentsPage";
 import { KbBasePage } from "@/admin/pages/KbBasePage";
 import { KbListPage } from "@/admin/pages/KbListPage";
 import { ScenarioEditorPage } from "@/admin/pages/ScenarioEditorPage";
 import { ScenarioListPage } from "@/admin/pages/ScenarioListPage";
 import { LoginsPage } from "@/admin/pages/LoginsPage";
+import { ModelsPage } from "@/admin/pages/ModelsPage";
+import { SettingsPage } from "@/admin/pages/SettingsPage";
+import { ToolsPage } from "@/admin/pages/ToolsPage";
 import { UserCardPage } from "@/admin/pages/UserCardPage";
 import { UsersPage } from "@/admin/pages/UsersPage";
 import { AppLayout } from "@/app/layout/AppLayout";
@@ -57,6 +65,14 @@ export const routes: RouteObject[] = [
       { path: "incidents", element: <IncidentsPage /> },
       { path: "scenarios", element: <ScenarioListPage /> },
       { path: "scenarios/:scenarioId", element: <ScenarioEditorPage /> },
+      { path: "dashboard", element: <DashboardPage /> },
+      { path: "chats", element: <ChatsPage /> },
+      { path: "chats/:chatId", element: <AdminChatPage /> },
+      { path: "exports", element: <ExportsPage /> },
+      { path: "feedback", element: <FeedbackPage /> },
+      { path: "models", element: <ModelsPage /> },
+      { path: "tools", element: <ToolsPage /> },
+      { path: "settings", element: <SettingsPage /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

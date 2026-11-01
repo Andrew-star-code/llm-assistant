@@ -11,6 +11,7 @@ import { ScenarioBadge } from "@/features/scenarios/ScenarioBadge";
 import { ChatSidebar } from "@/features/sidebar/ChatSidebar";
 import { SearchDialog } from "@/features/sidebar/SearchDialog";
 import { ApiStatus } from "@/features/system/ApiStatus";
+import { useBranding } from "@/features/system/useBranding";
 import { cn } from "@/lib/utils";
 
 interface SidebarState {
@@ -66,9 +67,10 @@ export function AppLayout() {
       ? t("userMenu.profile")
       : (chat.data?.title ?? t("chat.newChatTitle"));
 
+  const branding = useBranding();
   useEffect(() => {
-    document.title = match ? `${title} — ${t("app.name")}` : t("app.name");
-  }, [match, title, t]);
+    document.title = match ? `${title} — ${branding.name}` : branding.name;
+  }, [match, title, branding.name]);
 
   return (
     <div className="flex h-dvh bg-background text-foreground">
@@ -90,8 +92,12 @@ export function AppLayout() {
           </Button>
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2 font-semibold">
-              <Bot className="size-5 text-primary" />
-              {t("app.name")}
+              {branding.logoUrl ? (
+                <img src={branding.logoUrl} alt="" className="h-5 w-auto" />
+              ) : (
+                <Bot className="size-5 text-primary" />
+              )}
+              {branding.name}
             </Link>
           )}
         </div>
