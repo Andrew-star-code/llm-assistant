@@ -57,7 +57,11 @@ test("«Сделай таблицу в Excel» и «Оформи в Word» → �
   expect((await download).suggestedFilename()).toBe("Продажи по кварталам.xlsx");
 
   // PDF-превью Office-файла готовит воркер с LibreOffice; без него кнопки «Просмотр» нет.
+  // На стенде с настоящим воркером (E2E_REAL_WORKER=1, `make dev-up`) превью обязательно.
   const preview = xlsx.getByRole("button", { name: "Просмотр" });
+  if (process.env.E2E_REAL_WORKER === "1") {
+    await expect(preview).toBeVisible();
+  }
   if ((await preview.count()) > 0) {
     await preview.click();
     await expect(page.getByTestId("pdf-viewer").locator("canvas").first()).toBeVisible({

@@ -39,6 +39,9 @@ test("админ: пользователи, блокировка с аудито
   await expect(page.getByRole("cell", { name: "kim" }).first()).toBeVisible();
 
   await page.getByRole("link", { name: "Диагностика AD" }).click();
+  // Ждём саму страницу: на дев-сервере Vite она подгружается лениво, и «Логин» иначе находится
+  // ещё на предыдущей.
+  await expect(page.getByRole("heading", { name: "Диагностика AD" })).toBeVisible();
   await page.getByLabel("Логин").fill("kim");
   await page.getByRole("button", { name: "Проверить" }).click();
   const report = page.getByTestId("ad-report");

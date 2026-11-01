@@ -8,8 +8,11 @@ COMPOSE_DIR := deploy/compose
 ENV_FILE    := $(COMPOSE_DIR)/.env
 COMPOSE     := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/compose.dev.yml
 UV          := uv run --frozen
-PNPM        := pnpm --dir frontend
+# Из каталога frontend: corepack берёт версию pnpm из его package.json (packageManager).
+PNPM        := cd frontend && pnpm
 PY_SOURCES  := backend services scripts eval
+# Отчёты eval пишутся в смонтированный eval/ от имени пользователя хоста (в образе — uid 10001).
+EVAL_USER   := --user "$$(id -u):$$(id -g)" -e HOME=/tmp
 
 .PHONY: help install env dev-up dev-models-up dev-down dev-reset dev-logs dev-ps migrate \
         lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios gen-api docs-config docs-db \
@@ -32,7 +35,7 @@ $(ENV_FILE):
 # ------------------------------------------------------------------ дев-стенд
 
 dev-up: env ## Поднять дев-стенд с нуля одной командой (postgres, redis, qdrant, mock-ad, fake-llm, embed, api, worker, frontend)
-	$(COMPOSE) up -d --build --wait --wait-timeout 900
+	$(COMPOSE) up -d --build --wait --wait-timeout 2100
 	@echo ""
 	@echo "  Фронтенд:  http://localhost:5173"
 	@echo "  API:       http://localhost:8000/api/docs   (готовность: /ready)"
@@ -40,7 +43,7 @@ dev-up: env ## Поднять дев-стенд с нуля одной кома�
 	@echo "  mock-AD:   ldaps://localhost:636            Qdrant: http://localhost:6333/dashboard"
 
 dev-models-up: env ## Настоящий реранкер bge-reranker-v2-m3 (TEI, CPU; ~2,3 ГБ весов) — для eval-rag
-	$(COMPOSE) --profile models up -d --wait --wait-timeout 1800 rerank
+	$(COMPOSE) --profile models up -d --wait --wait-timeout 2100 rerank
 	@echo "Подключите его к api: deploy/compose/api.local.env по образцу api.local.env.example,"
 	@echo "затем: $(COMPOSE) up -d api"
 
@@ -91,10 +94,11 @@ e2e: ## E2E-тесты Playwright
 	$(PNPM) e2e
 
 eval-rag: env ## Оценка поиска (§10.6): hit@5 и MRR по 4 конфигурациям на моделях стенда
-	$(COMPOSE) run --rm --no-deps -v $(CURDIR)/eval:/srv/eval:ro api python /srv/eval/rag/run.py --check
+	$(COMPOSE) run --rm --no-deps $(EVAL_USER) -v $(CURDIR)/eval:/srv/eval api python /srv/eval/rag/run.py \
+		--check --json /srv/eval/rag/report.json
 
 eval-scenarios: env ## Эталонные запросы сценариев (§18): ответы + LLM-судья, сравнение с прошлым прогоном
-	$(COMPOSE) run --rm --no-deps -v $(CURDIR)/eval:/srv/eval api python /srv/eval/scenarios/run.py \
+	$(COMPOSE) run --rm --no-deps $(EVAL_USER) -v $(CURDIR)/eval:/srv/eval api python /srv/eval/scenarios/run.py \
 		--report /srv/eval/scenarios/report.json --baseline /srv/eval/scenarios/baseline.json
 
 gen-api: ## Перегенерировать OpenAPI, клиентские типы фронтенда и docs/reference/api.md

@@ -43,6 +43,19 @@ bge-m3 (~2,3 ГБ), поэтому дольше обычного. Разбор �
 make check
 ```
 
+Для `make e2e` один раз поставьте браузер Playwright (с системными библиотеками):
+
+```bash
+cd frontend && pnpm exec playwright install --with-deps chromium
+```
+
+На стенде `make dev-up` воркер настоящий (LibreOffice, Tesseract) — с `E2E_REAL_WORKER=1` e2e
+требуют и PDF-превью Office-файлов:
+
+```bash
+E2E_REAL_WORKER=1 make e2e
+```
+
 Остальные команды — `make help` и [AGENTS.md](AGENTS.md#2-команды).
 
 ## Состав
