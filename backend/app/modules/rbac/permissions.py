@@ -26,6 +26,15 @@ class Perm(StrEnum):
     KB_MANAGE_ROLES = "admin.kb.manage_roles"
     INCIDENTS_VIEW = "admin.incidents.view"
     SCENARIOS_MANAGE = "admin.scenarios.manage"
+    DASHBOARD_VIEW = "admin.dashboard.view"
+    CHATS_VIEW = "admin.chats.view"
+    CHATS_EXPORT = "admin.chats.export"
+    CHATS_RESTORE = "admin.chats.restore"
+    CHATS_PURGE = "admin.chats.purge"
+    FEEDBACK_VIEW = "admin.feedback.view"
+    MODELS_MANAGE = "admin.models.manage"
+    TOOLS_MANAGE = "admin.tools.manage"
+    SETTINGS_MANAGE = "admin.settings.manage"
 
 
 PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
@@ -42,6 +51,18 @@ PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
     Perm.KB_MANAGE_ROLES: "Ролевые базы знаний тех ролей, что есть у самого менеджера",
     Perm.INCIDENTS_VIEW: "Просмотр инцидентов",
     Perm.SCENARIOS_MANAGE: "Сценарии: создание, редактирование, тестовый чат",
+    Perm.DASHBOARD_VIEW: "Дашборд: активность, токены, качество, состояние моделей и очередей",
+    Perm.CHATS_VIEW: "Поиск и просмотр переписки всех пользователей (каждый просмотр — в аудит)",
+    Perm.CHATS_EXPORT: "Выгрузки переписки: JSON, XLSX, DOCX, PDF",
+    Perm.CHATS_RESTORE: "Вернуть пользователю удалённый чат",
+    Perm.CHATS_PURGE: "Физическое удаление переписки",
+    Perm.FEEDBACK_VIEW: "Обратная связь: лайки, дизлайки, причины, выгрузка",
+    Perm.MODELS_MANAGE: "Модели: реестр, состояние, видимость по ролям",
+    Perm.TOOLS_MANAGE: "Инструменты: включение и выключение, статистика",
+    Perm.SETTINGS_MANAGE: (
+        "Настройки: название, логотип, уведомление, сроки хранения, лимиты файлов, обращение, "
+        "системный промпт"
+    ),
 }
 
 SUPERADMIN = "superadmin"
@@ -69,7 +90,9 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         ADMIN,
         "Администратор",
         "Пользователи, переписка, входы, инциденты, лимиты, базы знаний, сценарии, модели",
-        frozenset(Perm) - {Perm.ADMINS_MANAGE, Perm.KB_MANAGE_ROLES},
+        # Назначение админов, физическое удаление и настройки — только superadmin (§13.1).
+        frozenset(Perm)
+        - {Perm.ADMINS_MANAGE, Perm.KB_MANAGE_ROLES, Perm.CHATS_PURGE, Perm.SETTINGS_MANAGE},
     ),
     SystemRole(
         KB_MANAGER,

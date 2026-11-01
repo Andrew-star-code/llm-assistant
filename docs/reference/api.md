@@ -7,6 +7,11 @@
 | --- | --- | --- | --- | --- |
 | POST | `/api/admin/ad/diagnostics` | `adminAdDiagnostics` | Ad Diagnostics | 200, 422 |
 | GET | `/api/admin/audit` | `adminListAudit` | List Audit | 200, 422 |
+| GET | `/api/admin/chats` | `adminListChats` | List Chats | 200, 422 |
+| GET | `/api/admin/chats/filters` | `adminChatFilterOptions` | Filter Options | 200 |
+| GET | `/api/admin/chats/{chat_id}` | `adminGetChat` | Get Chat | 200, 422 |
+| POST | `/api/admin/chats/{chat_id}/purge` | `adminPurgeChat` | Purge | 200, 422 |
+| POST | `/api/admin/chats/{chat_id}/restore` | `adminRestoreChat` | Restore Chat | 200, 422 |
 | GET | `/api/admin/incidents` | `adminListIncidents` | List Incidents | 200, 422 |
 | GET | `/api/admin/kb` | `adminListKb` | List Bases | 200 |
 | POST | `/api/admin/kb` | `adminCreateKb` | Create Base | 201, 422 |
@@ -22,6 +27,7 @@
 | GET | `/api/admin/kb/{kb_id}/imports` | `adminKbImports` | List Imports | 200, 422 |
 | POST | `/api/admin/kb/{kb_id}/imports` | `adminStartImport` | Start Import | 202, 422 |
 | GET | `/api/admin/logins` | `adminListLogins` | List Logins | 200, 422 |
+| GET | `/api/admin/messages` | `adminSearchMessages` | Search Messages | 200, 422 |
 | GET | `/api/admin/roles` | `adminListRoles` | List Roles | 200 |
 | GET | `/api/admin/scenarios` | `adminListScenarios` | List Scenarios | 200 |
 | POST | `/api/admin/scenarios` | `adminCreateScenario` | Create Scenario | 201, 422 |

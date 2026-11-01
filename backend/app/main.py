@@ -24,6 +24,7 @@ from app.core.health import router as health_router
 from app.core.logging import configure_logging
 from app.core.request_context import RequestContextMiddleware
 from app.core.storage import LocalStorage
+from app.modules.admin.chats_router import router as admin_chats_router
 from app.modules.admin.router import router as admin_router
 from app.modules.auth.deps import verify_csrf
 from app.modules.auth.providers.base import AuthProvider
@@ -202,6 +203,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(incidents_router)
     api.include_router(scenarios_router)
     api.include_router(scenarios_admin_router)
+    api.include_router(admin_chats_router)
     api.include_router(admin_router)
     app.include_router(api)
 

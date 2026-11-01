@@ -923,6 +923,123 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/chats/filters": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Filter Options
+     * @description Значения для фильтров: отделы, сценарии, модели.
+     */
+    get: operations["adminChatFilterOptions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Search Messages
+     * @description Поиск по всем сообщениям: русская морфология + подстрока, фрагмент с подсветкой.
+     */
+    get: operations["adminSearchMessages"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/chats": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Chats */
+    get: operations["adminListChats"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/chats/{chat_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Chat
+     * @description Чат целиком — все ветки, удалённое, скрытые вызовы; просмотр записывается в аудит.
+     */
+    get: operations["adminGetChat"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/chats/{chat_id}/restore": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Restore Chat
+     * @description Вернуть пользователю удалённый чат: он снова появится в его истории.
+     */
+    post: operations["adminRestoreChat"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/chats/{chat_id}/purge": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Purge
+     * @description Удалить чат безвозвратно; в аудите — кто, чей чат и сколько удалено, без содержимого.
+     */
+    post: operations["adminPurgeChat"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/users": {
     parameters: {
       query?: never;
@@ -1149,6 +1266,250 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AdminChatDetail */
+    AdminChatDetail: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Title */
+      title: string | null;
+      user: components["schemas"]["UserRef"];
+      scenario: components["schemas"]["app__modules__admin__chat_schemas__ScenarioRef"] | null;
+      /** Is Test */
+      is_test: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Last Message At */
+      last_message_at: string | null;
+      /** Deleted At */
+      deleted_at: string | null;
+      deleted_by: components["schemas"]["UserRef"] | null;
+      /** Active Leaf Id */
+      active_leaf_id: string | null;
+      /**
+       * Messages
+       * @description Все сообщения всех веток по времени.
+       */
+      messages: components["schemas"]["AdminMessage"][];
+    };
+    /** AdminChatItem */
+    AdminChatItem: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Title */
+      title: string | null;
+      user: components["schemas"]["UserRef"];
+      /** Scenario */
+      scenario: string | null;
+      /** Is Test */
+      is_test: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Last Message At */
+      last_message_at: string | null;
+      /** Deleted At */
+      deleted_at: string | null;
+      /** Messages */
+      messages: number;
+      /** Disliked */
+      disliked: number;
+      /** Incidents */
+      incidents: number;
+    };
+    /** AdminFeedback */
+    AdminFeedback: {
+      /** Rating */
+      rating: number;
+      /** Reasons */
+      reasons: string[];
+      /** Comment */
+      comment: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** AdminFile */
+    AdminFile: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Kind */
+      kind: string;
+      /** Filename */
+      filename: string;
+      /** Size */
+      size: number;
+      /** Parse Status */
+      parse_status: string;
+      /** Deleted At */
+      deleted_at: string | null;
+    };
+    /** AdminMessage */
+    AdminMessage: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Parent Id */
+      parent_id: string | null;
+      /** Role */
+      role: string;
+      /** Content */
+      content: string;
+      /** Reasoning */
+      reasoning: string | null;
+      /** Status */
+      status: string;
+      /** Thinking */
+      thinking: boolean;
+      /** Model */
+      model: string | null;
+      /** Finish Reason */
+      finish_reason: string | null;
+      /** Prompt Tokens */
+      prompt_tokens: number | null;
+      /** Completion Tokens */
+      completion_tokens: number | null;
+      /** Reasoning Tokens */
+      reasoning_tokens: number | null;
+      /** Ttft Ms */
+      ttft_ms: number | null;
+      /** Latency Ms */
+      latency_ms: number | null;
+      /** Reasoning Ms */
+      reasoning_ms: number | null;
+      /** Error */
+      error: {
+        [key: string]: unknown;
+      } | null;
+      /** Trace */
+      trace: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Deleted At */
+      deleted_at: string | null;
+      /** Tool Calls */
+      tool_calls: components["schemas"]["AdminToolCall"][];
+      /** Sources */
+      sources: components["schemas"]["AdminSource"][];
+      /** Files */
+      files: components["schemas"]["AdminFile"][];
+      feedback: components["schemas"]["AdminFeedback"] | null;
+    };
+    /** AdminMessageHit */
+    AdminMessageHit: {
+      /**
+       * Message Id
+       * Format: uuid
+       */
+      message_id: string;
+      /**
+       * Chat Id
+       * Format: uuid
+       */
+      chat_id: string;
+      /** Chat Title */
+      chat_title: string | null;
+      user: components["schemas"]["UserRef"];
+      /** Role */
+      role: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Fragments */
+      fragments: components["schemas"]["SearchFragment"][];
+      /** Model */
+      model: string | null;
+      /** Scenario */
+      scenario: string | null;
+      /**
+       * Deleted
+       * @description Удалено само сообщение или весь чат.
+       */
+      deleted: boolean;
+      /** Is Test */
+      is_test: boolean;
+      /** Disliked */
+      disliked: boolean;
+      /** Has Incident */
+      has_incident: boolean;
+      /** Has Attachments */
+      has_attachments: boolean;
+    };
+    /** AdminSource */
+    AdminSource: {
+      /** Index */
+      index: number;
+      /** Kind */
+      kind: string;
+      /** Title */
+      title: string;
+      /** Kb Name */
+      kb_name: string | null;
+      /** Page */
+      page: number | null;
+      /** Section */
+      section: string | null;
+      /** Snippet */
+      snippet: string;
+      /** Score */
+      score: number | null;
+      /** Cited */
+      cited: boolean;
+      /** Document Id */
+      document_id: string | null;
+      /** File Id */
+      file_id: string | null;
+    };
+    /** AdminToolCall */
+    AdminToolCall: {
+      /** Call Id */
+      call_id: string;
+      /** Tool */
+      tool: string;
+      /** Visibility */
+      visibility: string;
+      /** Status */
+      status: string;
+      /** Iteration */
+      iteration: number;
+      /** Duration Ms */
+      duration_ms: number;
+      /** Arguments */
+      arguments: {
+        [key: string]: unknown;
+      } | null;
+      /** Result Preview */
+      result_preview: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** AuditOut */
     AuditOut: {
       /**
@@ -1242,7 +1603,7 @@ export interface components {
       /** Thinking Enabled */
       thinking_enabled: boolean | null;
       /** @description Активный сценарий чата. */
-      scenario?: components["schemas"]["ScenarioRef"] | null;
+      scenario?: components["schemas"]["app__modules__scenarios__schemas__ScenarioRef"] | null;
       /**
        * Is Test
        * @default false
@@ -1511,6 +1872,15 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+    };
+    /** FilterOptions */
+    FilterOptions: {
+      /** Departments */
+      departments: string[];
+      /** Scenarios */
+      scenarios: components["schemas"]["NamedRef"][];
+      /** Models */
+      models: string[];
     };
     /** FolderIn */
     FolderIn: {
@@ -1854,12 +2224,36 @@ export interface components {
       /** Name */
       name: string;
     };
+    /** NamedRef */
+    NamedRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+    };
     /** Notice */
     Notice: {
       /** Required */
       required: boolean;
       /** Text */
       text: string;
+    };
+    /** Page[AdminChatItem] */
+    Page_AdminChatItem_: {
+      /** Items */
+      items: components["schemas"]["AdminChatItem"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Page[AdminMessageHit] */
+    Page_AdminMessageHit_: {
+      /** Items */
+      items: components["schemas"]["AdminMessageHit"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
     };
     /** Page[AuditOut] */
     Page_AuditOut_: {
@@ -1974,6 +2368,21 @@ export interface components {
       providers: ("ldap" | "dev")[];
       /** Dev Users */
       dev_users?: components["schemas"]["DevUserOut"][];
+    };
+    /** PurgeIn */
+    PurgeIn: {
+      /**
+       * Confirm
+       * @description id чата ещё раз — защита от удаления не того чата.
+       */
+      confirm: string;
+    };
+    /** PurgeOut */
+    PurgeOut: {
+      /** Messages */
+      messages: number;
+      /** Files */
+      files: number;
     };
     /** QuotaOut */
     QuotaOut: {
@@ -2210,22 +2619,6 @@ export interface components {
       unknown_roles?: string[];
       /** Unknown Knowledge Bases */
       unknown_knowledge_bases?: string[];
-    };
-    /** ScenarioRef */
-    ScenarioRef: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Name */
-      name: string;
-      /** Icon */
-      icon: string | null;
-      /** Requires Attachment */
-      requires_attachment: boolean;
-      /** Attachment Hint */
-      attachment_hint: string | null;
     };
     /**
      * ScenarioSpec
@@ -2587,6 +2980,20 @@ export interface components {
       /** Last Login At */
       last_login_at: string | null;
     };
+    /** UserRef */
+    UserRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
+      /** Department */
+      department: string | null;
+    };
     /** UserSettings */
     UserSettings: {
       /** Theme */
@@ -2604,6 +3011,34 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /** ScenarioRef */
+    app__modules__admin__chat_schemas__ScenarioRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+    };
+    /** ScenarioRef */
+    app__modules__scenarios__schemas__ScenarioRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Icon */
+      icon: string | null;
+      /** Requires Attachment */
+      requires_attachment: boolean;
+      /** Attachment Hint */
+      attachment_hint: string | null;
     };
   };
   responses: never;
@@ -4437,6 +4872,223 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["TestChatOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminChatFilterOptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FilterOptions"];
+        };
+      };
+    };
+  };
+  adminSearchMessages: {
+    parameters: {
+      query?: {
+        /** @description Слова или подстрока в сообщениях. */
+        q?: string | null;
+        user_id?: string | null;
+        department?: string | null;
+        /** @description С этой даты включительно (часовой пояс чата). */
+        date_from?: string | null;
+        /** @description По эту дату включительно. */
+        date_to?: string | null;
+        scenario_id?: string | null;
+        model?: string | null;
+        /** @description true — только удалённое, false — без него. */
+        deleted?: boolean | null;
+        /** @description С дизлайком. */
+        disliked?: boolean | null;
+        /** @description С инцидентом. */
+        incident?: boolean | null;
+        /** @description С вложениями пользователя. */
+        attachments?: boolean | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_AdminMessageHit_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListChats: {
+    parameters: {
+      query?: {
+        /** @description Слова или подстрока в сообщениях. */
+        q?: string | null;
+        user_id?: string | null;
+        department?: string | null;
+        /** @description С этой даты включительно (часовой пояс чата). */
+        date_from?: string | null;
+        /** @description По эту дату включительно. */
+        date_to?: string | null;
+        scenario_id?: string | null;
+        model?: string | null;
+        /** @description true — только удалённое, false — без него. */
+        deleted?: boolean | null;
+        /** @description С дизлайком. */
+        disliked?: boolean | null;
+        /** @description С инцидентом. */
+        incident?: boolean | null;
+        /** @description С вложениями пользователя. */
+        attachments?: boolean | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_AdminChatItem_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminGetChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        chat_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminChatDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminRestoreChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        chat_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminChatItem"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminPurgeChat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        chat_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PurgeIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PurgeOut"];
         };
       };
       /** @description Validation Error */
