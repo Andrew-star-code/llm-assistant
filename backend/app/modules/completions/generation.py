@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.storage import Storage
+from app.modules.admin import app_settings
 from app.modules.chats.models import Chat, Message
 from app.modules.chats.service import branch
 from app.modules.completions.attachments import build_attachments
@@ -271,11 +272,14 @@ class GenerationManager:
                     scenario.model_role if scenario else CHAT_ROLE, thinking=message.thinking
                 )
                 counter = TokenCounter(plan.endpoint.tokenizer)
+                # Правки из админки «Настройки» (компания, обращение, промпт) — без перезапуска.
+                effective = await app_settings.effective(db, self.settings)
+                base_override = await app_settings.system_prompt_override(db)
                 prompt_user = PromptUser(
                     full_name=user.full_name,
                     title=user.title,
                     department=user.department,
-                    address=address_of(user, self.settings),
+                    address=address_of(user, effective),
                 )
                 # Вложения только сообщений текущей ветки: у отредактированного вопроса — свои.
                 branch_ids = {m.id for m in chain}
@@ -293,13 +297,15 @@ class GenerationManager:
                     counter=counter,
                 )
                 now = utcnow()
-                base_system = system_prompt(self.renderer, self.settings, prompt_user, now)
+                base_system = system_prompt(
+                    self.renderer, effective, prompt_user, now, base_template=base_override
+                )
                 if scenario is not None:
                     scenario_text = render_scenario(
                         scenario,
                         {
                             "user": asdict(prompt_user),
-                            "company": self.settings.chat.company_name,
+                            "company": effective.chat.company_name,
                             "now": now_text(now, self.settings.chat.timezone),
                         },
                     )
@@ -332,7 +338,7 @@ class GenerationManager:
                 # Инструменты: включены ∩ разрешены сценарием ∩ доступны ролям (§9.1).
                 tools = (
                     available_tools(
-                        enabled=self.settings.tools.enabled,
+                        enabled=await app_settings.enabled_tools(db, self.settings),
                         scenario=scenario.tools if scenario else None,
                         permissions=permissions,
                         has_attachments=bool(attachments.files),

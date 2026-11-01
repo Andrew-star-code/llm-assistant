@@ -3213,6 +3213,766 @@
         }
       }
     },
+    "/api/admin/dashboard": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Dashboard",
+        "operationId": "adminDashboard",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 7,
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/feedback": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Feedback",
+        "operationId": "adminListFeedback",
+        "parameters": [
+          {
+            "name": "rating",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rating"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reason"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FeedbackItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/stats": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Stats",
+        "operationId": "adminFeedbackStats",
+        "parameters": [
+          {
+            "name": "rating",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rating"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reason"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/export": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Export Feedback",
+        "description": "XLSX: строка на оценку — пользователь, вопрос, ответ, причины, комментарий.",
+        "operationId": "adminExportFeedback",
+        "parameters": [
+          {
+            "name": "rating",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rating"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reason"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/models": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Models",
+        "operationId": "adminListModels",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelInfo"
+                  },
+                  "type": "array",
+                  "title": "Response Adminlistmodels"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/models/health": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Models Health",
+        "description": "Живая проверка каждого эндпоинта (до 3 с на модель, параллельно).",
+        "operationId": "adminModelsHealth",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelHealthOut"
+                  },
+                  "type": "array",
+                  "title": "Response Adminmodelshealth"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/models/{role}/visibility": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set Visibility",
+        "operationId": "adminSetModelVisibility",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Role"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisibilityIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/tools": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Tools",
+        "description": "Инструменты со статистикой вызовов за 30 дней.",
+        "operationId": "adminListTools",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ToolInfo"
+                  },
+                  "type": "array",
+                  "title": "Response Adminlisttools"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/tools/{name}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Toggle Tool",
+        "description": "Выключенный инструмент не предлагается модели ни в одном чате со следующего сообщения.",
+        "operationId": "adminToggleTool",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolToggleIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Settings",
+        "operationId": "adminGetSettings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Settings",
+        "operationId": "adminUpdateSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/settings/logo": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Upload Logo",
+        "description": "Логотип: PNG, JPEG или WebP до 512 КБ (SVG не принимается — в нём бывают скрипты).",
+        "operationId": "adminUploadLogo",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_adminUploadLogo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Logo",
+        "operationId": "adminDeleteLogo",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/branding": {
+      "get": {
+        "tags": [
+          "branding"
+        ],
+        "summary": "Branding",
+        "description": "Название и логотип — без входа: нужны странице входа.",
+        "operationId": "getBranding",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Branding"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/branding/logo": {
+      "get": {
+        "tags": [
+          "branding"
+        ],
+        "summary": "Logo",
+        "operationId": "getBrandingLogo",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/png": {}
+            }
+          }
+        }
+      }
+    },
     "/api/admin/exports": {
       "get": {
         "tags": [
@@ -4039,6 +4799,29 @@
   },
   "components": {
     "schemas": {
+      "ActiveUsers": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "week": {
+            "type": "integer",
+            "title": "Week"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "week",
+          "month"
+        ],
+        "title": "ActiveUsers"
+      },
       "AdminChatDetail": {
         "properties": {
           "id": {
@@ -4980,6 +5763,20 @@
         ],
         "title": "Body_adminUploadKbDocument"
       },
+      "Body_adminUploadLogo": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_adminUploadLogo"
+      },
       "Body_uploadFile": {
         "properties": {
           "file": {
@@ -5007,6 +5804,31 @@
           "file"
         ],
         "title": "Body_uploadPersonalDocument"
+      },
+      "Branding": {
+        "properties": {
+          "app_name": {
+            "type": "string",
+            "title": "App Name"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "app_name",
+          "logo_url"
+        ],
+        "title": "Branding"
       },
       "ChatCreate": {
         "properties": {
@@ -5568,6 +6390,149 @@
           "csrf_token"
         ],
         "title": "CsrfOut"
+      },
+      "Dashboard": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "active_users": {
+            "$ref": "#/components/schemas/ActiveUsers"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/DayPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioUsage"
+            },
+            "type": "array",
+            "title": "Scenarios"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          },
+          "queues": {
+            "$ref": "#/components/schemas/Queues"
+          },
+          "incidents": {
+            "$ref": "#/components/schemas/Incidents"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelHealthOut"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "gpus": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Gpu"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpus"
+          },
+          "gpu_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpu Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "active_users",
+          "series",
+          "scenarios",
+          "quality",
+          "queues",
+          "incidents",
+          "models",
+          "gpus",
+          "gpu_note"
+        ],
+        "title": "Dashboard"
+      },
+      "DayPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "active_users": {
+            "type": "integer",
+            "title": "Active Users"
+          },
+          "messages": {
+            "type": "integer",
+            "title": "Messages"
+          },
+          "answers": {
+            "type": "integer",
+            "title": "Answers"
+          },
+          "tokens": {
+            "type": "integer",
+            "title": "Tokens"
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors"
+          },
+          "ttft_avg_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttft Avg Ms"
+          },
+          "ttft_p95_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttft P95 Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "active_users",
+          "messages",
+          "answers",
+          "tokens",
+          "errors",
+          "ttft_avg_ms",
+          "ttft_p95_ms"
+        ],
+        "title": "DayPoint"
       },
       "DevUserOut": {
         "properties": {
@@ -6137,6 +7102,113 @@
         ],
         "title": "FeedbackIn"
       },
+      "FeedbackItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "rating": {
+            "type": "integer",
+            "title": "Rating"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "chat_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chat Id"
+          },
+          "chat_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Title"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Message Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "rating",
+          "reasons",
+          "comment",
+          "created_at",
+          "user",
+          "chat_id",
+          "chat_title",
+          "message_id",
+          "question",
+          "answer",
+          "model",
+          "scenario"
+        ],
+        "title": "FeedbackItem"
+      },
       "FeedbackOut": {
         "properties": {
           "rating": {
@@ -6180,6 +7252,32 @@
           "comment"
         ],
         "title": "FeedbackOut"
+      },
+      "FeedbackStats": {
+        "properties": {
+          "likes": {
+            "type": "integer",
+            "title": "Likes"
+          },
+          "dislikes": {
+            "type": "integer",
+            "title": "Dislikes"
+          },
+          "reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "likes",
+          "dislikes",
+          "reasons"
+        ],
+        "title": "FeedbackStats"
       },
       "FileLimits": {
         "properties": {
@@ -6429,6 +7527,55 @@
         "type": "object",
         "title": "FolderUpdate"
       },
+      "Gpu": {
+        "properties": {
+          "gpu": {
+            "type": "string",
+            "title": "Gpu"
+          },
+          "utilization": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Utilization"
+          },
+          "memory_used_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Used Mb"
+          },
+          "memory_total_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Total Mb"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gpu",
+          "utilization",
+          "memory_used_mb",
+          "memory_total_mb"
+        ],
+        "title": "Gpu"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6670,6 +7817,24 @@
           "payload"
         ],
         "title": "IncidentOut"
+      },
+      "Incidents": {
+        "properties": {
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          },
+          "high": {
+            "type": "integer",
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "open",
+          "high"
+        ],
+        "title": "Incidents"
       },
       "KbIn": {
         "properties": {
@@ -7313,6 +8478,134 @@
         ],
         "title": "MessageOut"
       },
+      "ModelHealthOut": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "ok",
+          "latency_ms",
+          "detail"
+        ],
+        "title": "ModelHealthOut"
+      },
+      "ModelInfo": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "base_url": {
+            "type": "string",
+            "title": "Base Url"
+          },
+          "api": {
+            "type": "string",
+            "title": "Api"
+          },
+          "context_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Length"
+          },
+          "max_output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Output Tokens"
+          },
+          "supports_tools": {
+            "type": "boolean",
+            "title": "Supports Tools"
+          },
+          "thinking_mode": {
+            "type": "string",
+            "title": "Thinking Mode"
+          },
+          "restrictable": {
+            "type": "boolean",
+            "title": "Restrictable",
+            "description": "Можно ли ограничить видимость по ролям."
+          },
+          "visible_to": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Visible To",
+            "description": "Коды ролей пользователей; пусто — всем."
+          },
+          "scenarios": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scenarios",
+            "description": "Сценарии на этой модели."
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "model",
+          "base_url",
+          "api",
+          "context_length",
+          "max_output_tokens",
+          "supports_tools",
+          "thinking_mode",
+          "restrictable",
+          "visible_to",
+          "scenarios"
+        ],
+        "title": "ModelInfo"
+      },
       "NamedOption": {
         "properties": {
           "code": {
@@ -7475,6 +8768,33 @@
           "items"
         ],
         "title": "Page[ChatListItem]"
+      },
+      "Page_FeedbackItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[FeedbackItem]"
       },
       "Page_LoginEventOut_": {
         "properties": {
@@ -7875,6 +9195,115 @@
           "files"
         ],
         "title": "PurgeOut"
+      },
+      "Quality": {
+        "properties": {
+          "answers": {
+            "type": "integer",
+            "title": "Answers"
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors"
+          },
+          "error_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Share"
+          },
+          "likes": {
+            "type": "integer",
+            "title": "Likes"
+          },
+          "dislikes": {
+            "type": "integer",
+            "title": "Dislikes"
+          },
+          "like_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Like Share"
+          },
+          "ttft_avg_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttft Avg Ms"
+          },
+          "ttft_p95_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttft P95 Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answers",
+          "errors",
+          "error_share",
+          "likes",
+          "dislikes",
+          "like_share",
+          "ttft_avg_ms",
+          "ttft_p95_ms"
+        ],
+        "title": "Quality"
+      },
+      "Queues": {
+        "properties": {
+          "kb_queued": {
+            "type": "integer",
+            "title": "Kb Queued"
+          },
+          "kb_processing": {
+            "type": "integer",
+            "title": "Kb Processing"
+          },
+          "kb_errors": {
+            "type": "integer",
+            "title": "Kb Errors"
+          },
+          "imports_running": {
+            "type": "integer",
+            "title": "Imports Running"
+          },
+          "attachments_pending": {
+            "type": "integer",
+            "title": "Attachments Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kb_queued",
+          "kb_processing",
+          "kb_errors",
+          "imports_running",
+          "attachments_pending"
+        ],
+        "title": "Queues"
       },
       "QuotaOut": {
         "properties": {
@@ -8597,6 +10026,29 @@
         "title": "ScenarioSpec",
         "description": "Сценарий из YAML и из редактора админки — одна схема."
       },
+      "ScenarioUsage": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "chats": {
+            "type": "integer",
+            "title": "Chats"
+          },
+          "messages": {
+            "type": "integer",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "chats",
+          "messages"
+        ],
+        "title": "ScenarioUsage"
+      },
       "SearchFragment": {
         "properties": {
           "text": {
@@ -8867,6 +10319,279 @@
         ],
         "title": "SessionOut"
       },
+      "SettingsIn": {
+        "properties": {
+          "app_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Name"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "notice_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Text"
+          },
+          "require_notice_reaccept": {
+            "type": "boolean",
+            "title": "Require Notice Reaccept",
+            "description": "Попросить всех подтвердить уведомление заново.",
+            "default": false
+          },
+          "retention_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3650.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Days"
+          },
+          "max_file_mb": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 500.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max File Mb"
+          },
+          "max_files_per_message": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Files Per Message"
+          },
+          "default_address_form": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "name_patronymic",
+                  "first_name",
+                  "full_name",
+                  "formal"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Address Form"
+          },
+          "system_prompt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Prompt"
+          }
+        },
+        "type": "object",
+        "title": "SettingsIn",
+        "description": "Меняются только переданные поля; ``null`` — вернуть значение из конфигурации."
+      },
+      "SettingsOut": {
+        "properties": {
+          "app_name": {
+            "type": "string",
+            "title": "App Name"
+          },
+          "company_name": {
+            "type": "string",
+            "title": "Company Name"
+          },
+          "notice_text": {
+            "type": "string",
+            "title": "Notice Text"
+          },
+          "retention_days": {
+            "type": "integer",
+            "title": "Retention Days"
+          },
+          "max_file_mb": {
+            "type": "integer",
+            "title": "Max File Mb"
+          },
+          "max_files_per_message": {
+            "type": "integer",
+            "title": "Max Files Per Message"
+          },
+          "default_address_form": {
+            "type": "string",
+            "enum": [
+              "name_patronymic",
+              "first_name",
+              "full_name",
+              "formal"
+            ],
+            "title": "Default Address Form"
+          },
+          "system_prompt": {
+            "type": "string",
+            "title": "System Prompt"
+          },
+          "defaults": {
+            "$ref": "#/components/schemas/SettingsValues",
+            "description": "Значения из конфигурации."
+          },
+          "overridden": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Overridden",
+            "description": "Поля, заданные в админке."
+          },
+          "notice_updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Updated At"
+          },
+          "has_logo": {
+            "type": "boolean",
+            "title": "Has Logo"
+          },
+          "logo_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "app_name",
+          "company_name",
+          "notice_text",
+          "retention_days",
+          "max_file_mb",
+          "max_files_per_message",
+          "default_address_form",
+          "system_prompt",
+          "defaults",
+          "overridden",
+          "notice_updated_at",
+          "has_logo",
+          "logo_version"
+        ],
+        "title": "SettingsOut"
+      },
+      "SettingsValues": {
+        "properties": {
+          "app_name": {
+            "type": "string",
+            "title": "App Name"
+          },
+          "company_name": {
+            "type": "string",
+            "title": "Company Name"
+          },
+          "notice_text": {
+            "type": "string",
+            "title": "Notice Text"
+          },
+          "retention_days": {
+            "type": "integer",
+            "title": "Retention Days"
+          },
+          "max_file_mb": {
+            "type": "integer",
+            "title": "Max File Mb"
+          },
+          "max_files_per_message": {
+            "type": "integer",
+            "title": "Max Files Per Message"
+          },
+          "default_address_form": {
+            "type": "string",
+            "enum": [
+              "name_patronymic",
+              "first_name",
+              "full_name",
+              "formal"
+            ],
+            "title": "Default Address Form"
+          },
+          "system_prompt": {
+            "type": "string",
+            "title": "System Prompt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "app_name",
+          "company_name",
+          "notice_text",
+          "retention_days",
+          "max_file_mb",
+          "max_files_per_message",
+          "default_address_form",
+          "system_prompt"
+        ],
+        "title": "SettingsValues"
+      },
       "SourceOut": {
         "properties": {
           "index": {
@@ -9034,6 +10759,84 @@
         ],
         "title": "TestChatOut"
       },
+      "ToolInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "visibility": {
+            "type": "string",
+            "title": "Visibility"
+          },
+          "required_permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Permissions"
+          },
+          "in_config": {
+            "type": "boolean",
+            "title": "In Config",
+            "description": "Разрешён конфигурацией (tools.enabled)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Предлагается модели (конфиг и админка)."
+          },
+          "calls": {
+            "type": "integer",
+            "title": "Calls"
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors"
+          },
+          "avg_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Duration Ms"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "visibility",
+          "required_permissions",
+          "in_config",
+          "enabled",
+          "calls",
+          "errors",
+          "avg_duration_ms",
+          "last_used_at"
+        ],
+        "title": "ToolInfo"
+      },
       "ToolStep": {
         "properties": {
           "call_id": {
@@ -9080,6 +10883,19 @@
         ],
         "title": "ToolStep",
         "description": "Шаг цикла инструментов в истории (§7.4): скрытые инструменты сюда не попадают (§9.6)."
+      },
+      "ToolToggleIn": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "ToolToggleIn"
       },
       "UserCard": {
         "properties": {
@@ -9497,6 +11313,20 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VisibilityIn": {
+        "properties": {
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles",
+            "description": "Коды ролей; пусто — всем."
+          }
+        },
+        "type": "object",
+        "title": "VisibilityIn"
       },
       "app__modules__admin__chat_schemas__ScenarioRef": {
         "properties": {

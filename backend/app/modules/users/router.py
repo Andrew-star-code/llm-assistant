@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
 
-from app.core.config import Settings
 from app.core.deps import DbDep, StorageDep
 from app.core.errors import NotFoundError
+from app.modules.admin import app_settings
 from app.modules.auth.deps import CurrentUserDep
 from app.modules.rbac import service as rbac
 from app.modules.users.profile import build_profile, photo_media_type
@@ -16,8 +16,8 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 
 
 @router.get("", response_model=Profile, operation_id="getProfile")
-async def get_profile(request: Request, current: CurrentUserDep) -> Profile:
-    settings: Settings = request.app.state.settings
+async def get_profile(request: Request, current: CurrentUserDep, db: DbDep) -> Profile:
+    settings = await app_settings.effective(db, request.app.state.settings)
     return build_profile(current.user, current.roles, settings)
 
 
@@ -25,7 +25,7 @@ async def get_profile(request: Request, current: CurrentUserDep) -> Profile:
 async def update_settings(
     body: ProfileSettingsUpdate, request: Request, current: CurrentUserDep, db: DbDep
 ) -> Profile:
-    settings: Settings = request.app.state.settings
+    settings = await app_settings.effective(db, request.app.state.settings)
     user = current.user
     if "address_form" in body.model_fields_set:
         user.address_form = body.address_form

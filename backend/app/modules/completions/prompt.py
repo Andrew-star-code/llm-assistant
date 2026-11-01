@@ -80,17 +80,30 @@ def format_now(now: datetime, timezone: str) -> str:
 
 
 def system_prompt(
-    renderer: PromptRenderer, settings: Settings, user: PromptUser, now: datetime
+    renderer: PromptRenderer,
+    settings: Settings,
+    user: PromptUser,
+    now: datetime,
+    *,
+    base_template: str | None = None,
 ) -> str:
-    parts = [
-        renderer.render(
-            "system/base.md.j2",
-            company=settings.chat.company_name,
-            now=format_now(now, settings.chat.timezone),
-            timezone=settings.chat.timezone,
-        ),
-        renderer.render("system/user.md.j2", user=user),
-    ]
+    """Базовые правила + пользователь. ``base_template`` — шаблон из админки «Настройки» вместо
+    ``system/base.md.j2``: шаблон админа рендерится только в песочнице Jinja2."""
+    context = {
+        "company": settings.chat.company_name,
+        "now": format_now(now, settings.chat.timezone),
+        "timezone": settings.chat.timezone,
+    }
+    if base_template:
+        from app.modules.scenarios.service import render_admin_template
+
+        # Шаблон с ошибкой не оставляет модель без базовых правил — тогда берётся файл.
+        base = render_admin_template(base_template, context) or renderer.render(
+            "system/base.md.j2", **context
+        )
+    else:
+        base = renderer.render("system/base.md.j2", **context)
+    parts = [base, renderer.render("system/user.md.j2", user=user)]
     return "\n\n".join(p for p in parts if p)
 
 

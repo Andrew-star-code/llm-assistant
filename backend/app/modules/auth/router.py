@@ -10,6 +10,7 @@ from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.deps import DbDep
 from app.core.errors import AppError
+from app.modules.admin import app_settings
 from app.modules.admin.app_settings import first_login_notice
 from app.modules.auth.deps import CurrentUser, CurrentUserDep, client_ip, optional_session
 from app.modules.auth.providers.base import AuthFailure
@@ -53,6 +54,7 @@ def _set_cookies(response: Response, settings: Settings, *, token: str | None, c
 
 async def build_me(db: DbDep, current: CurrentUser, settings: Settings) -> Me:
     user = current.user
+    settings = await app_settings.effective(db, settings)
     return Me(
         id=user.id,
         login=user.login,
@@ -67,7 +69,7 @@ async def build_me(db: DbDep, current: CurrentUser, settings: Settings) -> Me:
         permissions=sorted(current.permissions),
         settings=UserSettings.model_validate(user.settings or {}),
         notice=Notice(
-            required=user.notice_accepted_at is None,
+            required=await app_settings.notice_required(db, user.notice_accepted_at),
             text=await first_login_notice(db, settings),
         ),
     )
@@ -154,6 +156,6 @@ async def me(request: Request, db: DbDep, current: CurrentUserDep) -> Me:
 @router.post("/notice/accept", status_code=204, operation_id="acceptNotice")
 async def accept_notice(db: DbDep, current: CurrentUserDep) -> None:
     """Пользователь подтвердил уведомление о хранении переписки (§7.10, §15)."""
-    if current.user.notice_accepted_at is None:
+    if await app_settings.notice_required(db, current.user.notice_accepted_at):
         current.user.notice_accepted_at = utcnow()
         await db.commit()

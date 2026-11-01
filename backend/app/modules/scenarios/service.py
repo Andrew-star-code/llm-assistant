@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFoundError
+from app.modules.admin import app_settings
 from app.modules.scenarios.models import Scenario
 
 log = structlog.stdlib.get_logger("app.scenarios")
@@ -87,6 +88,15 @@ class _Quiet(Undefined):
 _ENV = SandboxedEnvironment(autoescape=False, undefined=_Quiet)
 
 
+def render_admin_template(text: str, context: dict[str, Any]) -> str:
+    """Шаблон из админки (базовый системный промпт) — в той же песочнице, что промпт сценария."""
+    try:
+        return _ENV.from_string(text).render(**context).strip()
+    except TemplateError as exc:
+        log.warning("prompts.admin_template_failed", error=str(exc)[:200])
+        return ""
+
+
 def check_template(text: str) -> None:
     """Шаблон компилируется и рендерится на примере; иначе — ошибка для редактора."""
     try:
@@ -121,14 +131,25 @@ def render_prompt(scenario: Scenario, context: dict[str, Any]) -> str:
         return ""
 
 
-def visible(scenario: Scenario, role_codes: Iterable[str]) -> bool:
-    return scenario.is_active and (
-        not scenario.roles or bool(set(scenario.roles) & set(role_codes))
+def visible(
+    scenario: Scenario, role_codes: Iterable[str], hidden_models: frozenset[str] = frozenset()
+) -> bool:
+    """Активен, виден ролям пользователя и его модель пользователю не скрыта (админка «Модели»)."""
+    return (
+        scenario.is_active
+        and (not scenario.roles or bool(set(scenario.roles) & set(role_codes)))
+        and scenario.model_role not in hidden_models
     )
+
+
+async def visible_for(db: AsyncSession, scenario: Scenario, role_codes: Iterable[str]) -> bool:
+    codes = set(role_codes)
+    return visible(scenario, codes, await app_settings.hidden_model_roles(db, codes))
 
 
 async def list_visible(db: AsyncSession, role_codes: Iterable[str]) -> list[Scenario]:
     codes = set(role_codes)
+    hidden = await app_settings.hidden_model_roles(db, codes)
     rows = (
         await db.scalars(
             select(Scenario)
@@ -136,13 +157,13 @@ async def list_visible(db: AsyncSession, role_codes: Iterable[str]) -> list[Scen
             .order_by(Scenario.sort_order, Scenario.name)
         )
     ).all()
-    return [s for s in rows if visible(s, codes)]
+    return [s for s in rows if visible(s, codes, hidden)]
 
 
 async def get_visible(db: AsyncSession, scenario_id: UUID, role_codes: Iterable[str]) -> Scenario:
     """Сценарий, доступный пользователю; чужой или выключенный — 404 (не раскрываем наличие)."""
     scenario = await db.get(Scenario, scenario_id)
-    if scenario is None or not visible(scenario, role_codes):
+    if scenario is None or not await visible_for(db, scenario, role_codes):
         raise NotFoundError("Сценарий недоступен")
     return scenario
 

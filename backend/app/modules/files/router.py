@@ -8,11 +8,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, Response, UploadFile
 
-from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.deps import DbDep, StorageDep
 from app.core.errors import AppError, NotFoundError
 from app.core.storage import Storage
+from app.modules.admin import app_settings
 from app.modules.auth.deps import CurrentUserDep
 from app.modules.files import service
 from app.modules.files.models import File
@@ -61,8 +61,8 @@ async def preview_response(row: File, storage: Storage) -> Response:
 
 
 @router.get("/limits", response_model=FileLimits, operation_id="getFileLimits")
-async def limits(request: Request, _: CurrentUserDep) -> FileLimits:
-    settings: Settings = request.app.state.settings
+async def limits(request: Request, db: DbDep, _: CurrentUserDep) -> FileLimits:
+    settings = await app_settings.effective(db, request.app.state.settings)
     accept = sorted(TEXT_EXTENSIONS | set(OOXML) | set(ODF) | OLE2 | {"pdf", "rtf"})
     return FileLimits(
         max_file_mb=settings.files.max_file_mb,
@@ -76,7 +76,7 @@ async def upload(
     file: UploadFile, request: Request, db: DbDep, storage: StorageDep, current: CurrentUserDep
 ) -> FileOut:
     """Загрузка вложения: проверки (§9.3) и разбор в воркере; статус — ``GET /api/files/{id}``."""
-    settings: Settings = request.app.state.settings
+    settings = await app_settings.effective(db, request.app.state.settings)
     # TODO(stage-8): лимит uploads в день (§12.1).
     try:
         row = await service.accept_upload(

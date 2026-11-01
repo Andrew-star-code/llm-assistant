@@ -1040,6 +1040,247 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/dashboard": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Dashboard */
+    get: operations["adminDashboard"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/feedback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Feedback */
+    get: operations["adminListFeedback"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/feedback/stats": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Stats */
+    get: operations["adminFeedbackStats"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/feedback/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Export Feedback
+     * @description XLSX: строка на оценку — пользователь, вопрос, ответ, причины, комментарий.
+     */
+    get: operations["adminExportFeedback"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/models": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Models */
+    get: operations["adminListModels"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/models/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Models Health
+     * @description Живая проверка каждого эндпоинта (до 3 с на модель, параллельно).
+     */
+    get: operations["adminModelsHealth"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/models/{role}/visibility": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Visibility */
+    put: operations["adminSetModelVisibility"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/tools": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Tools
+     * @description Инструменты со статистикой вызовов за 30 дней.
+     */
+    get: operations["adminListTools"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/tools/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Toggle Tool
+     * @description Выключенный инструмент не предлагается модели ни в одном чате со следующего сообщения.
+     */
+    put: operations["adminToggleTool"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Settings */
+    get: operations["adminGetSettings"];
+    /** Update Settings */
+    put: operations["adminUpdateSettings"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/settings/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload Logo
+     * @description Логотип: PNG, JPEG или WebP до 512 КБ (SVG не принимается — в нём бывают скрипты).
+     */
+    post: operations["adminUploadLogo"];
+    /** Delete Logo */
+    delete: operations["adminDeleteLogo"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/branding": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Branding
+     * @description Название и логотип — без входа: нужны странице входа.
+     */
+    get: operations["getBranding"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/branding/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Logo */
+    get: operations["getBrandingLogo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/exports": {
     parameters: {
       query?: never;
@@ -1324,6 +1565,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** ActiveUsers */
+    ActiveUsers: {
+      /** Day */
+      day: number;
+      /** Week */
+      week: number;
+      /** Month */
+      month: number;
+    };
     /** AdminChatDetail */
     AdminChatDetail: {
       /**
@@ -1612,6 +1862,11 @@ export interface components {
       /** File */
       file: string;
     };
+    /** Body_adminUploadLogo */
+    Body_adminUploadLogo: {
+      /** File */
+      file: string;
+    };
     /** Body_uploadFile */
     Body_uploadFile: {
       /** File */
@@ -1621,6 +1876,13 @@ export interface components {
     Body_uploadPersonalDocument: {
       /** File */
       file: string;
+    };
+    /** Branding */
+    Branding: {
+      /** App Name */
+      app_name: string;
+      /** Logo Url */
+      logo_url: string | null;
     };
     /** ChatCreate */
     ChatCreate: {
@@ -1801,6 +2063,47 @@ export interface components {
       /** Csrf Token */
       csrf_token: string;
     };
+    /** Dashboard */
+    Dashboard: {
+      /** Days */
+      days: number;
+      active_users: components["schemas"]["ActiveUsers"];
+      /** Series */
+      series: components["schemas"]["DayPoint"][];
+      /** Scenarios */
+      scenarios: components["schemas"]["ScenarioUsage"][];
+      quality: components["schemas"]["Quality"];
+      queues: components["schemas"]["Queues"];
+      incidents: components["schemas"]["Incidents"];
+      /** Models */
+      models: components["schemas"]["ModelHealthOut"][];
+      /** Gpus */
+      gpus: components["schemas"]["Gpu"][] | null;
+      /** Gpu Note */
+      gpu_note: string | null;
+    };
+    /** DayPoint */
+    DayPoint: {
+      /**
+       * Day
+       * Format: date
+       */
+      day: string;
+      /** Active Users */
+      active_users: number;
+      /** Messages */
+      messages: number;
+      /** Answers */
+      answers: number;
+      /** Tokens */
+      tokens: number;
+      /** Errors */
+      errors: number;
+      /** Ttft Avg Ms */
+      ttft_avg_ms: number | null;
+      /** Ttft P95 Ms */
+      ttft_p95_ms: number | null;
+    };
     /** DevUserOut */
     DevUserOut: {
       /** Login */
@@ -1974,6 +2277,46 @@ export interface components {
       /** Comment */
       comment?: string | null;
     };
+    /** FeedbackItem */
+    FeedbackItem: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Rating */
+      rating: number;
+      /** Reasons */
+      reasons: string[];
+      /** Comment */
+      comment: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      user: components["schemas"]["UserRef"];
+      /**
+       * Chat Id
+       * Format: uuid
+       */
+      chat_id: string;
+      /** Chat Title */
+      chat_title: string | null;
+      /**
+       * Message Id
+       * Format: uuid
+       */
+      message_id: string;
+      /** Question */
+      question: string;
+      /** Answer */
+      answer: string;
+      /** Model */
+      model: string | null;
+      /** Scenario */
+      scenario: string | null;
+    };
     /** FeedbackOut */
     FeedbackOut: {
       /**
@@ -1985,6 +2328,17 @@ export interface components {
       reasons: ("inaccurate" | "off_topic" | "code_error" | "incomplete" | "other")[];
       /** Comment */
       comment: string | null;
+    };
+    /** FeedbackStats */
+    FeedbackStats: {
+      /** Likes */
+      likes: number;
+      /** Dislikes */
+      dislikes: number;
+      /** Reasons */
+      reasons: {
+        [key: string]: number;
+      };
     };
     /** FileLimits */
     FileLimits: {
@@ -2073,6 +2427,17 @@ export interface components {
       name?: string | null;
       /** Sort Order */
       sort_order?: number | null;
+    };
+    /** Gpu */
+    Gpu: {
+      /** Gpu */
+      gpu: string;
+      /** Utilization */
+      utilization: number | null;
+      /** Memory Used Mb */
+      memory_used_mb: number | null;
+      /** Memory Total Mb */
+      memory_total_mb: number | null;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -2174,6 +2539,13 @@ export interface components {
       payload: {
         [key: string]: unknown;
       } | null;
+    };
+    /** Incidents */
+    Incidents: {
+      /** Open */
+      open: number;
+      /** High */
+      high: number;
     };
     /** KbIn */
     KbIn: {
@@ -2380,6 +2752,51 @@ export interface components {
       /** Sources */
       sources?: components["schemas"]["SourceOut"][];
     };
+    /** ModelHealthOut */
+    ModelHealthOut: {
+      /** Role */
+      role: string;
+      /** Ok */
+      ok: boolean;
+      /** Latency Ms */
+      latency_ms: number | null;
+      /** Detail */
+      detail: string | null;
+    };
+    /** ModelInfo */
+    ModelInfo: {
+      /** Role */
+      role: string;
+      /** Model */
+      model: string;
+      /** Base Url */
+      base_url: string;
+      /** Api */
+      api: string;
+      /** Context Length */
+      context_length: number | null;
+      /** Max Output Tokens */
+      max_output_tokens: number | null;
+      /** Supports Tools */
+      supports_tools: boolean;
+      /** Thinking Mode */
+      thinking_mode: string;
+      /**
+       * Restrictable
+       * @description Можно ли ограничить видимость по ролям.
+       */
+      restrictable: boolean;
+      /**
+       * Visible To
+       * @description Коды ролей пользователей; пусто — всем.
+       */
+      visible_to: string[];
+      /**
+       * Scenarios
+       * @description Сценарии на этой модели.
+       */
+      scenarios: string[];
+    };
     /** NamedOption */
     NamedOption: {
       /** Code */
@@ -2429,6 +2846,13 @@ export interface components {
     Page_ChatListItem_: {
       /** Items */
       items: components["schemas"]["ChatListItem"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
+    /** Page[FeedbackItem] */
+    Page_FeedbackItem_: {
+      /** Items */
+      items: components["schemas"]["FeedbackItem"][];
       /** Next Cursor */
       next_cursor?: string | null;
     };
@@ -2546,6 +2970,38 @@ export interface components {
       messages: number;
       /** Files */
       files: number;
+    };
+    /** Quality */
+    Quality: {
+      /** Answers */
+      answers: number;
+      /** Errors */
+      errors: number;
+      /** Error Share */
+      error_share: number | null;
+      /** Likes */
+      likes: number;
+      /** Dislikes */
+      dislikes: number;
+      /** Like Share */
+      like_share: number | null;
+      /** Ttft Avg Ms */
+      ttft_avg_ms: number | null;
+      /** Ttft P95 Ms */
+      ttft_p95_ms: number | null;
+    };
+    /** Queues */
+    Queues: {
+      /** Kb Queued */
+      kb_queued: number;
+      /** Kb Processing */
+      kb_processing: number;
+      /** Kb Errors */
+      kb_errors: number;
+      /** Imports Running */
+      imports_running: number;
+      /** Attachments Pending */
+      attachments_pending: number;
     };
     /** QuotaOut */
     QuotaOut: {
@@ -2850,6 +3306,15 @@ export interface components {
        */
       sort_order: number;
     };
+    /** ScenarioUsage */
+    ScenarioUsage: {
+      /** Name */
+      name: string;
+      /** Chats */
+      chats: number;
+      /** Messages */
+      messages: number;
+    };
     /** SearchFragment */
     SearchFragment: {
       /** Text */
@@ -2961,6 +3426,91 @@ export interface components {
       active: boolean;
     };
     /**
+     * SettingsIn
+     * @description Меняются только переданные поля; ``null`` — вернуть значение из конфигурации.
+     */
+    SettingsIn: {
+      /** App Name */
+      app_name?: string | null;
+      /** Company Name */
+      company_name?: string | null;
+      /** Notice Text */
+      notice_text?: string | null;
+      /**
+       * Require Notice Reaccept
+       * @description Попросить всех подтвердить уведомление заново.
+       * @default false
+       */
+      require_notice_reaccept: boolean;
+      /** Retention Days */
+      retention_days?: number | null;
+      /** Max File Mb */
+      max_file_mb?: number | null;
+      /** Max Files Per Message */
+      max_files_per_message?: number | null;
+      /** Default Address Form */
+      default_address_form?: ("name_patronymic" | "first_name" | "full_name" | "formal") | null;
+      /** System Prompt */
+      system_prompt?: string | null;
+    };
+    /** SettingsOut */
+    SettingsOut: {
+      /** App Name */
+      app_name: string;
+      /** Company Name */
+      company_name: string;
+      /** Notice Text */
+      notice_text: string;
+      /** Retention Days */
+      retention_days: number;
+      /** Max File Mb */
+      max_file_mb: number;
+      /** Max Files Per Message */
+      max_files_per_message: number;
+      /**
+       * Default Address Form
+       * @enum {string}
+       */
+      default_address_form: "name_patronymic" | "first_name" | "full_name" | "formal";
+      /** System Prompt */
+      system_prompt: string;
+      /** @description Значения из конфигурации. */
+      defaults: components["schemas"]["SettingsValues"];
+      /**
+       * Overridden
+       * @description Поля, заданные в админке.
+       */
+      overridden: string[];
+      /** Notice Updated At */
+      notice_updated_at: string | null;
+      /** Has Logo */
+      has_logo: boolean;
+      /** Logo Version */
+      logo_version: string | null;
+    };
+    /** SettingsValues */
+    SettingsValues: {
+      /** App Name */
+      app_name: string;
+      /** Company Name */
+      company_name: string;
+      /** Notice Text */
+      notice_text: string;
+      /** Retention Days */
+      retention_days: number;
+      /** Max File Mb */
+      max_file_mb: number;
+      /** Max Files Per Message */
+      max_files_per_message: number;
+      /**
+       * Default Address Form
+       * @enum {string}
+       */
+      default_address_form: "name_patronymic" | "first_name" | "full_name" | "formal";
+      /** System Prompt */
+      system_prompt: string;
+    };
+    /**
      * SourceOut
      * @description Источник ответа (§10.5): карточка и цель клика «открыть на странице».
      */
@@ -3036,6 +3586,35 @@ export interface components {
        */
       chat_id: string;
     };
+    /** ToolInfo */
+    ToolInfo: {
+      /** Name */
+      name: string;
+      /** Description */
+      description: string;
+      /** Visibility */
+      visibility: string;
+      /** Required Permissions */
+      required_permissions: string[];
+      /**
+       * In Config
+       * @description Разрешён конфигурацией (tools.enabled).
+       */
+      in_config: boolean;
+      /**
+       * Enabled
+       * @description Предлагается модели (конфиг и админка).
+       */
+      enabled: boolean;
+      /** Calls */
+      calls: number;
+      /** Errors */
+      errors: number;
+      /** Avg Duration Ms */
+      avg_duration_ms: number | null;
+      /** Last Used At */
+      last_used_at: string | null;
+    };
     /**
      * ToolStep
      * @description Шаг цикла инструментов в истории (§7.4): скрытые инструменты сюда не попадают (§9.6).
@@ -3061,6 +3640,11 @@ export interface components {
       };
       /** Duration Ms */
       duration_ms: number;
+    };
+    /** ToolToggleIn */
+    ToolToggleIn: {
+      /** Enabled */
+      enabled: boolean;
     };
     /** UserCard */
     UserCard: {
@@ -3174,6 +3758,14 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /** VisibilityIn */
+    VisibilityIn: {
+      /**
+       * Roles
+       * @description Коды ролей; пусто — всем.
+       */
+      roles?: string[];
     };
     /** ScenarioRef */
     app__modules__admin__chat_schemas__ScenarioRef: {
@@ -5261,6 +5853,420 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDashboard: {
+    parameters: {
+      query?: {
+        days?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Dashboard"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListFeedback: {
+    parameters: {
+      query?: {
+        rating?: number | null;
+        reason?: string | null;
+        user_id?: string | null;
+        date_from?: string | null;
+        date_to?: string | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_FeedbackItem_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminFeedbackStats: {
+    parameters: {
+      query?: {
+        rating?: number | null;
+        reason?: string | null;
+        user_id?: string | null;
+        date_from?: string | null;
+        date_to?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FeedbackStats"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminExportFeedback: {
+    parameters: {
+      query?: {
+        rating?: number | null;
+        reason?: string | null;
+        user_id?: string | null;
+        date_from?: string | null;
+        date_to?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListModels: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelInfo"][];
+        };
+      };
+    };
+  };
+  adminModelsHealth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelHealthOut"][];
+        };
+      };
+    };
+  };
+  adminSetModelVisibility: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        role: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VisibilityIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelInfo"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListTools: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ToolInfo"][];
+        };
+      };
+    };
+  };
+  adminToggleTool: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ToolToggleIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ToolInfo"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminGetSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SettingsOut"];
+        };
+      };
+    };
+  };
+  adminUpdateSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SettingsIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SettingsOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUploadLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_adminUploadLogo"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SettingsOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDeleteLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SettingsOut"];
+        };
+      };
+    };
+  };
+  getBranding: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Branding"];
+        };
+      };
+    };
+  };
+  getBrandingLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/png": unknown;
         };
       };
     };

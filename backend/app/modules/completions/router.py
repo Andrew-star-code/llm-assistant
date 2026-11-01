@@ -14,6 +14,7 @@ from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.deps import DbDep
 from app.core.errors import AppError, NotFoundError
+from app.modules.admin import app_settings
 from app.modules.auth.deps import CurrentUser, CurrentUserDep
 from app.modules.chats import service as chats
 from app.modules.chats.models import Chat, Message
@@ -79,7 +80,7 @@ async def chat_scenario(db: DbDep, chat: Chat, current: CurrentUser) -> Scenario
         return None
     scenario = await db.get(Scenario, chat.scenario_id)
     if scenario is not None and (
-        scenarios.visible(scenario, role_codes(current))
+        await scenarios.visible_for(db, scenario, role_codes(current))
         or (chat.is_test and current.has(Perm.SCENARIOS_MANAGE))
     ):
         return scenario
@@ -154,7 +155,7 @@ async def send_message(
         file_ids=body.attachment_ids,
         chat_id=chat.id,
         message_id=user_message.id,
-        max_files=settings.files.max_files_per_message,
+        max_files=(await app_settings.effective(db, settings)).files.max_files_per_message,
     )
     assistant = Message(
         chat_id=chat.id,

@@ -238,7 +238,7 @@ XLSX_COLUMNS = (
 )
 
 
-def _cell(text: str | None) -> str | None:
+def xlsx_cell(text: str | None) -> str | None:
     from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
     if text is None:
@@ -278,14 +278,14 @@ async def build_xlsx(db: AsyncSession, ids: Sequence[UUID], tz: str) -> bytes:
             sheet.append(
                 [
                     str(d.chat.id),
-                    _cell(d.chat.title),
+                    xlsx_cell(d.chat.title),
                     d.user.login,
                     d.user.full_name,
                     d.user.department,
                     d.scenario,
                     local(m.created_at),
                     ROLE_TITLES.get(m.role, m.role),
-                    _cell(m.content),
+                    xlsx_cell(m.content),
                     m.status,
                     m.model,
                     m.prompt_tokens,
@@ -294,7 +294,7 @@ async def build_xlsx(db: AsyncSession, ids: Sequence[UUID], tz: str) -> bytes:
                     m.latency_ms,
                     fb.rating if fb else None,
                     ", ".join(fb.reasons) if fb and fb.reasons else None,
-                    _cell(fb.comment) if fb else None,
+                    xlsx_cell(fb.comment) if fb else None,
                     ", ".join(
                         f"{c.tool}{' (скрытый)' if c.visibility == 'hidden' else ''}" for c in calls
                     )

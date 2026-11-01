@@ -12,10 +12,14 @@
 | GET | `/api/admin/chats/{chat_id}` | `adminGetChat` | Get Chat | 200, 422 |
 | POST | `/api/admin/chats/{chat_id}/purge` | `adminPurgeChat` | Purge | 200, 422 |
 | POST | `/api/admin/chats/{chat_id}/restore` | `adminRestoreChat` | Restore Chat | 200, 422 |
+| GET | `/api/admin/dashboard` | `adminDashboard` | Dashboard | 200, 422 |
 | GET | `/api/admin/exports` | `adminListExports` | List Exports | 200 |
 | POST | `/api/admin/exports` | `adminCreateExport` | Create Export | 202, 422 |
 | GET | `/api/admin/exports/{export_id}` | `adminGetExport` | Get Export | 200, 422 |
 | GET | `/api/admin/exports/{export_id}/download` | `adminDownloadExport` | Download Export | 200, 422 |
+| GET | `/api/admin/feedback` | `adminListFeedback` | List Feedback | 200, 422 |
+| GET | `/api/admin/feedback/export` | `adminExportFeedback` | Export Feedback | 200, 422 |
+| GET | `/api/admin/feedback/stats` | `adminFeedbackStats` | Stats | 200, 422 |
 | GET | `/api/admin/incidents` | `adminListIncidents` | List Incidents | 200, 422 |
 | GET | `/api/admin/kb` | `adminListKb` | List Bases | 200 |
 | POST | `/api/admin/kb` | `adminCreateKb` | Create Base | 201, 422 |
@@ -32,6 +36,9 @@
 | POST | `/api/admin/kb/{kb_id}/imports` | `adminStartImport` | Start Import | 202, 422 |
 | GET | `/api/admin/logins` | `adminListLogins` | List Logins | 200, 422 |
 | GET | `/api/admin/messages` | `adminSearchMessages` | Search Messages | 200, 422 |
+| GET | `/api/admin/models` | `adminListModels` | List Models | 200 |
+| GET | `/api/admin/models/health` | `adminModelsHealth` | Models Health | 200 |
+| PUT | `/api/admin/models/{role}/visibility` | `adminSetModelVisibility` | Set Visibility | 200, 422 |
 | GET | `/api/admin/roles` | `adminListRoles` | List Roles | 200 |
 | GET | `/api/admin/scenarios` | `adminListScenarios` | List Scenarios | 200 |
 | POST | `/api/admin/scenarios` | `adminCreateScenario` | Create Scenario | 201, 422 |
@@ -41,6 +48,12 @@
 | DELETE | `/api/admin/scenarios/{scenario_id}` | `adminDeleteScenario` | Delete Scenario | 204, 422 |
 | POST | `/api/admin/scenarios/{scenario_id}/test-chat` | `adminScenarioTestChat` | Test Chat | 201, 422 |
 | DELETE | `/api/admin/sessions/{session_id}` | `adminRevokeSession` | Revoke Session | 204, 422 |
+| GET | `/api/admin/settings` | `adminGetSettings` | Get Settings | 200 |
+| PUT | `/api/admin/settings` | `adminUpdateSettings` | Update Settings | 200, 422 |
+| POST | `/api/admin/settings/logo` | `adminUploadLogo` | Upload Logo | 200, 422 |
+| DELETE | `/api/admin/settings/logo` | `adminDeleteLogo` | Delete Logo | 200 |
+| GET | `/api/admin/tools` | `adminListTools` | List Tools | 200 |
+| PUT | `/api/admin/tools/{name}` | `adminToggleTool` | Toggle Tool | 200, 422 |
 | GET | `/api/admin/users` | `adminListUsers` | List Users | 200, 422 |
 | GET | `/api/admin/users/{user_id}` | `adminGetUser` | Get User | 200, 422 |
 | POST | `/api/admin/users/{user_id}/block` | `adminBlockUser` | Block User | 200, 422 |
@@ -54,6 +67,8 @@
 | GET | `/api/auth/me` | `getMe` | Me | 200 |
 | POST | `/api/auth/notice/accept` | `acceptNotice` | Accept Notice | 204 |
 | GET | `/api/auth/providers` | `getAuthProviders` | Providers | 200 |
+| GET | `/api/branding` | `getBranding` | Branding | 200 |
+| GET | `/api/branding/logo` | `getBrandingLogo` | Logo | 200 |
 | GET | `/api/chats` | `listChats` | List Chats | 200, 422 |
 | POST | `/api/chats` | `createChat` | Create Chat | 201, 422 |
 | GET | `/api/chats/search` | `searchChats` | Search Chats | 200, 422 |

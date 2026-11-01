@@ -25,7 +25,12 @@ from app.core.logging import configure_logging
 from app.core.request_context import RequestContextMiddleware
 from app.core.storage import LocalStorage
 from app.modules.admin.chats_router import router as admin_chats_router
+from app.modules.admin.dashboard import router as admin_dashboard_router
+from app.modules.admin.feedback_router import router as admin_feedback_router
 from app.modules.admin.router import router as admin_router
+from app.modules.admin.settings_router import public as branding_router
+from app.modules.admin.settings_router import router as admin_settings_router
+from app.modules.admin.system_router import router as admin_system_router
 from app.modules.auth.deps import verify_csrf
 from app.modules.auth.providers.base import AuthProvider
 from app.modules.auth.providers.dev import DevProvider
@@ -205,6 +210,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(scenarios_router)
     api.include_router(scenarios_admin_router)
     api.include_router(admin_chats_router)
+    api.include_router(admin_dashboard_router)
+    api.include_router(admin_feedback_router)
+    api.include_router(admin_system_router)
+    api.include_router(admin_settings_router)
+    api.include_router(branding_router)
     api.include_router(exports_router)
     api.include_router(admin_router)
     app.include_router(api)
