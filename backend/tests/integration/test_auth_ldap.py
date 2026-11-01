@@ -224,3 +224,28 @@ async def test_sync_blocks_and_logs_out_user_disabled_in_ad(
         sessions=app.state.sessions,
     )
     assert (await client.login("smirnova", USER_PASSWORD, provider="ldap")).status_code == 200
+
+
+async def test_bulk_role_add_creates_users_from_ad(
+    make_client: Any, infra: Infra, mock_ad: MockAd, tmp_path: Path
+) -> None:
+    """Сотрудников, которые ещё ни разу не входили, админ добавляет в роль — их заводим из AD."""
+    app, admin = await _ldap_client(make_client, infra, mock_ad, tmp_path)
+    assert (await admin.login("ivanov", USER_PASSWORD, provider="ldap")).status_code == 200
+    role = (await admin.post("/api/admin/roles", json={"code": "lawyers", "name": "Юристы"})).json()
+    response = await admin.post(
+        f"/api/admin/roles/{role['id']}/members",
+        json={"identifiers": ["sidorova@corp.local", "kuznetsov", "nobody"]},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["created"] == ["sidorova"] and [u["login"] for u in body["added"]] == ["sidorova"]
+    # Отключённый в AD и несуществующий — не найдены.
+    assert sorted(body["not_found"]) == ["kuznetsov", "nobody"]
+    async with app.state.db_sessions() as db:
+        user = await db.scalar(select(User).where(User.login == "sidorova"))
+        assert user is not None and user.full_name == "Сидорова Елена Николаевна"
+        assert user.last_login_at is None
+    # При первом входе ручная роль на месте, роли из AD добавились к ней.
+    me = (await admin.login("sidorova", USER_PASSWORD, provider="ldap")).json()
+    assert {"lawyers", "legal"} <= {r["code"] for r in me["roles"]}

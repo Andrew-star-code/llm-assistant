@@ -141,7 +141,8 @@
       "feedback": "Feedback",
       "models": "Models",
       "tools": "Tools",
-      "settings": "Settings"
+      "settings": "Settings",
+      "roles": "Roles"
     },
     "users": {
       "search": "Search by name, login, department or title",
@@ -495,6 +496,39 @@
       "reset": "Restore configuration value",
       "save": "Save",
       "saved": "Saved — applies without restart"
+    },
+    "roles": {
+      "hint": "Department from AD is not used: roles are assigned manually. A role opens scenarios, role knowledge bases and models.",
+      "name": "Role",
+      "kind": "Type",
+      "users": "Members",
+      "code": "Code (latin)",
+      "namePlaceholder": "Name, e.g. Lawyers",
+      "codePlaceholder": "Latin code, e.g. legal",
+      "create": "New role",
+      "createButton": "Create",
+      "kinds": {
+        "system": "admin",
+        "custom": "custom",
+        "department": "AD department"
+      },
+      "usersCount": "members: {{count}}",
+      "usedBy": "Opens: {{list}}",
+      "bulkTitle": "Add employees in bulk",
+      "bulkHint": "Logins or e-mails — one per line, comma separated or an Excel column. Those not yet in the system are looked up in AD and created.",
+      "bulkAdd": "Add ({{count}})",
+      "result": "Added: {{added}} · already members: {{already}} · created from AD: {{created}}",
+      "notFound": "Not found in AD: {{list}} — check the spelling",
+      "searchMembers": "Search by name or login",
+      "removeSelected": "Remove from role ({{count}})",
+      "source": "Assigned",
+      "sources": {
+        "manual": "manually",
+        "ad": "from AD"
+      },
+      "neverLoggedIn": "never logged in",
+      "empty": "No members yet",
+      "delete": "Delete role"
     }
   },
   "failure": {
@@ -531,7 +565,12 @@
     "settings.logo": "Logo",
     "models.visibility": "Model visibility",
     "tools.toggle": "Tool enabled or disabled",
-    "kb.search_settings": "Reranker threshold"
+    "kb.search_settings": "Reranker threshold",
+    "role.create": "Role created",
+    "role.update": "Role changed",
+    "role.delete": "Role deleted",
+    "role.members_add": "Members added",
+    "role.members_remove": "Members removed"
   },
   "notFound": {
     "title": "Page not found",

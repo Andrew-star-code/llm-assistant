@@ -155,4 +155,11 @@ test("папки, закрепление и переименование в ис
   await page.getByRole("textbox", { name: "Переименовать" }).fill(`${title} — итог`);
   await page.getByRole("textbox", { name: "Переименовать" }).press("Enter");
   await expect(page.getByTestId("chat-title")).toHaveText(`${title} — итог`);
+
+  // Уборка: закреплённые чаты копятся от прогона к прогону и выталкивают новый чат за пределы
+  // виртуального списка истории — удаляем папку вместе с чатом.
+  await folder.hover();
+  await folder.getByRole("button", { name: "Удалить папку" }).click();
+  await folder.getByRole("button", { name: "Удалить папку вместе с чатами" }).click();
+  await expect(page.getByTestId("folder").filter({ hasText: folderName })).toHaveCount(0);
 });

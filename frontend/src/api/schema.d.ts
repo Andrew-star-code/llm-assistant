@@ -1244,6 +1244,90 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/roles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Roles
+     * @description Все роли с числом пользователей; роли без пользователей — кандидаты на перенос (§6.3).
+     */
+    get: operations["adminListRoles"];
+    put?: never;
+    /** Create Role */
+    post: operations["adminCreateRole"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/roles/{role_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Role */
+    get: operations["adminGetRole"];
+    put?: never;
+    post?: never;
+    /**
+     * Delete Role
+     * @description Удалить свою роль; если она открывает базы знаний или сценарии — сначала снимите их.
+     */
+    delete: operations["adminDeleteRole"];
+    options?: never;
+    head?: never;
+    /** Update Role */
+    patch: operations["adminUpdateRole"];
+    trace?: never;
+  };
+  "/api/admin/roles/{role_id}/members": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Members */
+    get: operations["adminRoleMembers"];
+    put?: never;
+    /**
+     * Add Members
+     * @description Массовое добавление: список логинов или e-mail (например, столбец из Excel).
+     */
+    post: operations["adminAddRoleMembers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/roles/{role_id}/members/remove": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Remove Members
+     * @description Снять роль, назначенную вручную; роли из AD пересчитывает синхронизация.
+     */
+    post: operations["adminRemoveRoleMembers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/branding": {
     parameters: {
       query?: never;
@@ -1480,26 +1564,6 @@ export interface paths {
      * @description Задаёт ручные роли. Роли из AD пересчитываются при входе и синхронизации.
      */
     put: operations["adminSetUserRoles"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/admin/roles": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List Roles
-     * @description Все роли с числом пользователей; роли без пользователей — кандидаты на перенос (§6.3).
-     */
-    get: operations["adminListRoles"];
-    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -1883,6 +1947,28 @@ export interface components {
       app_name: string;
       /** Logo Url */
       logo_url: string | null;
+    };
+    /** BulkIn */
+    BulkIn: {
+      /**
+       * Identifiers
+       * @description Логины или e-mail (ivanov, ivanov@corp.local, CORP\ivanov).
+       */
+      identifiers: string[];
+    };
+    /** BulkOut */
+    BulkOut: {
+      /** Added */
+      added: components["schemas"]["UserRef"][];
+      /** Already */
+      already: components["schemas"]["UserRef"][];
+      /**
+       * Created
+       * @description Логины, заведённые из AD при добавлении.
+       */
+      created: string[];
+      /** Not Found */
+      not_found: string[];
     };
     /** ChatCreate */
     ChatCreate: {
@@ -2679,6 +2765,29 @@ export interface components {
       settings: components["schemas"]["UserSettings"];
       notice: components["schemas"]["Notice"];
     };
+    /** Member */
+    Member: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
+      /** Department */
+      department: string | null;
+      /**
+       * Source
+       * @description manual — назначен вручную; ad — из AD.
+       */
+      source: string;
+      /** Title */
+      title: string | null;
+      /** Last Login At */
+      last_login_at: string | null;
+    };
     /** MessageError */
     MessageError: {
       /** Code */
@@ -2863,6 +2972,13 @@ export interface components {
       /** Next Cursor */
       next_cursor?: string | null;
     };
+    /** Page[Member] */
+    Page_Member_: {
+      /** Items */
+      items: components["schemas"]["Member"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
     /** Page[UserListItem] */
     Page_UserListItem_: {
       /** Items */
@@ -3031,10 +3147,60 @@ export interface components {
       /** Thinking */
       thinking?: boolean | null;
     };
+    /** RemoveIn */
+    RemoveIn: {
+      /** User Ids */
+      user_ids: string[];
+    };
     /** RevokedOut */
     RevokedOut: {
       /** Revoked */
       revoked: number;
+    };
+    /** RoleDetail */
+    RoleDetail: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Kind */
+      kind: string;
+      /** Description */
+      description: string | null;
+      /** Users */
+      users: number;
+      /**
+       * Editable
+       * @description Свою роль можно переименовать и удалить.
+       */
+      editable: boolean;
+      /**
+       * Knowledge Bases
+       * @description Ролевые базы знаний этой роли.
+       */
+      knowledge_bases: string[];
+      /**
+       * Scenarios
+       * @description Сценарии, видимые этой роли.
+       */
+      scenarios: string[];
+    };
+    /** RoleIn */
+    RoleIn: {
+      /**
+       * Code
+       * @description Латиница: legal, it, accounting.
+       */
+      code: string;
+      /** Name */
+      name: string;
+      /** Description */
+      description?: string | null;
     };
     /** RoleListItem */
     RoleListItem: {
@@ -3090,6 +3256,13 @@ export interface components {
        * @enum {string}
        */
       source: "department" | "rule" | "group" | "bootstrap";
+    };
+    /** RoleUpdate */
+    RoleUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Description */
+      description?: string | null;
     };
     /** RolesIn */
     RolesIn: {
@@ -6231,6 +6404,259 @@ export interface operations {
       };
     };
   };
+  adminListRoles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleListItem"][];
+        };
+      };
+    };
+  };
+  adminCreateRole: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoleIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminGetRole: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        role_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDeleteRole: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        role_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUpdateRole: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        role_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoleUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminRoleMembers: {
+    parameters: {
+      query?: {
+        q?: string | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        role_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_Member_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminAddRoleMembers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        role_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BulkOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminRemoveRoleMembers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        role_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RemoveIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   getBranding: {
     parameters: {
       query?: never;
@@ -6643,26 +7069,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  adminListRoles: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RoleListItem"][];
         };
       };
     };

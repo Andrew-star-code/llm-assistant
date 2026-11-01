@@ -16,6 +16,8 @@ import { ScenarioEditorPage } from "@/admin/pages/ScenarioEditorPage";
 import { ScenarioListPage } from "@/admin/pages/ScenarioListPage";
 import { LoginsPage } from "@/admin/pages/LoginsPage";
 import { ModelsPage } from "@/admin/pages/ModelsPage";
+import { RolePage } from "@/admin/pages/RolePage";
+import { RolesPage } from "@/admin/pages/RolesPage";
 import { SettingsPage } from "@/admin/pages/SettingsPage";
 import { ToolsPage } from "@/admin/pages/ToolsPage";
 import { UserCardPage } from "@/admin/pages/UserCardPage";
@@ -66,6 +68,8 @@ export const routes: RouteObject[] = [
       { path: "scenarios", element: <ScenarioListPage /> },
       { path: "scenarios/:scenarioId", element: <ScenarioEditorPage /> },
       { path: "dashboard", element: <DashboardPage /> },
+      { path: "roles", element: <RolesPage /> },
+      { path: "roles/:roleId", element: <RolePage /> },
       { path: "chats", element: <ChatsPage /> },
       { path: "chats/:chatId", element: <AdminChatPage /> },
       { path: "exports", element: <ExportsPage /> },

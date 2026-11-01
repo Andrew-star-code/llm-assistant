@@ -11,6 +11,7 @@ import {
   ScrollText,
   ShieldAlert,
   Siren,
+  UserCog,
   Sparkles,
   Users,
   type LucideIcon,
@@ -51,6 +52,12 @@ export const ADMIN_SECTIONS: Section[] = [
     permission: "admin.feedback.view",
   },
   { to: "/admin/users", label: "admin.nav.users", icon: Users, permission: "admin.users.view" },
+  {
+    to: "/admin/roles",
+    label: "admin.nav.roles",
+    icon: UserCog,
+    permission: "admin.users.view",
+  },
   {
     to: "/admin/logins",
     label: "admin.nav.logins",

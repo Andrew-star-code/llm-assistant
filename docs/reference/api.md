@@ -40,6 +40,13 @@
 | GET | `/api/admin/models/health` | `adminModelsHealth` | Models Health | 200 |
 | PUT | `/api/admin/models/{role}/visibility` | `adminSetModelVisibility` | Set Visibility | 200, 422 |
 | GET | `/api/admin/roles` | `adminListRoles` | List Roles | 200 |
+| POST | `/api/admin/roles` | `adminCreateRole` | Create Role | 201, 422 |
+| GET | `/api/admin/roles/{role_id}` | `adminGetRole` | Get Role | 200, 422 |
+| PATCH | `/api/admin/roles/{role_id}` | `adminUpdateRole` | Update Role | 200, 422 |
+| DELETE | `/api/admin/roles/{role_id}` | `adminDeleteRole` | Delete Role | 204, 422 |
+| GET | `/api/admin/roles/{role_id}/members` | `adminRoleMembers` | Members | 200, 422 |
+| POST | `/api/admin/roles/{role_id}/members` | `adminAddRoleMembers` | Add Members | 200, 422 |
+| POST | `/api/admin/roles/{role_id}/members/remove` | `adminRemoveRoleMembers` | Remove Members | 200, 422 |
 | GET | `/api/admin/scenarios` | `adminListScenarios` | List Scenarios | 200 |
 | POST | `/api/admin/scenarios` | `adminCreateScenario` | Create Scenario | 201, 422 |
 | GET | `/api/admin/scenarios/options` | `adminScenarioOptions` | Options | 200 |

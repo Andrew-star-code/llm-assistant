@@ -24,6 +24,8 @@
 | `GET /api/admin/models`, `…/models/health`, `PUT …/models/{role}/visibility` | `admin.models.manage` |
 | `GET /api/admin/tools`, `PUT /api/admin/tools/{name}` | `admin.tools.manage` |
 | `GET/PUT /api/admin/settings`, `POST/DELETE /api/admin/settings/logo` | `admin.settings.manage` |
+| `GET /api/admin/roles/{id}`, `GET …/{id}/members` | `admin.users.view` |
+| `POST /api/admin/roles`, `PATCH/DELETE …/{id}`, `POST …/{id}/members` (массово: логины или e-mail; кого нет — из AD), `POST …/{id}/members/remove` | `admin.roles.manage` (+ `admin.admins.manage` для админских ролей) |
 | `GET /api/branding`, `GET /api/branding/logo` — название и логотип, без входа | — |
 
 Выгрузки — модуль `exports` (`/api/admin/exports`, `admin.chats.export`).
@@ -35,6 +37,13 @@
 поиск — FTS `russian` + подстрока (`pg_trgm`), курсор по времени сообщения. Просмотр отдаёт всё, что
 пользователю не показывается: удалённое, все ветки, размышления, скрытые вызовы, все источники,
 трассировку. Физическое удаление — `chats.purge` (записи → commit → файлы и точки Qdrant).
+
+**Роли** (`roles_router.py`, решение 57): отдел из AD не используется — свои роли (`kind = custom`)
+создаются в админке и назначаются вручную. Массовое добавление принимает список логинов или e-mail
+(`login`, `login@домен`, `ДОМЕН\login`); кого ещё нет в системе, ищет в AD сервисной учёткой и
+заводит (с ролями из AD), не найденных возвращает списком. Назначения `source = manual`
+синхронизация с AD не трогает. Роль, которая открывает базы знаний, сценарии или модели, не
+удаляется.
 
 **Настройки поверх конфига** (`app_settings.py`): `effective(db, settings)` — конфиг с правками из
 админки одной выборкой, на каждый запрос, без кэша (название, компания, лимиты файлов, обращение по

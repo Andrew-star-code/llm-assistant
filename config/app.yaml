@@ -31,9 +31,11 @@ ldap:
   netbios_domain: "CORP"
   access_group: ""                 # пусто — пускать всех включённых пользователей домена
   nested_groups: true
+  # Отдел из AD у заказчика не заполнен (решение 57): роли назначают вручную в админке «Роли» —
+  # массово, списком логинов. Правила ниже срабатывают, только если атрибут department есть.
   department_roles:
     auto: true                     # роль «Отдел: <название>» из атрибута department
-    rules:                         # TODO(question): названия отделов — уточнить при деплое (§21)
+    rules:
       - {attribute: department, equals: "Юридический отдел", roles: [legal]}
       - {attribute: department, contains: "ИТ", roles: [it]}
   group_roles: []
