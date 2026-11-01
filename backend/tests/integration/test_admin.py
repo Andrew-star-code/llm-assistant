@@ -46,6 +46,7 @@ def _admin_routes() -> list[APIRoute]:
     from app.modules.admin.dashboard import router as dashboard_router
     from app.modules.admin.feedback_router import router as feedback_router
     from app.modules.admin.roles_router import router as roles_router
+    from app.modules.admin.security_router import router as security_router
     from app.modules.admin.settings_router import router as settings_router
     from app.modules.admin.system_router import router as system_router
     from app.modules.exports.router import router as exports_router
@@ -59,6 +60,7 @@ def _admin_routes() -> list[APIRoute]:
         dashboard_router,
         feedback_router,
         roles_router,
+        security_router,
         settings_router,
         system_router,
         exports_router,

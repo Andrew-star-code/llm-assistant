@@ -129,6 +129,14 @@
 | `kb.import_root` | Path | `/srv/import` | `APP_KB__IMPORT_ROOT` | Корень папок для массового импорта; путь импорта не может выйти за него. |
 | `exports.ttl_days` | int | 7 | `APP_EXPORTS__TTL_DAYS` | Сколько дней хранится файл выгрузки. |
 | `exports.max_messages` | int | 100000 | `APP_EXPORTS__MAX_MESSAGES` | Предел сообщений в одной выгрузке (больше — сузьте фильтр). |
+| `security.work_hours.start` | str | `07:00` | `APP_SECURITY__WORK_HOURS__START` | Начало рабочего дня. |
+| `security.work_hours.end` | str | `21:00` | `APP_SECURITY__WORK_HOURS__END` | Конец рабочего дня. |
+| `security.work_hours.weekdays` | list[int] | [1, 2, 3, 4, 5] | `APP_SECURITY__WORK_HOURS__WEEKDAYS` | Рабочие дни ISO (1 — понедельник). Время — в chat.timezone. |
+| `security.subnet_prefix_v4` | int | 24 | `APP_SECURITY__SUBNET_PREFIX_V4` | Подсеть IPv4 для «нового IP». |
+| `security.subnet_prefix_v6` | int | 64 | `APP_SECURITY__SUBNET_PREFIX_V6` | Подсеть IPv6 для «нового IP». |
+| `security.message_burst.max_messages` | int | 60 | `APP_SECURITY__MESSAGE_BURST__MAX_MESSAGES` | Сколько сообщений за окно — ещё норма. |
+| `security.message_burst.window_minutes` | int | 10 | `APP_SECURITY__MESSAGE_BURST__WINDOW_MINUTES` | Окно подсчёта, минут. |
+| `security.blocklist_cache_s` | int | 15 | `APP_SECURITY__BLOCKLIST_CACHE_S` | Сколько секунд процесс кэширует список блокировок IP. |
 | `retention.deleted_days` | int | 0 | `APP_RETENTION__DELETED_DAYS` | Через сколько дней удалённые чаты стираются физически; 0 — никогда. |
 | `monitoring.prometheus_url` | str \| null | null | `APP_MONITORING__PROMETHEUS_URL` | Prometheus с метриками DCGM (GPU); пусто — блок GPU без данных. |
 | `monitoring.timeout_s` | float | 2.0 | `APP_MONITORING__TIMEOUT_S` | Тайм-аут запроса к Prometheus, с. |

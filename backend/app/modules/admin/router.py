@@ -365,10 +365,21 @@ async def list_logins(
     login: str | None = None,
     user_id: UUID | None = None,
     success: bool | None = None,
+    flagged: bool | None = None,
+    unreviewed: bool | None = None,
+    ip: str | None = None,
     cursor: str | None = None,
     limit: Limit = DEFAULT_LIMIT,
 ) -> Page[LoginEventOut]:
     stmt = select(LoginEvent)
+    if flagged is True:
+        stmt = stmt.where(func.jsonb_array_length(LoginEvent.risk_flags) > 0)
+    elif flagged is False:
+        stmt = stmt.where(func.jsonb_array_length(LoginEvent.risk_flags) == 0)
+    if unreviewed:
+        stmt = stmt.where(LoginEvent.reviewed_at.is_(None))
+    if ip:
+        stmt = stmt.where(LoginEvent.ip == ip.strip())
     if login:
         stmt = stmt.where(LoginEvent.login_attempted.ilike(f"%{login.strip()}%"))
     if user_id:

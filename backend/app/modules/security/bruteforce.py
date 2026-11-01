@@ -61,6 +61,14 @@ class BruteforceGuard:
         ip_locked = await self._register("ip", ip, self.settings.per_ip) if ip else False
         return FailureResult(login_locked, ip_locked)
 
+    async def failures(self, login: str) -> int:
+        """Неудачи по логину в текущем окне — для флага «успех после серии неудач»."""
+        value = await self.redis.get(_keys("login", login)[0])
+        return int(value or 0)
+
+    async def unlock_ip(self, ip: str) -> None:
+        await self.redis.delete(*_keys("ip", ip))
+
     async def reset_login(self, login: str) -> None:
         await self.redis.delete(_keys("login", login)[0])
 

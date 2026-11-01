@@ -34,6 +34,7 @@ from app.modules.rbac.permissions import Perm
 from app.modules.scenarios import service as scenarios
 from app.modules.scenarios.models import Scenario
 from app.modules.scenarios.router import role_codes
+from app.modules.security import rules
 
 router = APIRouter(tags=["completions"])
 
@@ -118,6 +119,11 @@ async def send_message(
         raise AppError("Сообщение слишком длинное", code="message_too_long", status_code=413)
     chat = await chats.get_chat(db, current.id, chat_id)
     await _ensure_idle(db, chat)
+    # Аномальный объём (§13.4): инцидент, не блокировка — лимиты появятся на этапе 8.
+    await rules.track_message(
+        request.app.state.redis, request.app.state.db_sessions,
+        user_id=current.id, login=current.user.login, settings=settings,
+    )  # fmt: skip
     # TODO(stage-8): проверка и резервирование лимитов до запроса (§12.3).
 
     parent_id = body.parent_id if "parent_id" in body.model_fields_set else chat.active_leaf_id

@@ -26,6 +26,9 @@
 | GET | `/api/admin/incidents/{incident_id}` | `adminGetIncident` | Get Incident | 200, 422 |
 | PATCH | `/api/admin/incidents/{incident_id}` | `adminUpdateIncident` | Update Incident | 200, 422 |
 | POST | `/api/admin/incidents/{incident_id}/comments` | `adminCommentIncident` | Comment | 201, 422 |
+| GET | `/api/admin/ip-blocks` | `adminListIpBlocks` | List Blocks | 200, 422 |
+| POST | `/api/admin/ip-blocks` | `adminBlockIp` | Block Ip | 201, 422 |
+| DELETE | `/api/admin/ip-blocks/{block_id}` | `adminUnblockIp` | Unblock Ip | 204, 422 |
 | GET | `/api/admin/kb` | `adminListKb` | List Bases | 200 |
 | POST | `/api/admin/kb` | `adminCreateKb` | Create Base | 201, 422 |
 | GET | `/api/admin/kb/import-folders` | `adminImportFolders` | Import Folders | 200 |
@@ -40,6 +43,7 @@
 | GET | `/api/admin/kb/{kb_id}/imports` | `adminKbImports` | List Imports | 200, 422 |
 | POST | `/api/admin/kb/{kb_id}/imports` | `adminStartImport` | Start Import | 202, 422 |
 | GET | `/api/admin/logins` | `adminListLogins` | List Logins | 200, 422 |
+| POST | `/api/admin/logins/{event_id}/review` | `adminReviewLogin` | Review | 200, 422 |
 | GET | `/api/admin/messages` | `adminSearchMessages` | Search Messages | 200, 422 |
 | GET | `/api/admin/models` | `adminListModels` | List Models | 200 |
 | GET | `/api/admin/models/health` | `adminModelsHealth` | Models Health | 200 |
@@ -66,6 +70,9 @@
 | DELETE | `/api/admin/settings/logo` | `adminDeleteLogo` | Delete Logo | 200 |
 | GET | `/api/admin/tools` | `adminListTools` | List Tools | 200 |
 | PUT | `/api/admin/tools/{name}` | `adminToggleTool` | Toggle Tool | 200, 422 |
+| GET | `/api/admin/trusted-networks` | `adminListTrustedNetworks` | List Trusted | 200 |
+| POST | `/api/admin/trusted-networks` | `adminTrustNetwork` | Trust | 201, 422 |
+| DELETE | `/api/admin/trusted-networks/{network_id}` | `adminUntrustNetwork` | Untrust | 204, 422 |
 | GET | `/api/admin/users` | `adminListUsers` | List Users | 200, 422 |
 | GET | `/api/admin/users/{user_id}` | `adminGetUser` | Get User | 200, 422 |
 | POST | `/api/admin/users/{user_id}/block` | `adminBlockUser` | Block User | 200, 422 |

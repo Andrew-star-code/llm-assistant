@@ -21,7 +21,9 @@ from app.modules.auth.sessions import SessionData, SessionStore
 from app.modules.rbac import service as rbac
 from app.modules.rbac.compute import compute_directory_roles
 from app.modules.rbac.permissions import SUPERADMIN
+from app.modules.security import rules
 from app.modules.security.bruteforce import BruteforceGuard
+from app.modules.security.ipblocks import Blocklist
 from app.modules.security.service import record_login_event
 from app.modules.users.models import User
 from app.modules.users.service import upsert_from_directory
@@ -75,12 +77,14 @@ class LoginService:
         sessions: SessionStore,
         bruteforce: BruteforceGuard,
         storage: Storage,
+        blocklist: Blocklist | None = None,
     ) -> None:
         self.settings = settings
         self.providers = providers
         self.sessions = sessions
         self.bruteforce = bruteforce
         self.storage = storage
+        self.blocklist = blocklist or Blocklist(ttl_s=0)
 
     async def _fail(
         self,
@@ -93,13 +97,14 @@ class LoginService:
     ) -> AuthFailure:
         """Пишет отказ в журнал (и в счётчики перебора) и возвращает исключение для raise."""
         details: dict[str, object] = {}
+        ip_locked = False
         if count and failure.reason not in NOT_COUNTED:
             result = await self.bruteforce.register_failure(attempt.login, attempt.ip)
             if result.login_locked:
                 details["locked"] = "login"
-            if result.ip_locked:
+            if result.ip_locked and attempt.ip:
                 details["locked_ip"] = True
-                # TODO(stage-7): инцидент «перебор паролей» (§13.4).
+                ip_locked = True
         if failure.detail:
             details["detail"] = failure.detail[:500]
         await record_login_event(
@@ -111,9 +116,20 @@ class LoginService:
             user_agent=attempt.user_agent,
             user_id=user_id,
             failure_reason=failure.reason,
+            risk_flags=rules.failure_flags(failure.reason),
             details=details,
         )
+        if ip_locked and attempt.ip:
+            # Доверенную подсеть (например, NAT офиса) не блокируем — только инцидент.
+            trusted = await self.blocklist.trusted(db, attempt.ip)
+            if trusted:
+                await self.bruteforce.unlock_ip(attempt.ip)
+            await rules.block_bruteforce_ip(
+                db, ip=attempt.ip, settings=self.settings, now=utcnow(), trusted=trusted
+            )
         await db.commit()
+        if ip_locked:
+            await self.blocklist.changed()
         return failure
 
     async def login(
@@ -145,6 +161,8 @@ class LoginService:
             raise await self._fail(db, AuthFailure("empty_password"), attempt)
         if locked := await self.bruteforce.locked(normalized, ip):
             raise await self._fail(db, AuthFailure(locked), attempt, count=False)
+        if await self.blocklist.blocked(db, ip):  # IP или подсеть заблокированы в админке
+            raise await self._fail(db, AuthFailure("locked_ip"), attempt, count=False)
 
         try:
             directory_user = await auth.authenticate(normalized, password)
@@ -168,6 +186,15 @@ class LoginService:
                 db, AuthFailure("blocked"), attempt, user_id=user.id, count=False
             )
 
+        flags = await rules.success_flags(
+            db,
+            user_id=user.id,
+            ip=ip,
+            now=now,
+            settings=self.settings,
+            failures_before=await self.bruteforce.failures(normalized),
+            trusted=await self.blocklist.trusted(db, ip),
+        )
         user.last_login_at = now
         token, session = await self.sessions.create(
             db, user_id=user.id, provider=provider, ip=ip, user_agent=user_agent
@@ -180,6 +207,7 @@ class LoginService:
             ip=ip,
             user_agent=user_agent,
             user_id=user.id,
+            risk_flags=flags,
         )
         await db.commit()
         await self.bruteforce.reset_login(normalized)

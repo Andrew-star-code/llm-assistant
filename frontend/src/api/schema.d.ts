@@ -1400,6 +1400,96 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/ip-blocks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Blocks */
+    get: operations["adminListIpBlocks"];
+    put?: never;
+    /** Block Ip */
+    post: operations["adminBlockIp"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/ip-blocks/{block_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Unblock Ip */
+    delete: operations["adminUnblockIp"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/trusted-networks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Trusted */
+    get: operations["adminListTrustedNetworks"];
+    put?: never;
+    /** Trust */
+    post: operations["adminTrustNetwork"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/trusted-networks/{network_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Untrust */
+    delete: operations["adminUntrustNetwork"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/logins/{event_id}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Review
+     * @description Отметить событие входа проверенным (флаги риска разобраны).
+     */
+    post: operations["adminReviewLogin"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/branding": {
     parameters: {
       query?: never;
@@ -2773,6 +2863,46 @@ export interface components {
       /** High */
       high: number;
     };
+    /** IpBlockIn */
+    IpBlockIn: {
+      /**
+       * Cidr
+       * @description IP или подсеть: 10.1.2.3, 10.1.2.0/24
+       */
+      cidr: string;
+      /** Reason */
+      reason: string;
+      /**
+       * Minutes
+       * @description Срок; пусто — бессрочно.
+       */
+      minutes?: number | null;
+    };
+    /** IpBlockOut */
+    IpBlockOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Cidr */
+      cidr: string;
+      /** Reason */
+      reason: string;
+      /** Source */
+      source: string;
+      /** Until */
+      until: string | null;
+      /** Active */
+      active: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Created By */
+      created_by: string | null;
+    };
     /** KbIn */
     KbIn: {
       /** Code */
@@ -2858,6 +2988,8 @@ export interface components {
       failure_reason: string | null;
       /** Risk Flags */
       risk_flags: string[];
+      /** Reviewed At */
+      reviewed_at?: string | null;
     };
     /** LoginIn */
     LoginIn: {
@@ -3992,6 +4124,32 @@ export interface components {
     ToolToggleIn: {
       /** Enabled */
       enabled: boolean;
+    };
+    /** TrustedIn */
+    TrustedIn: {
+      /** Cidr */
+      cidr: string;
+      /** Note */
+      note?: string | null;
+    };
+    /** TrustedOut */
+    TrustedOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Cidr */
+      cidr: string;
+      /** Note */
+      note: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Created By */
+      created_by: string | null;
     };
     /** UserCard */
     UserCard: {
@@ -6975,6 +7133,212 @@ export interface operations {
       };
     };
   };
+  adminListIpBlocks: {
+    parameters: {
+      query?: {
+        include_expired?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IpBlockOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminBlockIp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IpBlockIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IpBlockOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUnblockIp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        block_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListTrustedNetworks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrustedOut"][];
+        };
+      };
+    };
+  };
+  adminTrustNetwork: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TrustedIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrustedOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUntrustNetwork: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        network_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminReviewLogin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        event_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LoginEventOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   getBranding: {
     parameters: {
       query?: never;
@@ -7397,6 +7761,9 @@ export interface operations {
         login?: string | null;
         user_id?: string | null;
         success?: boolean | null;
+        flagged?: boolean | null;
+        unreviewed?: boolean | null;
+        ip?: string | null;
         cursor?: string | null;
         limit?: number;
       };

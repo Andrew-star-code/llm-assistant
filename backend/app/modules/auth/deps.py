@@ -21,6 +21,7 @@ from app.core.errors import ForbiddenError, UnauthenticatedError
 from app.modules.auth.sessions import SessionData, SessionStore
 from app.modules.rbac import service as rbac
 from app.modules.rbac.permissions import Perm
+from app.modules.security.ipblocks import Blocklist
 from app.modules.users.models import User
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -73,6 +74,9 @@ async def current_user(
 ) -> CurrentUser:
     if session is None:
         raise UnauthenticatedError("Требуется вход")
+    blocklist: Blocklist | None = getattr(request.app.state, "blocklist", None)
+    if blocklist is not None and await blocklist.blocked(db, client_ip(request)):
+        raise ForbiddenError("Доступ с этого адреса заблокирован", code="ip_blocked")
     user = await db.get(User, session.user_id)
     if user is None or user.ad_disabled or user.is_block_active(utcnow()):
         # Блокировку проверяем на каждом запросе: сессия могла пережить её в другом процессе.

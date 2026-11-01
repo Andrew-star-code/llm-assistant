@@ -369,6 +369,32 @@ class WorkerSettings(_Section):
     eager: bool = Field(False, description="Выполнять задачи в процессе api (только тесты).")
 
 
+class WorkHours(_Section):
+    start: str = Field("07:00", pattern=r"^\d{2}:\d{2}$", description="Начало рабочего дня.")
+    end: str = Field("21:00", pattern=r"^\d{2}:\d{2}$", description="Конец рабочего дня.")
+    weekdays: list[int] = Field(
+        default_factory=lambda: [1, 2, 3, 4, 5],
+        description="Рабочие дни ISO (1 — понедельник). Время — в chat.timezone.",
+    )
+
+
+class MessageBurst(_Section):
+    max_messages: int = Field(60, gt=0, description="Сколько сообщений за окно — ещё норма.")
+    window_minutes: int = Field(10, gt=0, description="Окно подсчёта, минут.")
+
+
+class SecuritySettings(_Section):
+    """Правила подозрительности (§13.4): флаги входа, всплеск запросов, кэш блокировок IP."""
+
+    work_hours: WorkHours = Field(default_factory=WorkHours)
+    subnet_prefix_v4: int = Field(24, ge=8, le=32, description="Подсеть IPv4 для «нового IP».")
+    subnet_prefix_v6: int = Field(64, ge=16, le=128, description="Подсеть IPv6 для «нового IP».")
+    message_burst: MessageBurst = Field(default_factory=MessageBurst)
+    blocklist_cache_s: int = Field(
+        15, ge=0, description="Сколько секунд процесс кэширует список блокировок IP."
+    )
+
+
 class ExportsSettings(_Section):
     """Выгрузки переписки из админки (§13.3)."""
 
@@ -528,6 +554,7 @@ class Settings(BaseSettings):
     rag: RagSettings = Field(default_factory=RagSettings)
     kb: KbSettings = Field(default_factory=KbSettings)
     exports: ExportsSettings = Field(default_factory=ExportsSettings)
+    security: SecuritySettings = Field(default_factory=SecuritySettings)
     retention: RetentionSettings = Field(default_factory=RetentionSettings)
     monitoring: MonitoringSettings = Field(default_factory=MonitoringSettings)
     models: dict[str, ModelEndpoint] = Field(
