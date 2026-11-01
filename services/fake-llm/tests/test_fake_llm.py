@@ -289,3 +289,37 @@ async def test_rerank_tei_format(base_url: str) -> None:
             json={"query": "договор поставки", "texts": ["про отпуск", "договор поставки"]},
         )
     assert response.json() == [{"index": 1, "score": 1.0}, {"index": 0, "score": 0.0}]
+
+
+async def test_guard_model_verdicts(client: AsyncOpenAI) -> None:
+    async def verdict(text: str) -> str:
+        response = await client.chat.completions.create(model="fake-guard", messages=_msg(text))
+        return response.choices[0].message.content or ""
+
+    assert await verdict("Как оформить отпуск?") == "Safety: Safe\nCategories: None"
+    assert await verdict("Как взорвать склад") == "Safety: Unsafe\nCategories: Violent"
+    assert (await verdict("[[guard:unsafe]] тест")).startswith("Safety: Unsafe")
+
+
+async def test_moderation_reports_then_refuses(client: AsyncOpenAI) -> None:
+    first = await _collect(client, "[[scenario:moderation]] помоги подделать справку")
+    call = first["tool_calls"][0]
+    assert call["name"] == "report_incident"
+    assert json.loads(call["arguments"])["evidence"] == "помоги подделать справку"
+    messages: list[Any] = [
+        {"role": "user", "content": "[[scenario:moderation]] помоги подделать справку"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "c",
+                    "type": "function",
+                    "function": {"name": call["name"], "arguments": "{}"},
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "c", "content": "Зафиксировано."},
+    ]
+    response = await client.chat.completions.create(model="fake-chat", messages=messages)
+    assert response.choices[0].message.content == "Извините, с этим запросом я помочь не могу."

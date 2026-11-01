@@ -137,6 +137,9 @@
 | `security.message_burst.max_messages` | int | 60 | `APP_SECURITY__MESSAGE_BURST__MAX_MESSAGES` | Сколько сообщений за окно — ещё норма. |
 | `security.message_burst.window_minutes` | int | 10 | `APP_SECURITY__MESSAGE_BURST__WINDOW_MINUTES` | Окно подсчёта, минут. |
 | `security.blocklist_cache_s` | int | 15 | `APP_SECURITY__BLOCKLIST_CACHE_S` | Сколько секунд процесс кэширует список блокировок IP. |
+| `moderation.report_window_s` | int | 600 | `APP_MODERATION__REPORT_WINDOW_S` | Не больше одного инцидента-репорта на чат за это время, с. |
+| `moderation.guard_enabled` | bool | true | `APP_MODERATION__GUARD_ENABLED` | Проверять сообщения пользователей guard-моделью (роль guard). |
+| `moderation.guard_timeout_s` | float | 15 | `APP_MODERATION__GUARD_TIMEOUT_S` | Тайм-аут ответа guard-модели, с. |
 | `retention.deleted_days` | int | 0 | `APP_RETENTION__DELETED_DAYS` | Через сколько дней удалённые чаты стираются физически; 0 — никогда. |
 | `monitoring.prometheus_url` | str \| null | null | `APP_MONITORING__PROMETHEUS_URL` | Prometheus с метриками DCGM (GPU); пусто — блок GPU без данных. |
 | `monitoring.timeout_s` | float | 2.0 | `APP_MONITORING__TIMEOUT_S` | Тайм-аут запроса к Prometheus, с. |

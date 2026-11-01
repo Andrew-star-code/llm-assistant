@@ -398,6 +398,18 @@ class SecuritySettings(_Section):
     )
 
 
+class ModerationSettings(_Section):
+    """Скрытый репорт и guard-модель (§9.6); категории и тексты — config/moderation/policy.yaml."""
+
+    report_window_s: int = Field(
+        600, gt=0, description="Не больше одного инцидента-репорта на чат за это время, с."
+    )
+    guard_enabled: bool = Field(
+        True, description="Проверять сообщения пользователей guard-моделью (роль guard)."
+    )
+    guard_timeout_s: float = Field(15, gt=0, description="Тайм-аут ответа guard-модели, с.")
+
+
 class ExportsSettings(_Section):
     """Выгрузки переписки из админки (§13.3)."""
 
@@ -567,6 +579,7 @@ class Settings(BaseSettings):
     kb: KbSettings = Field(default_factory=KbSettings)
     exports: ExportsSettings = Field(default_factory=ExportsSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
+    moderation: ModerationSettings = Field(default_factory=ModerationSettings)
     retention: RetentionSettings = Field(default_factory=RetentionSettings)
     monitoring: MonitoringSettings = Field(default_factory=MonitoringSettings)
     models: dict[str, ModelEndpoint] = Field(

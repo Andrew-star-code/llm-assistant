@@ -30,6 +30,7 @@ MAX_FILE_MB = "files.max_file_mb"
 MAX_FILES_PER_MESSAGE = "files.max_files_per_message"
 DEFAULT_ADDRESS_FORM = "users.default_address_form"
 SYSTEM_PROMPT = "prompts.system_base"  # шаблон базового системного промпта вместо файла
+GUARD_BLOCK = "moderation.guard_block"  # категории guard-модели, по которым ответ блокируется
 
 
 async def all_values(db: AsyncSession) -> dict[str, Any]:
@@ -121,6 +122,10 @@ async def enabled_tools(db: AsyncSession, settings: Settings) -> list[str] | Non
 
         return [name for name in all_tools() if name not in disabled]
     return [name for name in settings.tools.enabled if name not in disabled]
+
+
+async def guard_block_categories(db: AsyncSession) -> list[str]:
+    return [str(c) for c in await get_value(db, GUARD_BLOCK, [])]
 
 
 async def first_login_notice(db: AsyncSession, settings: Settings) -> str:

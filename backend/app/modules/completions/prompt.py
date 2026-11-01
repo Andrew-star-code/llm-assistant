@@ -86,6 +86,7 @@ def system_prompt(
     now: datetime,
     *,
     base_template: str | None = None,
+    moderation: dict[str, Any] | None = None,
 ) -> str:
     """Базовые правила + пользователь. ``base_template`` — шаблон из админки «Настройки» вместо
     ``system/base.md.j2``: шаблон админа рендерится только в песочнице Jinja2."""
@@ -104,6 +105,9 @@ def system_prompt(
     else:
         base = renderer.render("system/base.md.j2", **context)
     parts = [base, renderer.render("system/user.md.j2", user=user)]
+    if moderation is not None:
+        # Отдельным шаблоном: базовый промпт из админки не может убрать правила модерации.
+        parts.append(renderer.render("system/moderation.md.j2", **moderation))
     return "\n\n".join(p for p in parts if p)
 
 

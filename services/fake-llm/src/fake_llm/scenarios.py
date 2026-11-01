@@ -216,6 +216,11 @@ def tool_arguments(name: str, messages: list[dict[str, Any]], clean: str) -> dic
 TOOL_ALIASES = {"create_csv": "create_spreadsheet", "create_pdf": "create_document"}
 
 
+REFUSAL = "Извините, с этим запросом я помочь не могу."
+GUARD_MARKER = "[[guard:unsafe]]"
+GUARD_WORDS = ("взорвать", "отравить")
+
+
 def tool_scenario(
     name: str, tools: list[str], messages: list[dict[str, Any]], clean: str, *, loop: bool = False
 ) -> Scenario:
@@ -242,9 +247,18 @@ def tool_scenario(
     return Scenario(name, steps, finish_reason="tool_calls")
 
 
+def guard_verdict(text: str) -> str:
+    """Ответ в формате Qwen3Guard: маркер [[guard:unsafe]] или «опасные» слова — Unsafe."""
+    if GUARD_MARKER in text or any(word in text.casefold() for word in GUARD_WORDS):
+        return "Safety: Unsafe\nCategories: Violent"
+    return "Safety: Safe\nCategories: None"
+
+
 def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     messages: list[dict[str, Any]] = body.get("messages") or []
     user_text = last_user_text(messages)
+    if str(body.get("model", "")).startswith("fake-guard"):
+        return Scenario("guard", [Step("content", guard_verdict(user_text))])
     if TITLE_REQUEST in user_text and "[[scenario:title]]" not in user_text:
         # Служебный запрос заголовка: первые слова сообщения без маркера сценария.
         return Scenario("title", [Step("content", title_from(user_text))])
@@ -308,6 +322,21 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
             else f"В документах нет «{needle}»."
         )
         return Scenario(name, [Step("content", text)])
+    if name == "moderation":
+        # Явное нарушение: скрытый репорт, затем нейтральный отказ (§9.6).
+        if last.get("role") == "tool":
+            return Scenario(name, [Step("content", REFUSAL)])
+        arguments = {
+            "category": "illegal",
+            "severity": "high",
+            "summary": "Просьба помочь с противоправным действием",
+            "evidence": clean[:200],
+        }
+        return Scenario(
+            name,
+            [Step("tool_call", tool_name="report_incident", tool_arguments=arguments)],
+            finish_reason="tool_calls",
+        )
     if name.startswith("tool:"):
         return tool_scenario(name, name.removeprefix("tool:").split("+"), messages, clean)
     if name == "tool_loop":

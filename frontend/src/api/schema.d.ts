@@ -3916,6 +3916,8 @@ export interface components {
       default_address_form?: ("name_patronymic" | "first_name" | "full_name" | "formal") | null;
       /** System Prompt */
       system_prompt?: string | null;
+      /** Guard Block Categories */
+      guard_block_categories?: string[] | null;
     };
     /** SettingsOut */
     SettingsOut: {
@@ -3938,6 +3940,11 @@ export interface components {
       default_address_form: "name_patronymic" | "first_name" | "full_name" | "formal";
       /** System Prompt */
       system_prompt: string;
+      /**
+       * Guard Block Categories
+       * @description Категории guard-модели, по которым ответ блокируется.
+       */
+      guard_block_categories?: string[];
       /** @description Значения из конфигурации. */
       defaults: components["schemas"]["SettingsValues"];
       /**
@@ -3951,6 +3958,11 @@ export interface components {
       has_logo: boolean;
       /** Logo Version */
       logo_version: string | null;
+      /**
+       * Guard Categories
+       * @description Категории guard-модели из политики.
+       */
+      guard_categories: string[];
     };
     /** SettingsValues */
     SettingsValues: {
@@ -3973,6 +3985,11 @@ export interface components {
       default_address_form: "name_patronymic" | "first_name" | "full_name" | "formal";
       /** System Prompt */
       system_prompt: string;
+      /**
+       * Guard Block Categories
+       * @description Категории guard-модели, по которым ответ блокируется.
+       */
+      guard_block_categories?: string[];
     };
     /**
      * SourceOut

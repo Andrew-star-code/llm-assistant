@@ -12048,6 +12048,20 @@
               }
             ],
             "title": "System Prompt"
+          },
+          "guard_block_categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guard Block Categories"
           }
         },
         "type": "object",
@@ -12094,6 +12108,14 @@
             "type": "string",
             "title": "System Prompt"
           },
+          "guard_block_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Block Categories",
+            "description": "Категории guard-модели, по которым ответ блокируется."
+          },
           "defaults": {
             "$ref": "#/components/schemas/SettingsValues",
             "description": "Значения из конфигурации."
@@ -12132,6 +12154,14 @@
               }
             ],
             "title": "Logo Version"
+          },
+          "guard_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Categories",
+            "description": "Категории guard-модели из политики."
           }
         },
         "type": "object",
@@ -12148,7 +12178,8 @@
           "overridden",
           "notice_updated_at",
           "has_logo",
-          "logo_version"
+          "logo_version",
+          "guard_categories"
         ],
         "title": "SettingsOut"
       },
@@ -12191,6 +12222,14 @@
           "system_prompt": {
             "type": "string",
             "title": "System Prompt"
+          },
+          "guard_block_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Block Categories",
+            "description": "Категории guard-модели, по которым ответ блокируется."
           }
         },
         "type": "object",

@@ -42,7 +42,8 @@ def available_tools(
     if enabled is not None:
         names &= set(enabled)
     if scenario is not None:
-        names &= set(scenario)
+        # Скрытые инструменты (репорт, §9.6) сценарий не убирает — только выключение в админке.
+        names &= set(scenario) | {n for n, t in tools.items() if t.visibility == "hidden"}
     result = []
     for name in sorted(names):
         tool = tools[name]
