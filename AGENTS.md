@@ -13,7 +13,7 @@ RAG по базам знаний трёх уровней, инструмента
 | Команда | Что делает |
 | --- | --- |
 | `make install` | Зависимости (uv, pnpm) и pre-commit-хуки |
-| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, fake-llm, embed, api, worker, worker-kb, frontend |
+| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, fake-llm, embed, api, worker, worker-kb, scheduler, frontend |
 | `make dev-down` / `make dev-reset` | Остановить стенд / остановить и удалить данные |
 | `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → сборка образов |
 | `make test` | Unit- и интеграционные тесты (pytest, Vitest; нужен Docker: testcontainers и mock-AD) |
@@ -190,6 +190,13 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 - **Порог реранкера из админки** (`app_settings`) применяет `rag.service.run_search`; прямой вызов
   `rag.search.search` с `settings.rag.search` (тесты, eval по корпусу) поправку не видит — новый
   поиск в продукте делайте через `run_search`.
+- **Настройки из админки перекрывают конфиг** (`app_settings`): название, компания, лимиты файлов,
+  обращение, срок хранения — читайте через `app_settings.effective(db, settings)` в момент
+  применения; прямой `settings.files.max_file_mb` правку админа не видит. Базовый промпт из
+  админки — только песочница Jinja2 (`scenarios.service.render_admin_template`).
+- **Переписка в админке**: просмотр чата целиком — запись `chat.view` в аудит при каждом открытии;
+  новый эндпоинт, отдающий переписку целиком, тоже пишет аудит. Списки и поиск показывают только
+  фрагменты. Физическое удаление — `chats.purge.purge_chat`, файлы и точки Qdrant — после commit.
 - **Номера цитат** выдаёт `SourceBook` (общая на ответ); не нумеруйте фрагменты в инструментах
   сами — `render_fragments` в `tools/builtin/knowledge.py`.
 - **Сценарий читается из БД на каждое сообщение** (`completions/generation.py`) — не кэшируйте

@@ -31,7 +31,8 @@
 строка в `docs/reference/permissions.md`; при необходимости — в наборе системной роли.
 
 **Данные:** `roles`, `permissions`, `role_permissions`, `user_roles`.
-TODO(stage-6): таблица `role_mappings` для правки маппинга AD → роли в админке поверх конфига.
+TODO(question): таблица `role_mappings` (правка маппинга AD → роли в админке поверх конфига, §14) — в
+§19 ни за одним этапом не закреплена; пока маппинг только в конфиге (вопрос в `docs/status.md`).
 
 **Тесты:** `backend/tests/unit/test_auth_units.py::test_compute_directory_roles`,
 `backend/tests/integration/test_admin.py`.

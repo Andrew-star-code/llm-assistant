@@ -4,10 +4,13 @@
    (`backend/app/modules/rbac/permissions.py`), строку — в [reference/permissions.md](../reference/permissions.md).
    Решите, входит ли право в системную роль `admin` (у существующих установок набор прав роли
    меняется в админке или миграцией данных — при старте он не перезаписывается).
-2. **API.** Эндпоинт в `backend/app/modules/admin/router.py` (или роутер модуля с префиксом
-   `/admin`) с зависимостью `Depends(require(Perm.…))`. Любое действие над чужими данными или
-   настройками — `audit.record(...)` в той же транзакции. Списки — с курсорной пагинацией
-   (`core/pagination.py`).
+2. **API.** Эндпоинт в `backend/app/modules/admin/router.py` (или отдельный роутер с префиксом
+   `/admin` — `chats_router.py`, `settings_router.py`; новый роутер подключите в `main.py` и
+   добавьте в `_admin_routes` теста прав) с зависимостью `Depends(require(Perm.…))`. Любое действие
+   над чужими данными или настройками — `audit.record(...)` в той же транзакции; показ переписки
+   целиком — тоже запись в аудит. Списки — с курсорной пагинацией (`core/pagination.py`). Настройка,
+   которую админ меняет без перезапуска, — ключ в `admin/app_settings.py` и чтение через
+   `app_settings.effective(db, settings)` там, где она применяется.
 3. **Тесты.** Интеграционный тест в `backend/tests/integration/`; тест
    `test_every_admin_endpoint_requires_permission` автоматически проверит, что без права — 403.
 4. **Клиент.** `make gen-api` — обновятся `frontend/src/api/schema.d.ts` и `docs/reference/api.md`.
