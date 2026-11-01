@@ -137,6 +137,10 @@ services:
     restart: unless-stopped
     command: ["celery", "-A", "app.workers.celery_app", "beat",
               "--schedule", "/tmp/celerybeat-schedule", "--loglevel", "INFO"]
+    # Образ api: его HEALTHCHECK обращается к порту 8000, который beat не слушает, и `up --wait`
+    # падает на работающем сервисе. У воркера он отключён в Dockerfile (`HEALTHCHECK NONE`).
+    healthcheck:
+      disable: true
     environment:
       APP_ENV: ${APP_ENV:-dev}
       APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
