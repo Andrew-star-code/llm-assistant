@@ -93,9 +93,11 @@ test-frontend:
 e2e: ## E2E-тесты Playwright
 	$(PNPM) e2e
 
-eval-rag: env ## Оценка поиска (§10.6): hit@5 и MRR по 4 конфигурациям на моделях стенда
+# Настоящие базы знаний: make eval-rag KB=<коды через запятую> QUESTIONS=eval/rag/local/<файл>.yaml
+eval-rag: env ## Оценка поиска (§10.6): hit@5 и MRR по 4 конфигурациям и подбор порога реранкера
 	$(COMPOSE) run --rm --no-deps $(EVAL_USER) -v $(CURDIR)/eval:/srv/eval api python /srv/eval/rag/run.py \
-		--check --json /srv/eval/rag/report.json
+		--check --json /srv/eval/rag/report.json $(if $(KB),--kb $(KB)) \
+		$(if $(QUESTIONS),--questions /srv/$(QUESTIONS))
 
 eval-scenarios: env ## Эталонные запросы сценариев (§18): ответы + LLM-судья, сравнение с прошлым прогоном
 	$(COMPOSE) run --rm --no-deps $(EVAL_USER) -v $(CURDIR)/eval:/srv/eval api python /srv/eval/scenarios/run.py \

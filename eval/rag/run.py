@@ -1,6 +1,7 @@
 """Оценка поиска по базам знаний (§10.6): hit@5 и MRR для четырёх конфигураций.
 
     uv run python eval/rag/run.py [--check] [--json report.json]
+    uv run python eval/rag/run.py --kb regulations,it-docs --questions my-questions.yaml
 
 Корпус ``eval/rag/corpus`` индексируется тем же кодом, что и базы знаний (разбор, чанкинг, dense +
 BM25), но в отдельную коллекцию ``eval_rag_chunks`` — рабочие базы не затрагиваются. Модели и Qdrant
@@ -14,6 +15,9 @@ fake-llm и TEI, на сервере — настоящие bge-m3 и реран
 раз поиск честно вернул пустой список. Порог реранкера подбирается по трассе рабочей конфигурации
 (``threshold_sweep``): отбор повторяется для сетки порогов без новых запросов к моделям, а
 ``recommended_threshold`` — наибольший порог, при котором hit@5 и MRR не хуже, чем без порога.
+
+``--kb`` — прогон по настоящим базам знаний (уже проиндексированным, ничего не пишется): ожидаемый
+документ в вопросах — его название в базе. Так порог подбирают на реальных документах.
 """
 
 from __future__ import annotations
@@ -35,7 +39,7 @@ from app.modules.ingestion.parsers import split_pages
 from app.modules.llm.registry import ModelRegistry
 from app.modules.rag.search import Scope, search
 from app.modules.rag.store import DocumentRef, qdrant_client, write_document
-from app.workers.jobs import make_chunks, parse_bytes
+from app.workers.jobs import make_chunks, parse_bytes, worker_context
 
 HERE = Path(__file__).resolve().parent
 COLLECTION = "eval_rag_chunks"
@@ -106,7 +110,7 @@ def first_rank(ranked: list[str], expected: list[str]) -> int | None:
 def reselect(candidates: list[dict[str, Any]], threshold: float, settings: Settings) -> list[str]:
     """Повтор отбора ``search`` по трассе с другим порогом: id документов по убыванию балла.
 
-    Корпус — одна глобальная база, надбавка уровня у всех кандидатов одна, поэтому порядок — по
+    Надбавок за уровень базы по умолчанию нет (``rag.search.level_boost``), поэтому порядок — по
     баллу реранкера.
     """
     search_settings = settings.rag.search
@@ -174,12 +178,72 @@ def recommend(rows: list[dict[str, Any]]) -> float | None:
     return float(max(lossless))
 
 
-async def evaluate(settings: Settings) -> dict[str, Any]:
-    questions = yaml.safe_load((HERE / "questions.yaml").read_text("utf-8"))["questions"]
+@dataclass
+class RealBases:
+    """Настоящие базы знаний для прогона: id, названия документов и действующий порог."""
+
+    kb_ids: tuple[uuid.UUID, ...]
+    titles: set[str]
+    threshold: float
+
+
+async def load_bases(settings: Settings, codes: list[str]) -> RealBases:
+    from sqlalchemy import select
+
+    from app.modules.admin import app_settings
+    from app.modules.kb.models import KbDocument, KnowledgeBase
+
+    async with worker_context(settings) as ctx, ctx.sessions() as db:
+        rows = (
+            await db.execute(
+                select(KnowledgeBase.code, KnowledgeBase.id).where(
+                    KnowledgeBase.code.in_(codes), KnowledgeBase.deleted_at.is_(None)
+                )
+            )
+        ).all()
+        found = {code: kb_id for code, kb_id in rows}
+        unknown = [c for c in codes if c not in found]
+        if unknown:
+            raise SystemExit(f"Нет баз знаний с кодами: {', '.join(unknown)}")
+        titles = set(
+            (
+                await db.scalars(
+                    select(KbDocument.title).where(
+                        KbDocument.kb_id.in_(found.values()),
+                        KbDocument.deleted_at.is_(None),
+                        KbDocument.status == "ready",
+                    )
+                )
+            ).all()
+        )
+        # Порог, который действует в чате: с поправкой из админки, если она есть.
+        effective = await app_settings.search_settings(db, settings)
+    return RealBases(tuple(found.values()), titles, effective.rerank.score_threshold)
+
+
+async def evaluate(
+    settings: Settings,
+    *,
+    kb_codes: list[str] | None = None,
+    questions_path: Path | None = None,
+) -> dict[str, Any]:
+    path = questions_path or HERE / "questions.yaml"
+    questions = yaml.safe_load(path.read_text("utf-8"))["questions"]
+    bases = await load_bases(settings, kb_codes) if kb_codes else None
+    warnings: list[str] = []
+    if bases is not None:
+        # Опечатка в названии документа — тихий «промах»; лучше сказать сразу.
+        missing = sorted({t for q in questions for t in q["expected"]} - bases.titles)
+        warnings += [f"в базах нет готового документа «{t}»" for t in missing]
+        settings.rag.search.rerank.score_threshold = bases.threshold
     registry = ModelRegistry(settings)
     try:
-        names = await index_corpus(settings, registry)
-        scope = Scope(kb_ids=(EVAL_KB,), kb_collection=COLLECTION)
+        names: dict[str, str] = {}
+        if bases is None:
+            names = await index_corpus(settings, registry)
+            scope = Scope(kb_ids=(EVAL_KB,), kb_collection=COLLECTION)
+        else:
+            scope = Scope(kb_ids=bases.kb_ids)
         scores: dict[str, dict[str, Score]] = {c: defaultdict(Score) for c in CONFIGS}
         misses: dict[str, list[str]] = defaultdict(list)
         # Вопросы без ответа: сколько раз конфигурация вернула пустой список.
@@ -205,9 +269,11 @@ async def evaluate(settings: Settings) -> dict[str, Any]:
                     )
                     for stage in result.degraded:
                         degraded[config][stage] += 1
+                    for c in result.trace["candidates"]:
+                        names.setdefault(c["document_id"], str(c["title"]))
                     ranked: list[str] = []
                     for fragment in result.fragments:
-                        name = names.get(fragment.document_id, "?")
+                        name = names.get(fragment.document_id, fragment.title)
                         if name not in ranked:
                             ranked.append(name)
                     if config == WORKING and not result.degraded:
@@ -229,9 +295,10 @@ async def evaluate(settings: Settings) -> dict[str, Any]:
                         misses[config].append(f"{item['q']} → {ranked[:K]}")
         finally:
             await client.close()
-            cleanup = qdrant_client(settings)
-            await cleanup.delete_collection(COLLECTION)
-            await cleanup.close()
+            if bases is None:  # настоящие базы не трогаем
+                cleanup = qdrant_client(settings)
+                await cleanup.delete_collection(COLLECTION)
+                await cleanup.close()
     finally:
         await registry.close()
     return {
@@ -242,6 +309,9 @@ async def evaluate(settings: Settings) -> dict[str, Any]:
             }
             for config, buckets in scores.items()
         },
+        "source": f"базы {', '.join(kb_codes)}" if kb_codes else "корпус eval/rag/corpus",
+        "questions": str(path),
+        "warnings": warnings,
         "misses": dict(misses),
         "no_answer": {config: {"empty": s.hits, "n": s.total} for config, s in no_answer.items()},
         "no_answer_top_rerank": no_answer_top,
@@ -289,7 +359,7 @@ def render(report: dict[str, Any]) -> str:
 
 def render_sweep(report: dict[str, Any]) -> str:
     lines = [
-        f"Порог реранкера: сейчас {report['threshold']}, "
+        f"Порог реранкера: действует {report['threshold']}, "
         f"рекомендуется по eval {report['recommended_threshold']}",
         "| Порог | hit@5 | MRR | пусто (есть ответ) | пусто (нет ответа) |",
         "| --- | --- | --- | --- | --- |",
@@ -312,10 +382,24 @@ def main(argv: list[str] | None = None) -> int:
         default=120,
         help="Тайм-аут реранкера, с: eval меряет качество, а не скорость (CPU — медленно)",
     )
+    parser.add_argument(
+        "--kb",
+        help="Коды настоящих баз знаний через запятую: прогон по их документам без индексации",
+    )
+    parser.add_argument(
+        "--questions",
+        type=Path,
+        help="Свой файл вопросов (формат — eval/rag/questions.yaml; с --kb expected — названия "
+        "документов в базе)",
+    )
     args = parser.parse_args(argv)
     settings = get_settings()
     settings.rag.search.rerank.timeout_s = args.rerank_timeout
-    report = asyncio.run(evaluate(settings))
+    codes = [c.strip() for c in args.kb.split(",") if c.strip()] if args.kb else None
+    report = asyncio.run(evaluate(settings, kb_codes=codes, questions_path=args.questions))
+    print(f"Источник: {report['source']}, вопросы: {report['questions']}")
+    for warning in report["warnings"]:
+        print(f"ВНИМАНИЕ: {warning}", file=sys.stderr)
     print(f"Модели: {report['models']['embed']}, реранкер {report['models']['rerank']}")
     print(render(report))
     for miss in report["misses"].get(WORKING, []):

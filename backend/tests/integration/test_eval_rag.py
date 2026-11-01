@@ -9,10 +9,15 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
+import pytest
+import yaml
+
 from app.core.config import REPO_ROOT
+from app.modules.rag.store import qdrant_client
 from tests.integration.conftest import Infra, chat_settings
 
 
@@ -76,3 +81,55 @@ def test_threshold_sweep_reselects_from_trace(infra: Infra, tmp_path: Path) -> N
     assert rows[0.01]["hit@5"] == 1.0 and rows[0.01]["empty_no_answer"] == "0/1"
     assert rows[0.02]["hit@5"] == 0.0 and rows[0.03]["empty_no_answer"] == "1/1"
     assert run.recommend(list(rows.values())) == 0.01
+
+
+async def test_eval_rag_on_real_knowledge_bases(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str, qdrant_url: str
+) -> None:
+    """Прогон по настоящей базе: без индексации, документ — по названию, порог — из админки."""
+    run = load_eval()
+    settings = chat_settings(infra, tmp_path, fake_llm_url, qdrant_url=qdrant_url)
+    _, admin = await make_client(settings)
+    await admin.login("ivanov")
+    code = f"real-{uuid.uuid4().hex[:6]}"
+    body = {"code": code, "name": "Реальная", "level": "global", "role_ids": []}
+    kb_id = (await admin.post("/api/admin/kb", json=body)).json()["id"]
+    docs = {
+        "Регламент отпусков.md": "# Отпуск\n\nЕжегодный отпуск — 28 календарных дней.",
+        "VPN.md": "# VPN\n\nOpenVPN: если не подключается, проверьте код 2FA.",
+    }
+    for name, text in docs.items():
+        response = await admin.post(
+            f"/api/admin/kb/{kb_id}/documents",
+            files={"file": (name, text.encode(), "text/markdown")},
+        )
+        assert response.json()["status"] == "ready", response.text
+    url = "/api/admin/kb/search-settings"
+    assert (await admin.request("PUT", url, json={"score_threshold": 0.0123})).status_code == 200
+
+    questions = tmp_path / "questions.yaml"
+    items = [
+        {"q": "OpenVPN", "expected": ["VPN"], "type": "english"},
+        {"q": "отпусков календарных", "expected": ["Регламент отпусков"], "type": "word_form"},
+        {"q": "что-то", "expected": ["Опечатка"], "type": "paraphrase"},
+        {"q": "рецепт борща", "expected": [], "type": "no_answer"},
+    ]
+    questions.write_text(yaml.safe_dump({"questions": items}, allow_unicode=True), "utf-8")
+    report = await run.evaluate(settings, kb_codes=[code], questions_path=questions)
+
+    assert report["source"] == f"базы {code}" and report["threshold"] == 0.0123
+    assert report["warnings"] == ["в базах нет готового документа «Опечатка»"]
+    assert report["configs"]["bm25"]["all"]["n"] == 3
+    assert report["configs"]["bm25"]["english"]["hit@5"] == 1.0
+    assert report["configs"]["bm25"]["word_form"]["hit@5"] == 1.0
+    assert report["no_answer"]["hybrid+rerank"]["n"] == 1
+    # Настоящая коллекция не тронута.
+    client = qdrant_client(settings)
+    try:
+        assert await client.collection_exists("kb_chunks")
+        assert not await client.collection_exists(run.COLLECTION)
+    finally:
+        await client.close()
+
+    with pytest.raises(SystemExit, match="Нет баз знаний с кодами: nope"):
+        await run.evaluate(settings, kb_codes=["nope"], questions_path=questions)

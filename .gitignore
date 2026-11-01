@@ -44,3 +44,5 @@ deploy/compose/import/*
 # Отчёты прогонов eval (baseline.json — копия принятого отчёта — коммитится)
 eval/scenarios/report.json
 eval/rag/report.json
+# вопросы по реальным документам — не в git
+eval/rag/local/
