@@ -14,6 +14,7 @@ import hashlib
 import uuid
 from datetime import datetime, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import structlog
 from sqlalchemy import select
@@ -88,7 +89,8 @@ async def _export(export_id: UUID, settings: Settings) -> None:
             await db.commit()
             return
 
-        stamp = utcnow().astimezone().strftime("%Y-%m-%d %H-%M")
+        # Время в имени файла — в поясе компании, как и внутри выгрузки (контейнер живёт в UTC).
+        stamp = utcnow().astimezone(ZoneInfo(tz)).strftime("%Y-%m-%d %H-%M")
         title = f"Выгрузка переписки {stamp}"
         if fmt == "json":
             data, ext = await service.build_json(db, ids), "json"

@@ -64,6 +64,9 @@
 1. Docker Desktop с интеграцией WSL2 (Settings → Resources → WSL integration), в дистрибутиве WSL —
    `git`, `make`, `uv`, Node 22 и pnpm. Репозиторий клонируйте **в файловую систему WSL**
    (`~/src/llm-assistant`), а не в `/mnt/c/…`: там медленный ввод-вывод и проблемы с правами.
+   Чтобы `git push` из WSL не зависал молча на запросе пароля, подключите менеджер учётных данных
+   Git for Windows:
+   `git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe"`.
 2. Дайте WSL не меньше 22 ГБ памяти (`%UserProfile%\.wslconfig`: `memory=22GB`, затем
    `wsl --shutdown`): TEI на CPU держит bge-m3 в ~12 ГБ, реранкер — ~2,2 ГБ (до 7 ГБ при прогреве).
    Реранкер стартует только после готового embed и не перезапускается вместе с Docker — иначе оба

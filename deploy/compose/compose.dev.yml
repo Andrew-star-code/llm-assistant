@@ -33,7 +33,10 @@ services:
       mock-ad: {condition: service_healthy}
 
   worker:
-    # Перезапуск при изменении кода (у Celery нет своего reload).
+    # Перезапуск при изменении кода (у Celery нет своего reload). Ждёт готовый embed: при старте
+    # воркер заново разбирает зависшие вложения, а без эмбеддингов они остались бы без поиска.
+    depends_on:
+      embed: {condition: service_healthy}
     command: ["watchfiles", "--filter", "python",
               "celery -A app.workers.celery_app worker -Q files -c 2 --without-gossip --without-mingle -n files@%h",
               "/srv/backend/app"]
@@ -49,6 +52,8 @@ services:
     extra_hosts: ["host.docker.internal:host-gateway"]
 
   worker-kb:
+    depends_on:
+      embed: {condition: service_healthy}
     command: ["watchfiles", "--filter", "python",
               "celery -A app.workers.celery_app worker -Q kb -c 2 --without-gossip --without-mingle -n kb@%h",
               "/srv/backend/app"]

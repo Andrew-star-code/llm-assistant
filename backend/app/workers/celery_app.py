@@ -13,6 +13,7 @@ import asyncio
 from typing import Any
 
 from celery import Celery, signals
+from celery.schedules import crontab
 
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
@@ -43,9 +44,15 @@ def make_celery(settings: Settings) -> Celery:
         broker_connection_retry_on_startup=True,
         worker_hijack_root_logger=False,
         # Плановые задачи — сервис scheduler (celery beat); выполняет их воркер очереди files.
+        # По часам, а не интервалом от старта: пересоздание scheduler не сдвигает и не отменяет
+        # запуск (файл расписания beat живёт в /tmp контейнера).
+        timezone=settings.chat.timezone,
         beat_schedule={
-            "exports-cleanup": {"task": "exports.cleanup", "schedule": 3600.0},
-            "retention-purge": {"task": "retention.purge", "schedule": 6 * 3600.0},
+            "exports-cleanup": {"task": "exports.cleanup", "schedule": crontab(minute=7)},
+            "retention-purge": {
+                "task": "retention.purge",
+                "schedule": crontab(minute=17, hour="1,7,13,19"),
+            },
         },
     )
     return app
