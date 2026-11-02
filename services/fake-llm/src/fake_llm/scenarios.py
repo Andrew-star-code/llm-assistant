@@ -253,6 +253,10 @@ def person_query(text: str) -> dict[str, Any] | None:
 
 def phonebook_answer(result: str) -> str:
     """Ответ по таблице результата ``search_employees``: первая найденная строка."""
+    if result.startswith("Ошибка"):
+        # Инструмент не сработал (шлюз недоступен и т. п.) — не выдаём это за «никого нет».
+        reason = result.removeprefix("Ошибка:").strip()
+        return f"Не удалось обратиться к телефонному справочнику: {reason}"
     rows = [line for line in result.splitlines() if line.startswith("|")]
     if len(rows) < 3:
         return "В телефонном справочнике никого не нашёл."

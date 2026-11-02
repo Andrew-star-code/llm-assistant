@@ -53,7 +53,7 @@
 
 `DG_SECRET` (или `DG_SECRET_FILE`, по умолчанию `/run/secrets/data_gateway_secret`), `DG_CATALOG_DIR`,
 `DG_SECRETS_DIR`, `DG_EMBED_URL`, `DG_EMBED_MODEL`, `DG_PORT` (8090), `DG_LOG_LEVEL`. В логах — логин,
-набор, число строк и время; текст SQL — только на уровне DEBUG.
+набор, число строк, время и причина отказа; текст SQL не пишется (он — в аудите api).
 
 ## Запуск и тесты
 

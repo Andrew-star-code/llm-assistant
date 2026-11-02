@@ -95,6 +95,8 @@ def _parse(sql: str) -> exp.Expr:
 
 def _check_root(root: exp.Expr) -> None:
     if not isinstance(root, (exp.Select, exp.Union, exp.Intersect, exp.Except)):
+        if type(root).__name__ in ("Execute", "ExecuteSql", "Command"):
+            raise Rejected("вызов процедур и команд запрещён — разрешён только SELECT")
         raise Rejected("разрешён только SELECT (или WITH … SELECT); изменения данных запрещены")
     for node in root.walk():
         if isinstance(node, _FORBIDDEN):

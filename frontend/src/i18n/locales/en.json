@@ -693,7 +693,7 @@
     "data": {
       "hint": "Semantic layer over corporate databases: the model sees only datasets and functions from the catalog (services/data-gateway/catalog). Every query is in the journal below and in the audit log.",
       "notConfigured": "The data gateway is not configured (data_gateway.url) — data tools are not offered to the model.",
-      "unavailable": "The data gateway is unavailable: {{error}}",
+      "unavailable": "The data gateway does not respond — check the data-gateway service. The journal below is available.",
       "catalogError": "Catalog error (the last valid version is in use): {{error}}",
       "datasets": "Datasets",
       "dataset": "Dataset",
@@ -726,7 +726,8 @@
         "unavailable": "unavailable",
         "error": "error"
       },
-      "empty": "No data queries yet."
+      "empty": "No data queries yet.",
+      "gatewayError": "Data gateway error: {{error}}"
     }
   },
   "failure": {

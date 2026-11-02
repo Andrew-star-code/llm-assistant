@@ -230,6 +230,46 @@ async def test_interrupted_generation_is_reported(
     assert await app.state.generations.mark_orphaned_interrupted() == 1
 
 
+async def test_crashed_generation_with_partial_stream_ends_for_readers(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Процесс упал посреди ответа (проверка этапа 8): в Redis — начало потока, ключ живости
+    истёк. Проверка «осиротевших» закрывает ответ и освобождает слот генерации, а читатель потока
+    получает error и message.end, а не бесконечные ping."""
+    from app.modules.completions.streaming import EventWriter
+    from app.modules.limits.counters import slot_key
+
+    app, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    chat_id = await new_chat(client)
+    async with app.state.db_sessions() as db:
+        chat = await db.get(Chat, chat_id)
+        assert chat is not None
+        user_msg = Message(chat_id=chat.id, role="user", content="вопрос", status="completed")
+        db.add(user_msg)
+        await db.flush()
+        orphan = Message(
+            chat_id=chat.id, parent_id=user_msg.id, role="assistant", status="streaming"
+        )
+        db.add(orphan)
+        await db.commit()
+        orphan_id, user_id = orphan.id, chat.user_id
+    redis = app.state.redis
+    writer = EventWriter(redis, orphan_id, 600)
+    await writer.emit("message.start", {"message_id": str(orphan_id)})
+    await writer.delta("content", "Начало ответа")
+    await writer.flush()
+    await redis.zadd(slot_key(user_id), {str(orphan_id): 4_102_444_800_000})  # слот «навсегда»
+
+    assert await app.state.generations.mark_orphaned_interrupted() == 1
+    assert await redis.zscore(slot_key(user_id), str(orphan_id)) is None
+    events = await read_stream(client, str(orphan_id))
+    assert [e.event for e in events] == ["message.start", "content.delta", "error", "message.end"]
+    assert events[-1].data["status"] == "interrupted"
+    # Переподключение с позиции последнего события — сразу конец, без повтора начала.
+    after = await read_stream(client, str(orphan_id), last_event_id=2)
+    assert [e.event for e in after] == ["error", "message.end"]
+
+
 async def test_delete_search_pin_and_folders(
     make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
 ) -> None:

@@ -218,6 +218,8 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
         try:
             prepared = prepare_query(body.sql, catalog(), user)
         except Rejected as exc:
+            # Без текста SQL: он — в аудите api.
+            log.info("dg.rejected kind=query login=%s reason=%s", user.login, exc.message)
             raise _error(400, "rejected", exc.message) from exc
         return await execute(prepared, user, "query", ",".join(prepared.datasets))
 

@@ -2301,6 +2301,8 @@ export interface components {
       catalog_error?: string | null;
       /** Error */
       error?: string | null;
+      /** Error Code */
+      error_code?: string | null;
     };
     /** ChatCreate */
     ChatCreate: {

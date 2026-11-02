@@ -145,7 +145,9 @@ export function DataSourcesPage() {
       )}
       {data?.error && (
         <p role="alert" className="text-sm text-red-600">
-          {t("admin.data.unavailable", { error: data.error })}
+          {data.error_code === "unavailable"
+            ? t("admin.data.unavailable")
+            : t("admin.data.gatewayError", { error: data.error })}
         </p>
       )}
       {data?.catalog_error && (

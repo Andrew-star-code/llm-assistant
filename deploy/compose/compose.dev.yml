@@ -10,7 +10,8 @@ services:
 
   api:
     command: ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000",
-              "--reload", "--reload-dir", "/srv/backend/app", "--reload-dir", "/srv/config", "--no-access-log"]
+              "--reload", "--reload-dir", "/srv/backend/app", "--reload-dir", "/srv/config", "--no-access-log",
+              "--timeout-graceful-shutdown", "5"]
     environment:
       APP_ENV: dev
     # Локальные переопределения APP_* (не в git), например адрес живой модели вместо fake-llm.
@@ -152,7 +153,6 @@ services:
   data-gateway:
     environment:
       DG_EMBED_URL: http://embed:80/v1      # похожие примеры «вопрос → SQL» (bge-m3 стенда)
-      DG_LOG_LEVEL: DEBUG
     ports: ["127.0.0.1:8090:8090"]
     depends_on:
       mock-mssql: {condition: service_healthy}

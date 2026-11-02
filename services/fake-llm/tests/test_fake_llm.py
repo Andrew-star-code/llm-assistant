@@ -373,3 +373,12 @@ async def test_phonebook_question_calls_search_employees(client: AsyncOpenAI) ->
         model="fake-chat", messages=[{"role": "user", "content": question}]
     )
     assert not plain.choices[0].message.tool_calls
+
+
+def test_phonebook_answer_reports_tool_errors() -> None:
+    from fake_llm.scenarios import phonebook_answer
+
+    assert phonebook_answer("Ошибка: шлюз данных недоступен") == (
+        "Не удалось обратиться к телефонному справочнику: шлюз данных недоступен"
+    )
+    assert phonebook_answer("Найдено строк: 0.") == "В телефонном справочнике никого не нашёл."

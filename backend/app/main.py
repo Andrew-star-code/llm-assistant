@@ -161,6 +161,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         log.exception("completions.orphans_check_failed")
 
+    # Ответы упавших или остановленных процессов не должны висеть в «streaming» (§8.5).
+    sweep_task = asyncio.create_task(app.state.generations.sweep_orphans())
     sync_task = None
     if app.state.ldap_directory is not None and settings.ldap.sync_interval_minutes > 0:
         sync_task = asyncio.create_task(
@@ -178,6 +180,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        sweep_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await sweep_task
         if sync_task is not None:
             sync_task.cancel()
             with suppress(asyncio.CancelledError):

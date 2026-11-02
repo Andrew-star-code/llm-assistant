@@ -36,7 +36,11 @@ def _gateway(ctx: ToolContext) -> DataGateway:
 
 
 async def _audit(
-    ctx: ToolContext, action: str, target_type: str, target: str, details: dict[str, Any]
+    ctx: ToolContext,
+    action: str,
+    target_type: str,
+    target: str | None,
+    details: dict[str, Any],
 ) -> None:
     """Аудит запроса к данным (§9.5 п. 6): от имени пользователя, в его чате."""
     async with ctx.services.sessions() as db:
@@ -45,7 +49,7 @@ async def _audit(
             actor_id=ctx.user_id,
             action=action,
             target_type=target_type,
-            target_id=target[:200],
+            target_id=target[:200] if target else None,
             details={**details, "chat_id": str(ctx.chat_id), "message_id": str(ctx.message_id)},
         )
         await db.commit()
@@ -299,8 +303,9 @@ class RunSqlQuery(Tool):
             counted = exc.code in ("rejected", "query_failed")
             if redis is not None and not counted:
                 await redis.decr(key)  # шлюз недоступен — не вина запроса
+            # Отклонённый запрос — до разбора наборов: цели нет, только SQL модели.
             await _audit(
-                ctx, "data.query", "dataset", "sql",
+                ctx, "data.query", "dataset", None,
                 {"sql": args.sql, "status": exc.code, "error": exc.message},
             )  # fmt: skip
             left = max(0, settings.max_failed_attempts - attempt)
@@ -308,7 +313,7 @@ class RunSqlQuery(Tool):
             raise ToolError(f"{exc.message}.{hint}") from exc
         if redis is not None:
             await redis.decr(key)
-        datasets = ",".join(result.get("datasets") or []) or "sql"
+        datasets = ",".join(result.get("datasets") or []) or None
         await _audit(
             ctx, "data.query", "dataset", datasets,
             {
@@ -322,7 +327,7 @@ class RunSqlQuery(Tool):
             if result.get("rls")
             else ""
         )
-        return await _result(ctx, f"Запрос {datasets}", result, note=note)
+        return await _result(ctx, f"Запрос {datasets or 'данных'}", result, note=note)
 
 
 class EmployeesArgs(BaseModel):

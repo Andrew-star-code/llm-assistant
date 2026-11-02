@@ -189,4 +189,19 @@ async def test_admin_datasources_catalog_test_call_and_journal(
     await bare.login("ivanov")
     assert (await bare.get("/api/admin/data/catalog")).json() == {
         "configured": False, "datasets": [], "functions": [], "catalog_error": None, "error": None,
+        "error_code": None,
     }  # fmt: skip
+    # Шлюз настроен, но не отвечает: в разделе — код ошибки, ответ модели говорит о сбое,
+    # а не «никого не нашёл» (проверка этапа 9).
+    down = _settings(infra, tmp_path, fake_llm_url, "http://127.0.0.1:9")
+    _, admin_down = await make_client(down)
+    _, kim = await make_client(down)
+    await admin_down.login("ivanov")
+    await kim.login("kim")
+    broken = (await admin_down.get("/api/admin/data/catalog")).json()
+    assert broken["error_code"] == "unavailable" and broken["error"] == "шлюз данных недоступен"
+    hr = next(s for s in (await kim.get("/api/scenarios")).json() if s["code"] == "hr_bot")
+    chat_id = (await kim.post("/api/chats", json={"scenario_id": hr["id"]})).json()["id"]
+    reply, events = await _ask(kim, chat_id, "Найди телефон Петрова из бухгалтерии")
+    assert [e.data["status"] for e in events if e.event == "tool.end"] == ["error"]
+    assert reply == "Не удалось обратиться к телефонному справочнику: шлюз данных недоступен"

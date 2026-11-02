@@ -33,7 +33,8 @@ class CatalogOut(BaseModel):
     datasets: list[dict[str, Any]] = Field(default_factory=list)
     functions: list[dict[str, Any]] = Field(default_factory=list)
     catalog_error: str | None = None
-    error: str | None = None  # шлюз недоступен
+    error: str | None = None  # текст ошибки шлюза
+    error_code: str | None = None  # unavailable — шлюз не отвечает
 
 
 class TestCallIn(BaseModel):
@@ -78,7 +79,7 @@ async def catalog(request: Request, db: DbDep, actor: Viewer) -> CatalogOut:
     try:
         data = await gateway.catalog(await identity_of(db, actor.id, admin=True))
     except GatewayError as exc:
-        return CatalogOut(configured=True, error=exc.message)
+        return CatalogOut(configured=True, error=exc.message, error_code=exc.code)
     return CatalogOut(
         configured=True,
         datasets=data["datasets"],

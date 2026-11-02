@@ -142,7 +142,7 @@ async def add_document(
         and used.used_documents >= used.max_documents
     ):
         raise AppError(
-            f"В личной базе уже {used.max_documents} документов — удалите ненужные",
+            f"Квота личной базы исчерпана (документов: {used.max_documents}) — удалите ненужные",
             code="quota_documents",
             status_code=413,
         )

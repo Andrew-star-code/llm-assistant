@@ -231,20 +231,45 @@ class GenerationManager:
                 await task
 
     async def mark_orphaned_interrupted(self) -> int:
-        """При старте: ответы в статусе streaming без живого исполнителя → interrupted."""
+        """Ответы в статусе streaming без живого исполнителя → interrupted (§8.5).
+
+        Вызывается при старте и периодически (``sweep_orphans``): процесс мог упасть или быть
+        остановлен, не успев сохранить ответ. Ключ живости продлевает только работающая
+        генерация, поэтому ответ упавшего процесса находится не позже чем через его TTL.
+        Слот одновременной генерации такого ответа сразу возвращается в лимит.
+        """
+        released: list[tuple[UUID, UUID]] = []
         async with self.sessions() as db:
-            rows = (await db.scalars(select(Message).where(Message.status == "streaming"))).all()
+            rows = (
+                await db.execute(
+                    select(Message, Chat.user_id)
+                    .join(Chat, Chat.id == Message.chat_id)
+                    .where(Message.status == "streaming")
+                )
+            ).all()
             count = 0
-            for message in rows:
+            for message, user_id in rows:
                 if message.id in self.tasks or await self.redis.exists(alive_key(message.id)):
                     continue
                 message.status = "interrupted"
                 message.error = {"code": "interrupted", "message": "Генерация прервана"}
+                released.append((user_id, message.id))
                 count += 1
             await db.commit()
+        for user_id, message_id in released:
+            await self.limits.release_slot(user_id, message_id)
         if count:
             log.warning("completions.orphans_interrupted", count=count)
         return count
+
+    async def sweep_orphans(self) -> None:
+        """Фоновая проверка «осиротевших» ответов раз в TTL ключа живости."""
+        while True:
+            await asyncio.sleep(ALIVE_TTL_SECONDS)
+            try:
+                await self.mark_orphaned_interrupted()
+            except Exception:
+                log.exception("completions.orphans_check_failed")
 
     # ------------------------------------------------------------------ генерация
 
