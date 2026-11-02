@@ -55,3 +55,15 @@ rag:
       # админка «Базы знаний» → «Параметры поиска» (действует без перезапуска, перекрывает это
       # значение) или здесь.
       score_threshold: 0.005
+
+# Лимиты (§12): глобальные политики по умолчанию. Ролевые, персональные и временные — в админке
+# «Лимиты»; глобальная политика из админки с тем же ключом (метрика, окно, роль модели, thinking)
+# перекрывает строку отсюда. Окна — по календарным границам в поясе chat.timezone.
+limits:
+  defaults:
+    - {metric: messages, window: day, limit: 200}
+    - {metric: tokens, window: day, limit: 2000000}
+    - {metric: concurrent_generations, limit: 2}
+    - {metric: uploads, window: day, limit: 100}
+    - {metric: personal_kb_storage, limit: 500}      # МБ
+    - {metric: personal_kb_documents, limit: 100}

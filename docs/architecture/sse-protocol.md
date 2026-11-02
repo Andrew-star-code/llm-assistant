@@ -9,7 +9,10 @@
 - У каждого события есть порядковый `id` (1, 2, 3, …; в Redis — `0-<id>`) — клиент
   переподключается с заголовком `Last-Event-ID` (или `?after=<id>`) и получает только пропущенное.
 - Дельты `reasoning.delta` и `content.delta` склеиваются пачками не реже раза в 50 мс.
-- Каждые 15 секунд — heartbeat (комментарий `: ping`).
+- Каждые 15 секунд (`chat.heartbeat_seconds`) — heartbeat: событие `ping` без `id` и с пустыми данными
+  (позицию переподключения не сдвигает). Клиент, не получивший ни одного события дольше трёх
+  интервалов, сам закрывает соединение и переподключается с `?after=<id>`: так вкладка переживает
+  перезапуск api за прокси, который держит старое соединение открытым.
 - Поток хранится в Redis Stream `gen:{message_id}` ещё 10 минут после завершения
   (`chat.stream_ttl_seconds`). Если потока уже нет, сервер сразу отдаёт `message.end` с финальным
   статусом, а клиент перечитывает сообщение по REST — после `message.end` он делает это всегда.
@@ -32,7 +35,7 @@
 | `sources` | `items`: **полный** текущий список карточек — `index` (номер для `[n]`), `kind` (`kb` / `attachment`), `title`, `kb_name`, `document_id`, `file_id`, `page`, `section`, `snippet`, `score`; клиент заменяет список, а не дописывает | после авто-поиска RAG и после каждого инструмента, нашедшего фрагменты |
 | `file` | `file_id`, `name`, `mime`, `size`, `preview` (есть PDF-превью) | создан файл (после `tool.end` его инструмента) |
 | `usage` | `prompt_tokens`, `completion_tokens`, `reasoning_tokens` | в конце |
-| `limits` | остатки по метрикам пользователя | в конце |
+| `limits` | `timezone`, `items` (метрика, окно, роль модели, thinking, `limit`, `used`, `remaining`, `reset_at`), `nearest` — ближайшая к исчерпанию, `blocked` — исчерпан лимит на все сообщения; то же, что `GET /api/limits` | в конце, после `usage` |
 | `title` | `chat_id`, `title` | сгенерирован заголовок |
 | `error` | `code`, `message`, `retryable` | ошибка |
 | `message.end` | `status` (`completed`, `stopped`, `error`, `interrupted`), `finish_reason` (`stop`, `length`, `max_iterations` — модель не уложилась в `tools.max_iterations`, …) | конец |

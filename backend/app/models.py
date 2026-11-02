@@ -9,6 +9,7 @@ from app.modules.feedback.models import Feedback
 from app.modules.files.models import File
 from app.modules.incidents.models import Incident, IncidentComment
 from app.modules.kb.models import KbDocument, KbImport, KbRole, KnowledgeBase
+from app.modules.limits.models import LimitPolicy, UsageRecord
 from app.modules.rag.models import MessageSource
 from app.modules.rbac.models import Permission, Role, RolePermission, UserRole
 from app.modules.scenarios.models import Scenario
@@ -31,6 +32,7 @@ __all__ = [
     "KbImport",
     "KbRole",
     "KnowledgeBase",
+    "LimitPolicy",
     "LoginEvent",
     "Message",
     "MessageSource",
@@ -40,6 +42,7 @@ __all__ = [
     "Scenario",
     "ToolCall",
     "TrustedNetwork",
+    "UsageRecord",
     "User",
     "UserRole",
     "UserSession",

@@ -33,7 +33,7 @@ CLI: `python -m app.cli kb list`, `python -m app.cli kb import --kb <код> <п
 
 **Зависит от:** `files` (проверки и хранение), `ingestion`, `rag`, `rbac`, `audit`, `incidents`.
 
-**Точки расширения:** квоты по ролям (§7.8) — `TODO(stage-8)` вместе с лимитами; базы сценария — этап 5.
+**Точки расширения:** квота личной базы — политики лимитов `personal_kb_storage` и `personal_kb_documents` (по ролям, персонально, временно; §7.8, `modules/limits`); загрузка документа тратит лимит `uploads`; базы сценария — этап 5.
 
 **Данные:** `knowledge_bases`, `kb_roles`, `kb_documents`, `kb_imports`; файлы — `files.kind = kb_document`.
 

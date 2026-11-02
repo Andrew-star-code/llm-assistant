@@ -11,7 +11,8 @@
     "nothingFound": "Nothing found",
     "yes": "yes",
     "no": "no",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "sidebar": {
     "label": "Sidebar",
@@ -97,7 +98,8 @@
     "label": "User menu",
     "profile": "Profile",
     "admin": "Admin",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "limits": "Limits"
   },
   "profile": {
     "company": "Company",
@@ -144,7 +146,9 @@
       "tools": "Tools",
       "settings": "Settings",
       "roles": "Roles",
-      "security": "Security"
+      "security": "Security",
+      "limits": "Limits",
+      "data": "Data sources"
     },
     "users": {
       "search": "Search by name, login, department or title",
@@ -636,6 +640,94 @@
       "showExpired": "Show expired",
       "expired": "expired",
       "empty": "None"
+    },
+    "limits": {
+      "hint": "Effective limit: personal policy, else the highest role policy, else global, else the configuration value. A temporary policy expires on its own.",
+      "policies": "Policies",
+      "showExpired": "Show expired",
+      "target": "Applies to",
+      "key": "Limit",
+      "limit": "Value",
+      "expires": "Valid until",
+      "expiresLabel": "until",
+      "note": "Note",
+      "forever": "no end date",
+      "expired": "expired",
+      "delete": "Delete",
+      "empty": "No policies — configuration values apply.",
+      "new": "New policy",
+      "scope": "Scope",
+      "role": "Role",
+      "chooseRole": "— role —",
+      "login": "User login",
+      "metric": "Metric",
+      "window": "Window",
+      "modelRole": "Model role",
+      "anyModel": "any model",
+      "add": "Add",
+      "defaults": "Configuration values",
+      "defaultsHint": "config/app.yaml → limits.defaults; a global policy with the same key overrides them.",
+      "userNotFound": "User “{{login}}” not found",
+      "scopes": {
+        "global": "Everyone",
+        "role": "Role",
+        "user": "User"
+      },
+      "reset": "Reset counters",
+      "usage": "Usage",
+      "source": "Source",
+      "resetsAt": "Resets",
+      "sources": {
+        "config": "configuration",
+        "global": "global policy",
+        "role": "role “{{name}}”",
+        "user": "personal"
+      },
+      "until": "until {{date}}",
+      "raise": "Raise temporarily:",
+      "forDays": "for days",
+      "days": "Days",
+      "raiseButton": "Raise",
+      "raiseNote": "Temporary raise for {{days}} d."
+    },
+    "data": {
+      "hint": "Semantic layer over corporate databases: the model sees only datasets and functions from the catalog (services/data-gateway/catalog). Every query is in the journal below and in the audit log.",
+      "notConfigured": "The data gateway is not configured (data_gateway.url) — data tools are not offered to the model.",
+      "unavailable": "The data gateway does not respond — check the data-gateway service. The journal below is available.",
+      "catalogError": "Catalog error (the last valid version is in use): {{error}}",
+      "datasets": "Datasets",
+      "dataset": "Dataset",
+      "view": "View",
+      "roles": "Roles",
+      "rls": "Row filter",
+      "everyone": "everyone",
+      "except": "except {{roles}}",
+      "columns_one": "{{count}} column",
+      "columns_other": "{{count}} columns",
+      "functions": "Functions",
+      "run": "Run",
+      "resultSummary": "Rows: {{rows}} · {{ms}} ms",
+      "journal": "Query journal",
+      "search": "Search by user, dataset or SQL",
+      "time": "Time",
+      "user": "User",
+      "query": "Query",
+      "result": "Result",
+      "function": "function",
+      "sql": "SQL",
+      "chat": "chat",
+      "rows_one": "{{count}} row",
+      "rows_other": "{{count}} rows",
+      "statuses": {
+        "ok": "done",
+        "rejected": "rejected",
+        "query_failed": "failed",
+        "not_found": "no access",
+        "unavailable": "unavailable",
+        "error": "error"
+      },
+      "empty": "No data queries yet.",
+      "gatewayError": "Data gateway error: {{error}}"
     }
   },
   "failure": {
@@ -783,7 +875,12 @@
       "error": "error",
       "timeout": "timed out"
     },
-    "search_knowledge_base": "Searching knowledge bases: “{{query}}”"
+    "search_knowledge_base": "Searching knowledge bases: “{{query}}”",
+    "list_datasets": "Looking at the data catalog",
+    "describe_dataset": "Studying dataset {{name}}",
+    "call_data_function": "Requesting data: {{name}}",
+    "run_sql_query": "Running a data query",
+    "search_employees": "Searching the phone book: “{{query}}”"
   },
   "sources": {
     "open": "Open source",
@@ -795,6 +892,7 @@
     "personalTitle": "My knowledge base",
     "personalHint": "Only you can see these documents. The assistant searches them automatically and cites them in answers.",
     "quota": "{{used}} of {{max}} used · {{docs}} of {{maxDocs}} documents",
+    "unlimited": "unlimited",
     "dropHere": "Drop files here or choose them",
     "chooseFiles": "Choose files",
     "empty": "No documents yet",
@@ -815,5 +913,55 @@
     "title": "Scenarios",
     "reset": "Reset scenario",
     "attachFile": "Attach a file for this scenario"
+  },
+  "limits": {
+    "title": "Limits",
+    "hint": "Limits are set by an administrator; windows reset on the company clock.",
+    "at": "at {{time}}",
+    "onDate": "on {{date}} at {{time}}",
+    "remaining": "{{remaining}} of {{limit}} {{what}} left",
+    "resetsShort": " · resets {{when}}",
+    "exhausted": "{{window}} {{what}} limit reached",
+    "resets": ", resets {{when}}",
+    "askAdmin": "If you need more, contact your administrator.",
+    "concurrent": "At most {{limit}} answers can run at once — wait for one to finish or stop it.",
+    "thinkingSuffix": "in thinking mode",
+    "modelSuffix": "for model “{{role}}”",
+    "genitive": {
+      "messages": "messages",
+      "tokens": "tokens",
+      "uploads": "file uploads",
+      "concurrent_generations": "concurrent answers",
+      "personal_kb_storage": "MB in personal knowledge base",
+      "personal_kb_documents": "documents in personal knowledge base"
+    },
+    "windowAdj": {
+      "minute": "Per-minute",
+      "hour": "Hourly",
+      "day": "Daily",
+      "week": "Weekly",
+      "month": "Monthly",
+      "none": "Total"
+    },
+    "metric": {
+      "messages": "Messages",
+      "tokens": "Tokens",
+      "concurrent_generations": "Concurrent answers",
+      "uploads": "File uploads",
+      "personal_kb_storage": "Personal KB, MB",
+      "personal_kb_documents": "Personal KB documents"
+    },
+    "window": {
+      "minute": "per minute",
+      "hour": "per hour",
+      "day": "per day",
+      "week": "per week",
+      "month": "per month"
+    },
+    "usage": "{{used}} of {{limit}}",
+    "resetAt": "resets {{when}}",
+    "thinkingOnly": "thinking only",
+    "modelOnly": "model {{role}}",
+    "now": "now"
   }
 }

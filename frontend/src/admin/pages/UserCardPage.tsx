@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { hasPermission, useMe } from "@/features/auth/useMe";
 import { formatDateTime } from "@/lib/format";
+import { UserLimits } from "@/admin/components/UserLimits";
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -293,6 +294,8 @@ export function UserCardPage() {
           ))}
         </Table>
       </section>
+
+      {hasPermission(me, "admin.limits.manage") && <UserLimits userId={u.id} />}
 
       <section>
         <h2 className="mb-2 font-semibold">{t("admin.users.recentLogins")}</h2>

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api, unwrap, type Schemas } from "@/api/client";
 import { Avatar } from "@/components/ui/avatar";
 import { ME_QUERY_KEY } from "@/features/auth/useMe";
+import { LimitsSection } from "@/features/limits/LimitsSection";
 
 type AddressForm = Schemas["Profile"]["address_form"];
 const FORMS: AddressForm[] = ["name_patronymic", "first_name", "full_name", "formal"];
@@ -19,7 +20,7 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   );
 }
 
-/** Профиль (§6.5): данные из AD, роли, форма обращения. Лимиты и базы знаний — этапы 4 и 8. */
+/** Профиль (§6.5): данные из AD, роли, форма обращения, расход лимитов (§12.4). */
 export function ProfilePage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -120,6 +121,8 @@ export function ProfilePage() {
           <strong>{p.address ?? t("addressForm.formalPreview")}</strong>
         </p>
       </section>
+
+      <LimitsSection />
     </section>
   );
 }

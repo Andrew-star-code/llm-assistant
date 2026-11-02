@@ -1,0 +1,10 @@
+# Подключения шлюза (§9.5). У каждого источника — свой логин только на чтение с правом SELECT на
+# нужные представления; пароль — секрет ${ИМЯ} (/run/secrets/<имя> или переменная окружения).
+# TODO(question): адрес сервера и учётка MS SQL — уточнить при деплое (§21).
+sources:
+  - name: mssql_main
+    dialect: mssql
+    description: Основная корпоративная БД (MS SQL)
+    url: "mssql+pyodbc://${MSSQL_USER}:${MSSQL_PASSWORD}@${MSSQL_HOST}:1433/${MSSQL_DATABASE}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes&Encrypt=yes"
+    timeout_s: 15
+    max_rows: 1000

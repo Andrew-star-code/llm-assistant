@@ -18,6 +18,7 @@ from app.modules.files import service
 from app.modules.files.models import File
 from app.modules.files.schemas import FileLimits, FileOut
 from app.modules.files.sniff import ODF, OLE2, OOXML, TEXT_EXTENSIONS, UploadRejected
+from app.modules.limits.service import Limits
 from app.workers.dispatch import Dispatcher
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -77,13 +78,14 @@ async def upload(
 ) -> FileOut:
     """Загрузка вложения: проверки (§9.3) и разбор в воркере; статус — ``GET /api/files/{id}``."""
     settings = await app_settings.effective(db, request.app.state.settings)
-    # TODO(stage-8): лимит uploads в день (§12.1).
-    try:
-        row = await service.accept_upload(
-            db, storage, settings.files, owner_id=current.id, upload=file
-        )
-    except UploadRejected as exc:
-        raise AppError(exc.message, code=exc.code, status_code=exc.status_code) from exc
+    limits: Limits = request.app.state.limits
+    async with limits.upload(db, current.id):  # лимит загрузок в день (§12.1)
+        try:
+            row = await service.accept_upload(
+                db, storage, settings.files, owner_id=current.id, upload=file
+            )
+        except UploadRejected as exc:
+            raise AppError(exc.message, code=exc.code, status_code=exc.status_code) from exc
     dispatcher: Dispatcher = request.app.state.dispatcher
     await dispatcher.parse(str(row.id))
     await db.refresh(row)

@@ -39,7 +39,9 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
 
-CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-access-log"]
+# Открытые SSE не дают uvicorn завершиться сами: через 5 с соединения закрываются, и lifespan
+# успевает сохранить идущие ответы как «прерванные» до SIGKILL Docker (stop_grace_period).
+CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-access-log", "--timeout-graceful-shutdown", "5"]
 
 
 # ---------------------------------------------------------------- воркер файлов (§4, §9.3–9.4)

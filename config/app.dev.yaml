@@ -49,3 +49,14 @@ trusted_proxies: ["172.16.0.0/12", "192.168.0.0/16", "10.0.0.0/8"]
 
 monitoring:
   docker_url: http://docker-proxy:2375   # Docker API только на чтение: логи упавшей модели
+
+# Лимиты на дев-стенде выше прода: один прогон e2e тратит ~20 сообщений пользователя, а прогонов
+# за день бывает много. Список заменяет limits.defaults из app.yaml целиком.
+limits:
+  defaults:
+    - {metric: messages, window: day, limit: 2000}
+    - {metric: tokens, window: day, limit: 20000000}
+    - {metric: concurrent_generations, limit: 2}
+    - {metric: uploads, window: day, limit: 1000}
+    - {metric: personal_kb_storage, limit: 500}
+    - {metric: personal_kb_documents, limit: 100}

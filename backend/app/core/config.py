@@ -520,16 +520,101 @@ class RagSettings(_Section):
     )
 
 
-class PersonalQuota(_Section):
-    max_documents: int = Field(100, gt=0, description="Документов в личной базе.")
-    max_mb: int = Field(500, gt=0, description="Объём личной базы, МБ.")
-
-
 class KbSettings(_Section):
-    personal_quota: PersonalQuota = Field(default_factory=PersonalQuota)
     import_root: Path = Field(
         Path("/srv/import"),
         description="Корень папок для массового импорта; путь импорта не может выйти за него.",
+    )
+
+
+LimitMetric = Literal[
+    "messages",
+    "tokens",
+    "concurrent_generations",
+    "uploads",
+    "personal_kb_storage",
+    "personal_kb_documents",
+]
+LimitWindow = Literal["minute", "hour", "day", "week", "month"]
+# Метрики с окном (счётчик в Redis до конца окна) и с уточнением по роли модели и thinking.
+WINDOWED_METRICS: frozenset[str] = frozenset({"messages", "tokens", "uploads"})
+QUALIFIED_METRICS: frozenset[str] = frozenset({"messages", "tokens"})
+
+
+class LimitRule(_Section):
+    """Одна политика лимита (§12.2): метрика, окно, значение и необязательные уточнения."""
+
+    metric: LimitMetric
+    window: LimitWindow | None = Field(
+        None, description="Окно для messages, tokens, uploads; у остальных метрик — пусто."
+    )
+    limit: int = Field(ge=0, description="Значение; личная база — МБ или документы.")
+    model_role: str | None = Field(None, description="Только генерации этой роли модели.")
+    thinking: bool = Field(False, description="Только генерации в режиме thinking.")
+
+    @model_validator(mode="after")
+    def _check_shape(self) -> Self:
+        if (self.metric in WINDOWED_METRICS) != (self.window is not None):
+            need = "нужно окно" if self.metric in WINDOWED_METRICS else "окно не задаётся"
+            raise ValueError(f"лимит {self.metric}: {need}")
+        if self.metric not in QUALIFIED_METRICS and (self.model_role or self.thinking):
+            raise ValueError(f"лимит {self.metric}: роль модели и thinking не поддерживаются")
+        return self
+
+
+def _default_limits() -> list[LimitRule]:
+    rules: list[dict[str, Any]] = [
+        {"metric": "messages", "window": "day", "limit": 200},
+        {"metric": "tokens", "window": "day", "limit": 2_000_000},
+        {"metric": "concurrent_generations", "limit": 2},
+        {"metric": "uploads", "window": "day", "limit": 100},
+        {"metric": "personal_kb_storage", "limit": 500},
+        {"metric": "personal_kb_documents", "limit": 100},
+    ]
+    return [LimitRule.model_validate(r) for r in rules]
+
+
+class LimitsSettings(_Section):
+    enabled: bool = Field(True, description="Проверять лимиты (выключение — только для отладки).")
+    defaults: list[LimitRule] = Field(
+        default_factory=_default_limits,
+        description="Глобальные политики по умолчанию (§12.1); глобальная политика из админки с "
+        "тем же ключом (метрика, окно, роль модели, thinking) их перекрывает.",
+    )
+    slot_ttl_s: int = Field(
+        120,
+        ge=30,
+        description="Слот одновременной генерации без продления освобождается через столько "
+        "секунд (упавший процесс не держит лимит).",
+    )
+    partitions_ahead: int = Field(
+        2, ge=1, le=12, description="На сколько месяцев вперёд создавать разделы usage_records."
+    )
+
+    @model_validator(mode="after")
+    def _unique_keys(self) -> Self:
+        keys = [(r.metric, r.window, r.model_role, r.thinking) for r in self.defaults]
+        if len(keys) != len(set(keys)):
+            raise ValueError("limits.defaults: две политики с одинаковым ключом")
+        return self
+
+
+class DataGatewaySettings(_Section):
+    """Шлюз данных (§9.5): семантический слой над SQL-БД. Без ``url`` инструменты данных не
+    предлагаются модели."""
+
+    url: str | None = Field(
+        None, description="Адрес data-gateway, например http://data-gateway:8090."
+    )
+    secret: SecretStr | None = Field(
+        None, description="Общий секрет подписи идентичности пользователя (не короче 16 символов)."
+    )
+    timeout_s: float = Field(40.0, gt=0, description="Тайм-аут запроса к шлюзу, с.")
+    preview_rows: int = Field(
+        50, ge=1, le=500, description="Строк результата SQL, которые видит модель (§9.5)."
+    )
+    max_failed_attempts: int = Field(
+        3, ge=1, le=10, description="Неудачных SQL-запросов на один ответ, дальше — отказ."
     )
 
 
@@ -584,6 +669,8 @@ class Settings(BaseSettings):
     moderation: ModerationSettings = Field(default_factory=ModerationSettings)
     retention: RetentionSettings = Field(default_factory=RetentionSettings)
     monitoring: MonitoringSettings = Field(default_factory=MonitoringSettings)
+    limits: LimitsSettings = Field(default_factory=LimitsSettings)
+    data_gateway: DataGatewaySettings = Field(default_factory=DataGatewaySettings)
     models: dict[str, ModelEndpoint] = Field(
         default_factory=dict, description="Реестр моделей по ролям (config/models.yaml)."
     )
@@ -602,6 +689,12 @@ class Settings(BaseSettings):
             target = m.thinking.model_role
             if m.thinking.mode == "separate_model" and target not in self.models:
                 errors.append(f"models.{role}.thinking.model_role: роль {target!r} не описана")
+        for rule in self.limits.defaults:
+            if rule.model_role and rule.model_role not in self.models:
+                errors.append(f"limits.defaults: роль модели {rule.model_role!r} не описана")
+        gateway = self.data_gateway
+        if gateway.url and (gateway.secret is None or len(gateway.secret.get_secret_value()) < 16):
+            errors.append("data_gateway.secret: нужен секрет не короче 16 символов")
         for proxy in self.trusted_proxies:
             try:
                 ipaddress.ip_network(proxy, strict=False)

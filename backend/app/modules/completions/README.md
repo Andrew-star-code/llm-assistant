@@ -34,7 +34,7 @@
 
 **Точки расширения:** формат стрима — `docs/architecture/sse-protocol.md` → `streaming.py` →
 `frontend/src/api/sse.ts` (версия протокола, тесты обеих сторон); промпты — `config/prompts/`.
-TODO(stage-3): цикл инструментов; TODO(stage-4): RAG; TODO(stage-8): лимиты.
+Лимиты (этап 8): резерв до запроса в `router.py` (`limits.reserve_generation`, отказ — 429), слот генерации продлевается и освобождается в `generation.py`, фактические токены — `usage_records` и счётчики после ответа, событие `limits` в конце.
 
 **Данные:** пишет `messages`; Redis `gen:<id>` (живёт `chat.stream_ttl_seconds` после конца),
 `gen:alive:<id>`, `gen:cancel:<id>`.

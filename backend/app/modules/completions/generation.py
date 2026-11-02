@@ -54,6 +54,8 @@ from app.modules.completions.streaming import (
 from app.modules.files.service import chat_files
 from app.modules.incidents.errors import report_exception
 from app.modules.kb.models import KnowledgeBase
+from app.modules.limits import service as limits_service
+from app.modules.limits.service import Limits
 from app.modules.llm.registry import ModelRegistry
 from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_stream
 from app.modules.llm.tokens import TokenCounter
@@ -111,6 +113,12 @@ class GenerationResult:
     tools: list[ToolOutcome] = field(default_factory=list)
     files: list[dict[str, Any]] = field(default_factory=list)
     book: SourceBook | None = None
+    # Для учёта (§12.3): кто, какой ролью модели и в каком режиме генерировал.
+    user_id: UUID | None = None
+    chat_id: UUID | None = None
+    model_role: str | None = None
+    thinking: bool = False
+    title_usage: Usage | None = None
 
     def add_usage(self, usage: Usage) -> None:
         if self.usage is None:
@@ -179,8 +187,10 @@ class GenerationManager:
         renderer: PromptRenderer,
         storage: Storage,
         dispatcher: Dispatcher,
+        limits: Limits,
     ) -> None:
         self.settings = settings
+        self.limits = limits
         self.redis = redis
         self.sessions = sessions
         self.background: set[asyncio.Task[Any]] = set()
@@ -221,20 +231,45 @@ class GenerationManager:
                 await task
 
     async def mark_orphaned_interrupted(self) -> int:
-        """При старте: ответы в статусе streaming без живого исполнителя → interrupted."""
+        """Ответы в статусе streaming без живого исполнителя → interrupted (§8.5).
+
+        Вызывается при старте и периодически (``sweep_orphans``): процесс мог упасть или быть
+        остановлен, не успев сохранить ответ. Ключ живости продлевает только работающая
+        генерация, поэтому ответ упавшего процесса находится не позже чем через его TTL.
+        Слот одновременной генерации такого ответа сразу возвращается в лимит.
+        """
+        released: list[tuple[UUID, UUID]] = []
         async with self.sessions() as db:
-            rows = (await db.scalars(select(Message).where(Message.status == "streaming"))).all()
+            rows = (
+                await db.execute(
+                    select(Message, Chat.user_id)
+                    .join(Chat, Chat.id == Message.chat_id)
+                    .where(Message.status == "streaming")
+                )
+            ).all()
             count = 0
-            for message in rows:
+            for message, user_id in rows:
                 if message.id in self.tasks or await self.redis.exists(alive_key(message.id)):
                     continue
                 message.status = "interrupted"
                 message.error = {"code": "interrupted", "message": "Генерация прервана"}
+                released.append((user_id, message.id))
                 count += 1
             await db.commit()
+        for user_id, message_id in released:
+            await self.limits.release_slot(user_id, message_id)
         if count:
             log.warning("completions.orphans_interrupted", count=count)
         return count
+
+    async def sweep_orphans(self) -> None:
+        """Фоновая проверка «осиротевших» ответов раз в TTL ключа живости."""
+        while True:
+            await asyncio.sleep(ALIVE_TTL_SECONDS)
+            try:
+                await self.mark_orphaned_interrupted()
+            except Exception:
+                log.exception("completions.orphans_check_failed")
 
     # ------------------------------------------------------------------ генерация
 
@@ -259,9 +294,12 @@ class GenerationManager:
         task.add_done_callback(self.background.discard)
         return task
 
-    async def _keep_alive(self, message_id: UUID) -> None:
+    async def _keep_alive(self, message_id: UUID, result: GenerationResult) -> None:
         while True:
             await self.redis.set(alive_key(message_id), "1", ex=ALIVE_TTL_SECONDS)
+            # Слот одновременной генерации продлевается, пока генерация жива (§12.3).
+            if result.user_id is not None:
+                await self.limits.refresh_slot(result.user_id, message_id)
             await asyncio.sleep(ALIVE_TTL_SECONDS / 3)
 
     async def _load(
@@ -284,14 +322,15 @@ class GenerationManager:
     async def _run(self, message_id: UUID) -> None:
         started = time.monotonic()
         writer = EventWriter(self.redis, message_id, self.settings.chat.stream_ttl_seconds)
-        keepalive = asyncio.create_task(self._keep_alive(message_id))
         result = GenerationResult()
+        keepalive = asyncio.create_task(self._keep_alive(message_id, result))
         trace: dict[str, Any] = {}
         is_first_answer = False
         question = ""
         try:
             async with self.sessions() as db:
                 message, chat, user, chain = await self._load(db, message_id)
+                result.user_id, result.chat_id = user.id, chat.id
                 question = chain[-1].content if chain else ""
                 history = [
                     Turn(m.role, m.content)  # type: ignore[arg-type]
@@ -385,6 +424,7 @@ class GenerationManager:
                         permissions=permissions,
                         has_attachments=bool(attachments.files),
                         has_knowledge=has_kb and rag_mode != "off",
+                        has_data=bool(self.settings.data_gateway.url),
                     )
                     if plan.endpoint.supports_tools
                     else []
@@ -406,6 +446,10 @@ class GenerationManager:
                 guard_block = await app_settings.guard_block_categories(db)
                 message.model = plan.endpoint.model
                 message.thinking = plan.thinking
+                # Роль, которую запросил пользователь (как при резервировании), а не модель
+                # размышлений, на которую её может перенаправить реестр (§8.2).
+                result.model_role = scenario.model_role if scenario else CHAT_ROLE
+                result.thinking = plan.thinking
                 await db.commit()
 
             await writer.emit(
@@ -777,7 +821,7 @@ class GenerationManager:
             call.id = call.id or f"call_{index}"
         return "".join(text), pending
 
-    async def _generate_title(self, question: str) -> str:
+    async def _generate_title(self, question: str, result: GenerationResult) -> str:
         try:
             plan = self.registry.plan(UTILITY_ROLE, thinking=False)
             params = {**plan.params, "max_tokens": 32}
@@ -788,12 +832,56 @@ class GenerationManager:
                 ),
                 timeout=self.settings.chat.title_timeout_seconds,
             )
+            if response.usage is not None:
+                result.title_usage = Usage(
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens,
+                    reasoning_tokens=None,
+                )
             title = clean_title(response.choices[0].message.content or "")
             if title:
                 return title
         except Exception as exc:
             log.warning("completions.title_failed", error=f"{type(exc).__name__}: {exc}"[:300])
         return fallback_title(question)
+
+    def _record_usage(self, db: AsyncSession, message: Message, result: GenerationResult) -> None:
+        """Строки ``usage_records``: ответ (``chat``) и заголовок (``title``) — §12.3, §14."""
+        if result.user_id is None:
+            return
+        if result.usage is not None and result.model_role is not None:
+            limits_service.record_usage(
+                db, user_id=result.user_id, kind="chat", model_role=result.model_role,
+                thinking=result.thinking, usage=result.usage, chat_id=message.chat_id,
+                message_id=message.id,
+            )  # fmt: skip
+        if result.title_usage is not None:
+            limits_service.record_usage(
+                db, user_id=result.user_id, kind="title", model_role=UTILITY_ROLE,
+                thinking=False, usage=result.title_usage, chat_id=message.chat_id,
+                message_id=message.id,
+            )  # fmt: skip
+
+    async def _charge(self, result: GenerationResult) -> dict[str, Any] | None:
+        """Списывает токены ответа в лимиты и возвращает остатки для события ``limits``.
+
+        Заголовок и guard — служебные вызовы: пишутся в учёт, но лимит пользователя не тратят.
+        Сбой Redis не должен ломать уже сохранённый ответ — он только логируется.
+        """
+        if result.user_id is None:
+            return None
+        try:
+            if result.usage is not None and result.model_role is not None:
+                await self.limits.commit_tokens(
+                    user_id=result.user_id, model_role=result.model_role,
+                    thinking=result.thinking, usage=result.usage,
+                )  # fmt: skip
+            async with self.sessions() as db:
+                statuses = await self.limits.status(db, result.user_id)
+            return limits_service.status_payload(statuses, self.limits.tz)
+        except Exception:
+            log.exception("completions.limits_charge_failed")
+            return None
 
     async def _finish(
         self,
@@ -809,7 +897,7 @@ class GenerationManager:
         """Сохраняет ответ в БД и закрывает поток событий. Вызывается ровно один раз."""
         latency_ms = int((time.monotonic() - started) * 1000)
         usage = result.usage
-        title = await self._generate_title(title_for) if title_for else title_now
+        title = await self._generate_title(title_for, result) if title_for else title_now
         chat_id: UUID | None = None
         try:
             async with self.sessions() as db:
@@ -884,6 +972,7 @@ class GenerationManager:
                         message.prompt_tokens = usage.prompt_tokens
                         message.completion_tokens = usage.completion_tokens
                         message.reasoning_tokens = usage.reasoning_tokens
+                    self._record_usage(db, message, result)
                     values: dict[str, Any] = {"last_message_at": utcnow()}
                     if title:
                         values["title"] = title
@@ -892,8 +981,8 @@ class GenerationManager:
                     )
                     chat_id = message.chat_id
                     await db.commit()
-                    # TODO(stage-8): списание токенов в лимиты и usage_records (§12.3).
-                    # TODO(stage-7): проверка guard-моделью (§9.6).
+            # Фактические токены — в счётчики лимитов, после записи учёта (§12.3).
+            limits_payload = await self._charge(result)
             with suppress(asyncio.CancelledError):
                 if usage:
                     await writer.emit(
@@ -904,6 +993,8 @@ class GenerationManager:
                             "reasoning_tokens": usage.reasoning_tokens,
                         },
                     )
+                if limits_payload is not None:
+                    await writer.emit("limits", limits_payload)
                 if title and chat_id:
                     await writer.emit("title", {"chat_id": str(chat_id), "title": title})
                 await writer.emit(
@@ -912,6 +1003,8 @@ class GenerationManager:
                 await writer.close()
         finally:
             await self.redis.delete(alive_key(message_id), cancel_key(message_id))
+            if result.user_id is not None:
+                await self.limits.release_slot(result.user_id, message_id)
             log.info(
                 "completions.done",
                 message_id=str(message_id),

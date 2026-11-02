@@ -21,6 +21,7 @@ from uuid import UUID
 from redis.asyncio import Redis
 
 PROTOCOL_VERSION = 1
+HEARTBEAT = "event: ping\ndata: {}\n\n"
 
 EventType = Literal[
     "message.start",
@@ -134,8 +135,13 @@ async def sse_events(
     cursor = f"0-{last_event_id}"
     seq = last_event_id
 
-    async def fallback() -> list[str] | None:
-        """Потока в Redis нет или он стоит: решаем по состоянию в БД."""
+    async def fallback(drained: bool = False) -> list[str] | None:
+        """Потока в Redis нет или он стоит: решаем по состоянию в БД.
+
+        ``drained`` — поток дочитан и новых событий нет: если генерации уже нет, а ответ в БД
+        финальный (процесс упал, ответ закрыла проверка «осиротевших»), поток завершается —
+        иначе читатель слал бы ping бесконечно.
+        """
         if await redis.exists(key) and await redis.exists(alive_key(message_id)):
             return None
         status = await message_status()
@@ -149,9 +155,18 @@ async def sse_events(
                 format_sse(seq + 1, "error", error),
                 format_sse(seq + 2, "message.end", {"status": status, "finish_reason": None}),
             ]
-        if await redis.exists(key):
+        if await redis.exists(key) and not drained:
             return None  # поток ещё в Redis — дочитаем его
-        return [format_sse(seq + 1, "message.end", {"status": status, "finish_reason": None})]
+        lines = []
+        if status == "interrupted":
+            error = {"code": "interrupted", "message": "Генерация прервана", "retryable": True}
+            lines.append(format_sse(seq + 1, "error", error))
+        lines.append(
+            format_sse(
+                seq + len(lines) + 1, "message.end", {"status": status, "finish_reason": None}
+            )
+        )
+        return lines
 
     if (final := await fallback()) is not None:
         for line in final:
@@ -162,11 +177,13 @@ async def sse_events(
         # Тип ответа xread в redis-py размыт: [[key, [(id, {field: value}), …]], …].
         response: Any = await redis.xread({key: cursor}, count=200, block=heartbeat_seconds * 1000)
         if not response:
-            if (final := await fallback()) is not None:
+            if (final := await fallback(drained=True)) is not None:
                 for line in final:
                     yield line
                 return
-            yield ": ping\n\n"
+            # Heartbeat — событием без id: клиент видит, что поток жив (комментарий EventSource
+            # в JS не отдаёт), а позиция для переподключения не сдвигается.
+            yield HEARTBEAT
             continue
         for _, entries in response:
             for entry_id, raw_fields in entries:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Header, Query, Request
 from fastapi.responses import StreamingResponse
@@ -29,6 +29,7 @@ from app.modules.completions.generation import CHAT_ROLE, GenerationManager
 from app.modules.completions.streaming import sse_events
 from app.modules.files import service as files_service
 from app.modules.files.models import File
+from app.modules.limits.service import Limits, Reservation
 from app.modules.llm.registry import ModelRegistry
 from app.modules.rbac.permissions import Perm
 from app.modules.scenarios import service as scenarios
@@ -42,6 +43,30 @@ router = APIRouter(tags=["completions"])
 def _manager(request: Request) -> GenerationManager:
     manager: GenerationManager = request.app.state.generations
     return manager
+
+
+def _limits(request: Request) -> Limits:
+    limits: Limits = request.app.state.limits
+    return limits
+
+
+async def _reserve(
+    request: Request,
+    db: DbDep,
+    current: CurrentUser,
+    *,
+    scenario: Scenario | None,
+    thinking: bool,
+    message_id: UUID,
+) -> Reservation:
+    """Лимиты до запроса (§12.3): сообщения, токены, слот генерации; превышение — 429."""
+    return await _limits(request).reserve_generation(
+        db,
+        user_id=current.id,
+        model_role=scenario.model_role if scenario else CHAT_ROLE,
+        thinking=thinking,
+        message_id=message_id,
+    )
 
 
 async def _ensure_idle(db: DbDep, chat: Chat) -> None:
@@ -119,12 +144,11 @@ async def send_message(
         raise AppError("Сообщение слишком длинное", code="message_too_long", status_code=413)
     chat = await chats.get_chat(db, current.id, chat_id)
     await _ensure_idle(db, chat)
-    # Аномальный объём (§13.4): инцидент, не блокировка — лимиты появятся на этапе 8.
+    # Аномальный объём (§13.4): инцидент для разбора, независимо от лимитов (§12).
     await rules.track_message(
         request.app.state.redis, request.app.state.db_sessions,
         user_id=current.id, login=current.user.login, settings=settings,
     )  # fmt: skip
-    # TODO(stage-8): проверка и резервирование лимитов до запроса (§12.3).
 
     parent_id = body.parent_id if "parent_id" in body.model_fields_set else chat.active_leaf_id
     if parent_id is not None:
@@ -144,6 +168,32 @@ async def send_message(
                 status_code=422,
             )
     thinking = _thinking(request, body.thinking, chat, scenario)
+    assistant_id = uuid4()
+    reservation = await _reserve(
+        request, db, current, scenario=scenario, thinking=thinking, message_id=assistant_id
+    )
+    try:
+        return await _create_and_start(
+            request, db, current, chat, body, content, parent_id, thinking, assistant_id
+        )
+    except BaseException:
+        # Запрос не дошёл до генерации — сообщение и слот возвращаются в лимит.
+        await _limits(request).cancel(reservation)
+        raise
+
+
+async def _create_and_start(
+    request: Request,
+    db: DbDep,
+    current: CurrentUser,
+    chat: Chat,
+    body: SendMessageIn,
+    content: str,
+    parent_id: UUID | None,
+    thinking: bool,
+    assistant_id: UUID,
+) -> SendMessageOut:
+    settings: Settings = request.app.state.settings
     now = utcnow()
     user_message = Message(
         chat_id=chat.id,
@@ -164,6 +214,7 @@ async def send_message(
         max_files=(await app_settings.effective(db, settings)).files.max_files_per_message,
     )
     assistant = Message(
+        id=assistant_id,
         chat_id=chat.id,
         parent_id=user_message.id,
         role="assistant",
@@ -203,21 +254,32 @@ async def regenerate(
     if message.role != "assistant" or message.parent_id is None:
         raise AppError("Перегенерировать можно только ответ ассистента", code="bad_message")
     await _ensure_idle(db, chat)
-    assistant = Message(
-        chat_id=chat.id,
-        parent_id=message.parent_id,
-        role="assistant",
-        content="",
-        status="streaming",
-        thinking=_thinking(request, body.thinking, chat, await chat_scenario(db, chat, current)),
-        created_at=utcnow(),
+    scenario = await chat_scenario(db, chat, current)
+    thinking = _thinking(request, body.thinking, chat, scenario)
+    assistant_id = uuid4()
+    reservation = await _reserve(
+        request, db, current, scenario=scenario, thinking=thinking, message_id=assistant_id
     )
-    db.add(assistant)
-    await db.flush()
-    chat.active_leaf_id = assistant.id
-    chat.last_message_at = utcnow()
-    await db.commit()
-    await _manager(request).start(assistant.id)
+    try:
+        assistant = Message(
+            id=assistant_id,
+            chat_id=chat.id,
+            parent_id=message.parent_id,
+            role="assistant",
+            content="",
+            status="streaming",
+            thinking=thinking,
+            created_at=utcnow(),
+        )
+        db.add(assistant)
+        await db.flush()
+        chat.active_leaf_id = assistant.id
+        chat.last_message_at = utcnow()
+        await db.commit()
+        await _manager(request).start(assistant.id)
+    except BaseException:
+        await _limits(request).cancel(reservation)
+        raise
     return chats.message_out(assistant)
 
 

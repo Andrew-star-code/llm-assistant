@@ -207,6 +207,24 @@
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 
+## `limit_policies`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `scope` | VARCHAR(16) | not null |  |
+| `target_id` | UUID | null | index |
+| `metric` | VARCHAR(32) | not null |  |
+| `window` | VARCHAR(16) | null |  |
+| `limit` | BIGINT | not null |  |
+| `model_role` | VARCHAR(32) | null |  |
+| `thinking` | BOOLEAN | not null |  |
+| `expires_at` | TIMESTAMP WITH TIME ZONE | null |  |
+| `note` | VARCHAR(300) | null |  |
+| `created_by` | UUID | null | → users.id, index |
+| `updated_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
 ## `login_events`
 
 | Колонка | Тип | NULL | Ключи и индексы |
@@ -364,6 +382,22 @@
 | `created_by` | UUID | null | → users.id, index |
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `usage_records`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `id` | UUID | not null | PK |
+| `ts` | TIMESTAMP WITH TIME ZONE | not null | PK |
+| `user_id` | UUID | not null | → users.id |
+| `chat_id` | UUID | null |  |
+| `message_id` | UUID | null |  |
+| `model_role` | VARCHAR(32) | not null |  |
+| `kind` | VARCHAR(16) | not null |  |
+| `thinking` | BOOLEAN | not null |  |
+| `prompt_tokens` | INTEGER | not null |  |
+| `completion_tokens` | INTEGER | not null |  |
+| `reasoning_tokens` | INTEGER | null |  |
 
 ## `user_roles`
 

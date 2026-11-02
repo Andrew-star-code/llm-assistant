@@ -1,5 +1,7 @@
 import {
   Cpu,
+  Database,
+  Gauge,
   Download,
   LayoutDashboard,
   Library,
@@ -95,6 +97,18 @@ export const ADMIN_SECTIONS: Section[] = [
     label: "admin.nav.incidents",
     icon: Siren,
     permission: "admin.incidents.view",
+  },
+  {
+    to: "/admin/limits",
+    label: "admin.nav.limits",
+    icon: Gauge,
+    permission: "admin.limits.manage",
+  },
+  {
+    to: "/admin/data",
+    label: "admin.nav.data",
+    icon: Database,
+    permission: "admin.datasources.view",
   },
   { to: "/admin/models", label: "admin.nav.models", icon: Cpu, permission: "admin.models.manage" },
   { to: "/admin/tools", label: "admin.nav.tools", icon: Wrench, permission: "admin.tools.manage" },

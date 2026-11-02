@@ -50,6 +50,10 @@ def make_celery(settings: Settings) -> Celery:
         beat_schedule={
             "exports-cleanup": {"task": "exports.cleanup", "schedule": crontab(minute=7)},
             "models-health": {"task": "models.health", "schedule": crontab()},
+            "usage-partitions": {
+                "task": "limits.partitions",
+                "schedule": crontab(minute=27, hour=3),
+            },
             "retention-purge": {
                 "task": "retention.purge",
                 "schedule": crontab(minute=17, hour="1,7,13,19"),
@@ -94,6 +98,11 @@ def cleanup_exports_task() -> int:
 @celery_app.task(name="models.health")  # type: ignore[untyped-decorator]
 def models_health_task() -> int:
     return asyncio.run(export_jobs.models_health_job(get_settings()))
+
+
+@celery_app.task(name="limits.partitions")  # type: ignore[untyped-decorator]
+def usage_partitions_task() -> int:
+    return asyncio.run(export_jobs.usage_partitions_job(get_settings()))
 
 
 @celery_app.task(name="retention.purge")  # type: ignore[untyped-decorator]

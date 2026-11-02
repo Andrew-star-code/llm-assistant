@@ -10,7 +10,8 @@ services:
 
   api:
     command: ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000",
-              "--reload", "--reload-dir", "/srv/backend/app", "--reload-dir", "/srv/config", "--no-access-log"]
+              "--reload", "--reload-dir", "/srv/backend/app", "--reload-dir", "/srv/config", "--no-access-log",
+              "--timeout-graceful-shutdown", "5"]
     environment:
       APP_ENV: dev
     # Локальные переопределения APP_* (не в git), например адрес живой модели вместо fake-llm.
@@ -136,6 +137,26 @@ services:
       retries: 180
       start_period: 30s
 
+  mock-mssql:
+    # Тестовый MS SQL (§16.1): SQL Server 2022 Developer с телефонным справочником dbo.v_phonebook
+    # (deploy/mock-mssql/seed.sql) и логином dg_reader только на чтение. Нужно ~2 ГБ памяти.
+    build: ../mock-mssql
+    image: ai-assistant/mock-mssql:${APP_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      MSSQL_SA_PASSWORD: ${MOCK_MSSQL_SA_PASSWORD:-Dev-Sa-Passw0rd!}
+      MSSQL_READER_PASSWORD: ${MSSQL_PASSWORD:-Dev-Reader-Passw0rd!}
+    volumes:
+      - mock-mssql-data:/var/opt/mssql
+    ports: ["127.0.0.1:1433:1433"]
+
+  data-gateway:
+    environment:
+      DG_EMBED_URL: http://embed:80/v1      # похожие примеры «вопрос → SQL» (bge-m3 стенда)
+    ports: ["127.0.0.1:8090:8090"]
+    depends_on:
+      mock-mssql: {condition: service_healthy}
+
   docker-proxy:
     # Docker API только на чтение (§13.5): монитор моделей берёт логи контейнера упавшей модели
     # для инцидента model_health (monitoring.docker_url в config/app.dev.yaml). Разрешены только
@@ -195,6 +216,7 @@ secrets:
 
 volumes:
   embed-cache:
+  mock-mssql-data:
   mock-ad-samba:
   mock-ad-etc:
   mock-ad-export:

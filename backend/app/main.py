@@ -44,12 +44,16 @@ from app.modules.chats.router import router as chats_router
 from app.modules.completions.generation import GenerationManager
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.router import router as completions_router
+from app.modules.data.admin_router import router as admin_data_router
 from app.modules.exports.router import router as exports_router
 from app.modules.feedback.router import router as feedback_router
 from app.modules.files.router import router as files_router
 from app.modules.incidents.router import router as incidents_router
 from app.modules.kb.admin_router import router as kb_admin_router
 from app.modules.kb.router import router as kb_router
+from app.modules.limits.admin_router import router as admin_limits_router
+from app.modules.limits.router import router as limits_router
+from app.modules.limits.service import Limits
 from app.modules.llm.registry import ModelRegistry
 from app.modules.rbac.service import ensure_system_rbac
 from app.modules.scenarios.admin_router import router as scenarios_admin_router
@@ -95,6 +99,7 @@ def init_services(app: FastAPI) -> None:
         providers["dev"] = DevProvider(settings.auth.dev_users)
     app.state.models = ModelRegistry(settings)
     app.state.dispatcher = Dispatcher(settings)
+    app.state.limits = Limits(settings, redis_client)
     app.state.generations = GenerationManager(
         settings=settings,
         redis=redis_client,
@@ -103,6 +108,7 @@ def init_services(app: FastAPI) -> None:
         renderer=PromptRenderer(settings.config_dir / "prompts"),
         storage=app.state.storage,
         dispatcher=app.state.dispatcher,
+        limits=app.state.limits,
     )
     app.state.blocklist = Blocklist(ttl_s=settings.security.blocklist_cache_s, redis=redis_client)
     app.state.login_service = LoginService(
@@ -155,6 +161,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         log.exception("completions.orphans_check_failed")
 
+    # Ответы упавших или остановленных процессов не должны висеть в «streaming» (§8.5).
+    sweep_task = asyncio.create_task(app.state.generations.sweep_orphans())
     sync_task = None
     if app.state.ldap_directory is not None and settings.ldap.sync_interval_minutes > 0:
         sync_task = asyncio.create_task(
@@ -172,6 +180,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        sweep_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await sweep_task
         if sync_task is not None:
             sync_task.cancel()
             with suppress(asyncio.CancelledError):
@@ -210,6 +221,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(feedback_router)
     api.include_router(files_router)
     api.include_router(kb_router)
+    api.include_router(limits_router)
     api.include_router(kb_admin_router)
     api.include_router(incidents_router)
     api.include_router(scenarios_router)
@@ -221,6 +233,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(admin_settings_router)
     api.include_router(admin_roles_router)
     api.include_router(admin_security_router)
+    api.include_router(admin_limits_router)
+    api.include_router(admin_data_router)
     api.include_router(branding_router)
     api.include_router(exports_router)
     api.include_router(admin_router)

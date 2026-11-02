@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LogOut, Shield, UserRound } from "lucide-react";
+import { Gauge, LogOut, Shield, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
@@ -73,6 +73,17 @@ export function UserMenu({ collapsed }: { collapsed: boolean }) {
           >
             <UserRound className="size-4" />
             {t("userMenu.profile")}
+          </Link>
+          <Link
+            role="menuitem"
+            to="/profile#limits"
+            className={ITEM}
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
+            <Gauge className="size-4" />
+            {t("userMenu.limits")}
           </Link>
           {hasPermission(me, "admin.access") && (
             <Link

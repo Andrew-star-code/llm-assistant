@@ -62,12 +62,17 @@ services:
       target: api
     image: ai-assistant/api:${APP_VERSION:-dev}
     restart: unless-stopped
+    # uvicorn закрывает открытые SSE через 5 с и сохраняет идущие ответы как прерванные.
+    stop_grace_period: 20s
     environment:
       APP_ENV: ${APP_ENV:-dev}
       APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
       APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       APP_QDRANT_URL: http://qdrant:6333
       APP_QDRANT_API_KEY: ${QDRANT_API_KEY}
+      # Шлюз данных (§9.5): подписанная идентичность пользователя — общим секретом.
+      APP_DATA_GATEWAY__URL: http://data-gateway:8090
+      APP_DATA_GATEWAY__SECRET: ${DATA_GATEWAY_SECRET:-dev-data-gateway-secret}
       HF_HUB_OFFLINE: "1"
       OTEL_SDK_DISABLED: "true"
     volumes:
@@ -149,6 +154,26 @@ services:
     depends_on:
       redis: {condition: service_healthy}
       worker: {condition: service_started}
+    logging: *default-logging
+
+  data-gateway:
+    # Семантический слой над корпоративными SQL-БД (§9.5): каталог, функции, проверка SQL, RLS.
+    # Модель его не видит: обращается только api, с подписанной идентичностью пользователя.
+    # Каталог — из репозитория (services/data-gateway/catalog), перечитывается без перезапуска.
+    build:
+      context: ../..
+      dockerfile: services/data-gateway/Dockerfile
+    image: ai-assistant/data-gateway:${APP_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      DG_SECRET: ${DATA_GATEWAY_SECRET:-dev-data-gateway-secret}
+      # Подключение источника mssql_main (catalog/sources.yaml); логин — только на чтение.
+      MSSQL_HOST: ${MSSQL_HOST:-mock-mssql}
+      MSSQL_DATABASE: ${MSSQL_DATABASE:-corp}
+      MSSQL_USER: ${MSSQL_USER:-dg_reader}
+      MSSQL_PASSWORD: ${MSSQL_PASSWORD:-Dev-Reader-Passw0rd!}
+    volumes:
+      - ../../services/data-gateway/catalog:/srv/catalog:ro
     logging: *default-logging
 
   migrate:

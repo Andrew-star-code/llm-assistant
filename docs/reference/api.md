@@ -13,6 +13,9 @@
 | POST | `/api/admin/chats/{chat_id}/purge` | `adminPurgeChat` | Purge | 200, 422 |
 | POST | `/api/admin/chats/{chat_id}/restore` | `adminRestoreChat` | Restore Chat | 200, 422 |
 | GET | `/api/admin/dashboard` | `adminDashboard` | Dashboard | 200, 422 |
+| GET | `/api/admin/data/catalog` | `adminDataCatalog` | Catalog | 200 |
+| POST | `/api/admin/data/functions/{name}/test` | `adminDataTestFunction` | Test Function | 200, 422 |
+| GET | `/api/admin/data/queries` | `adminDataQueries` | Queries | 200, 422 |
 | GET | `/api/admin/exports` | `adminListExports` | List Exports | 200 |
 | POST | `/api/admin/exports` | `adminCreateExport` | Create Export | 202, 422 |
 | GET | `/api/admin/exports/{export_id}` | `adminGetExport` | Get Export | 200, 422 |
@@ -42,6 +45,10 @@
 | POST | `/api/admin/kb/{kb_id}/documents/{document_id}/reindex` | `adminReindexKbDocument` | Reindex Document | 200, 422 |
 | GET | `/api/admin/kb/{kb_id}/imports` | `adminKbImports` | List Imports | 200, 422 |
 | POST | `/api/admin/kb/{kb_id}/imports` | `adminStartImport` | Start Import | 202, 422 |
+| GET | `/api/admin/limits/policies` | `adminListLimitPolicies` | List Policies | 200, 422 |
+| POST | `/api/admin/limits/policies` | `adminCreateLimitPolicy` | Create Policy | 201, 422 |
+| PATCH | `/api/admin/limits/policies/{policy_id}` | `adminUpdateLimitPolicy` | Update Policy | 200, 422 |
+| DELETE | `/api/admin/limits/policies/{policy_id}` | `adminDeleteLimitPolicy` | Delete Policy | 204, 422 |
 | GET | `/api/admin/logins` | `adminListLogins` | List Logins | 200, 422 |
 | POST | `/api/admin/logins/{event_id}/review` | `adminReviewLogin` | Review | 200, 422 |
 | GET | `/api/admin/messages` | `adminSearchMessages` | Search Messages | 200, 422 |
@@ -76,6 +83,8 @@
 | GET | `/api/admin/users` | `adminListUsers` | List Users | 200, 422 |
 | GET | `/api/admin/users/{user_id}` | `adminGetUser` | Get User | 200, 422 |
 | POST | `/api/admin/users/{user_id}/block` | `adminBlockUser` | Block User | 200, 422 |
+| GET | `/api/admin/users/{user_id}/limits` | `adminUserLimits` | User Limits | 200, 422 |
+| POST | `/api/admin/users/{user_id}/limits/reset` | `adminResetUserLimits` | Reset Limits | 204, 422 |
 | POST | `/api/admin/users/{user_id}/logout` | `adminLogoutUser` | Logout User | 200, 422 |
 | GET | `/api/admin/users/{user_id}/photo` | `adminGetUserPhoto` | Get User Photo | 200, 404, 422 |
 | PUT | `/api/admin/users/{user_id}/roles` | `adminSetUserRoles` | Set User Roles | 200, 422 |
@@ -112,6 +121,7 @@
 | POST | `/api/kb/personal/documents` | `uploadPersonalDocument` | Upload Personal | 201, 422 |
 | DELETE | `/api/kb/personal/documents/{document_id}` | `deletePersonalDocument` | Delete Personal | 204, 422 |
 | POST | `/api/kb/personal/documents/{document_id}/reindex` | `reindexPersonalDocument` | Reindex Personal | 200, 422 |
+| GET | `/api/limits` | `getMyLimits` | My Limits | 200 |
 | PUT | `/api/messages/{message_id}/feedback` | `setFeedback` | Set Feedback | 200, 422 |
 | DELETE | `/api/messages/{message_id}/feedback` | `clearFeedback` | Clear Feedback | 204, 422 |
 | POST | `/api/messages/{message_id}/regenerate` | `regenerateMessage` | Regenerate | 202, 422 |
