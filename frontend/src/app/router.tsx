@@ -7,6 +7,7 @@ import { AdminHomePage } from "@/admin/pages/AdminHomePage";
 import { AuditPage } from "@/admin/pages/AuditPage";
 import { ChatsPage } from "@/admin/pages/ChatsPage";
 import { DashboardPage } from "@/admin/pages/DashboardPage";
+import { DataSourcesPage } from "@/admin/pages/DataSourcesPage";
 import { ExportsPage } from "@/admin/pages/ExportsPage";
 import { FeedbackPage } from "@/admin/pages/FeedbackPage";
 import { IncidentPage } from "@/admin/pages/IncidentPage";
@@ -71,6 +72,7 @@ export const routes: RouteObject[] = [
       { path: "incidents/:incidentId", element: <IncidentPage /> },
       { path: "security", element: <SecurityPage /> },
       { path: "limits", element: <LimitsPage /> },
+      { path: "data", element: <DataSourcesPage /> },
       { path: "scenarios", element: <ScenarioListPage /> },
       { path: "scenarios/:scenarioId", element: <ScenarioEditorPage /> },
       { path: "dashboard", element: <DashboardPage /> },

@@ -1586,6 +1586,63 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/data/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Catalog */
+    get: operations["adminDataCatalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/data/functions/{name}/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Test Function
+     * @description Тестовый вызов функции от имени админа (видит все функции); пишется в аудит.
+     */
+    post: operations["adminDataTestFunction"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/data/queries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Queries
+     * @description Журнал SQL-запросов и вызовов функций — из аудита (только чтение).
+     */
+    get: operations["adminDataQueries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/branding": {
     parameters: {
       query?: never;
@@ -2227,6 +2284,23 @@ export interface components {
       created: string[];
       /** Not Found */
       not_found: string[];
+    };
+    /** CatalogOut */
+    CatalogOut: {
+      /** Configured */
+      configured: boolean;
+      /** Datasets */
+      datasets?: {
+        [key: string]: unknown;
+      }[];
+      /** Functions */
+      functions?: {
+        [key: string]: unknown;
+      }[];
+      /** Catalog Error */
+      catalog_error?: string | null;
+      /** Error */
+      error?: string | null;
     };
     /** ChatCreate */
     ChatCreate: {
@@ -3441,6 +3515,13 @@ export interface components {
       /** Next Cursor */
       next_cursor?: string | null;
     };
+    /** Page[QueryLogOut] */
+    Page_QueryLogOut_: {
+      /** Items */
+      items: components["schemas"]["QueryLogOut"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
     /** Page[UserListItem] */
     Page_UserListItem_: {
       /** Items */
@@ -3670,6 +3751,37 @@ export interface components {
       ttft_avg_ms: number | null;
       /** Ttft P95 Ms */
       ttft_p95_ms: number | null;
+    };
+    /** QueryLogOut */
+    QueryLogOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Ts
+       * Format: date-time
+       */
+      ts: string;
+      /** User */
+      user: string | null;
+      /** Action */
+      action: string;
+      /** Target */
+      target: string | null;
+      /** Sql */
+      sql: string | null;
+      /** Status */
+      status: string | null;
+      /** Rows */
+      rows: number | null;
+      /** Duration Ms */
+      duration_ms: number | null;
+      /** Error */
+      error: string | null;
+      /** Chat Id */
+      chat_id: string | null;
     };
     /** Queues */
     Queues: {
@@ -4378,6 +4490,28 @@ export interface components {
       login?: string | null;
       /** Code */
       code?: string | null;
+    };
+    /** TestCallIn */
+    TestCallIn: {
+      /** Params */
+      params?: {
+        [key: string]: unknown;
+      };
+    };
+    /** TestCallOut */
+    TestCallOut: {
+      /** Columns */
+      columns: string[];
+      /** Rows */
+      rows: unknown[][];
+      /** Row Count */
+      row_count: number;
+      /** Truncated */
+      truncated: boolean;
+      /** Duration Ms */
+      duration_ms: number;
+      /** Sql */
+      sql: string;
     };
     /** TestChatOut */
     TestChatOut: {
@@ -7870,6 +8004,94 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDataCatalog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogOut"];
+        };
+      };
+    };
+  };
+  adminDataTestFunction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TestCallIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TestCallOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDataQueries: {
+    parameters: {
+      query?: {
+        q?: string | null;
+        cursor?: string | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page_QueryLogOut_"];
+        };
       };
       /** @description Validation Error */
       422: {

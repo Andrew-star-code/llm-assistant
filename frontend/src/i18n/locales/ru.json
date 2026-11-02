@@ -147,7 +147,8 @@
       "settings": "Настройки",
       "roles": "Роли",
       "security": "Безопасность",
-      "limits": "Лимиты"
+      "limits": "Лимиты",
+      "data": "Источники данных"
     },
     "users": {
       "search": "Поиск по ФИО, логину, отделу или должности",
@@ -688,6 +689,48 @@
       "days": "Дней",
       "raiseButton": "Повысить",
       "raiseNote": "Временное повышение на {{days}} дн."
+    },
+    "data": {
+      "hint": "Семантический слой над корпоративными БД: модель видит только наборы и функции из каталога (services/data-gateway/catalog). Каждый запрос — в журнале ниже и в аудите.",
+      "notConfigured": "Шлюз данных не настроен (data_gateway.url) — инструменты данных модели не предлагаются.",
+      "unavailable": "Шлюз данных недоступен: {{error}}",
+      "catalogError": "Ошибка в каталоге (действует последняя корректная версия): {{error}}",
+      "datasets": "Наборы данных",
+      "dataset": "Набор",
+      "view": "Представление",
+      "roles": "Роли",
+      "rls": "Ограничение строк",
+      "everyone": "всем",
+      "except": "кроме {{roles}}",
+      "columns_one": "{{count}} колонка",
+      "columns_few": "{{count}} колонки",
+      "columns_many": "{{count}} колонок",
+      "columns_other": "{{count}} колонки",
+      "functions": "Функции",
+      "run": "Выполнить",
+      "resultSummary": "Строк: {{rows}} · {{ms}} мс",
+      "journal": "Журнал запросов",
+      "search": "Поиск по пользователю, набору или SQL",
+      "time": "Время",
+      "user": "Пользователь",
+      "query": "Запрос",
+      "result": "Результат",
+      "function": "функция",
+      "sql": "SQL",
+      "chat": "чат",
+      "rows_one": "{{count}} строка",
+      "rows_few": "{{count}} строки",
+      "rows_many": "{{count}} строк",
+      "rows_other": "{{count}} строки",
+      "statuses": {
+        "ok": "выполнен",
+        "rejected": "отклонён",
+        "query_failed": "ошибка",
+        "not_found": "нет доступа",
+        "unavailable": "недоступен",
+        "error": "ошибка"
+      },
+      "empty": "Запросов к данным ещё не было."
     }
   },
   "failure": {
@@ -835,7 +878,12 @@
       "error": "ошибка",
       "timeout": "не успел"
     },
-    "search_knowledge_base": "Ищу в базах знаний: «{{query}}»"
+    "search_knowledge_base": "Ищу в базах знаний: «{{query}}»",
+    "list_datasets": "Смотрю каталог данных",
+    "describe_dataset": "Изучаю набор данных {{name}}",
+    "call_data_function": "Запрашиваю данные: {{name}}",
+    "run_sql_query": "Выполняю запрос к данным",
+    "search_employees": "Ищу в справочнике: «{{query}}»"
   },
   "sources": {
     "open": "Открыть источник",

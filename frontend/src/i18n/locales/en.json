@@ -147,7 +147,8 @@
       "settings": "Settings",
       "roles": "Roles",
       "security": "Security",
-      "limits": "Limits"
+      "limits": "Limits",
+      "data": "Data sources"
     },
     "users": {
       "search": "Search by name, login, department or title",
@@ -688,6 +689,44 @@
       "days": "Days",
       "raiseButton": "Raise",
       "raiseNote": "Temporary raise for {{days}} d."
+    },
+    "data": {
+      "hint": "Semantic layer over corporate databases: the model sees only datasets and functions from the catalog (services/data-gateway/catalog). Every query is in the journal below and in the audit log.",
+      "notConfigured": "The data gateway is not configured (data_gateway.url) — data tools are not offered to the model.",
+      "unavailable": "The data gateway is unavailable: {{error}}",
+      "catalogError": "Catalog error (the last valid version is in use): {{error}}",
+      "datasets": "Datasets",
+      "dataset": "Dataset",
+      "view": "View",
+      "roles": "Roles",
+      "rls": "Row filter",
+      "everyone": "everyone",
+      "except": "except {{roles}}",
+      "columns_one": "{{count}} column",
+      "columns_other": "{{count}} columns",
+      "functions": "Functions",
+      "run": "Run",
+      "resultSummary": "Rows: {{rows}} · {{ms}} ms",
+      "journal": "Query journal",
+      "search": "Search by user, dataset or SQL",
+      "time": "Time",
+      "user": "User",
+      "query": "Query",
+      "result": "Result",
+      "function": "function",
+      "sql": "SQL",
+      "chat": "chat",
+      "rows_one": "{{count}} row",
+      "rows_other": "{{count}} rows",
+      "statuses": {
+        "ok": "done",
+        "rejected": "rejected",
+        "query_failed": "failed",
+        "not_found": "no access",
+        "unavailable": "unavailable",
+        "error": "error"
+      },
+      "empty": "No data queries yet."
     }
   },
   "failure": {
@@ -835,7 +874,12 @@
       "error": "error",
       "timeout": "timed out"
     },
-    "search_knowledge_base": "Searching knowledge bases: “{{query}}”"
+    "search_knowledge_base": "Searching knowledge bases: “{{query}}”",
+    "list_datasets": "Looking at the data catalog",
+    "describe_dataset": "Studying dataset {{name}}",
+    "call_data_function": "Requesting data: {{name}}",
+    "run_sql_query": "Running a data query",
+    "search_employees": "Searching the phone book: “{{query}}”"
   },
   "sources": {
     "open": "Open source",
