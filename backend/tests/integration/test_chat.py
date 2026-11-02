@@ -66,6 +66,30 @@ async def test_message_stream_personalization_and_title(
         assert row.trace["model"] == "fake-chat" and row.trace["history_turns_used"] == 0
 
 
+async def test_heartbeat_is_a_ping_event_without_id(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Heartbeat — событие ``ping`` без ``id`` (§8.5): клиент видит, что поток жив, а позиция
+    переподключения не сдвигается. Генерации нет — читатель ждёт и получает ping."""
+    app, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    chat_id = await new_chat(client)
+    async with app.state.db_sessions() as db:
+        chat = await db.get(Chat, chat_id)
+        assert chat is not None
+        waiting = Message(chat_id=chat.id, role="assistant", status="streaming")
+        db.add(waiting)
+        await db.commit()
+        message_id = str(waiting.id)
+    from app.modules.completions.streaming import alive_key
+
+    await app.state.redis.set(alive_key(waiting.id), "1", ex=3)  # «генерация ещё жива» 3 с
+    response = await client.get(f"/api/messages/{message_id}/stream", timeout=30)
+    blocks = [b for b in response.text.split("\n\n") if b.strip()]
+    pings = [b for b in blocks if b.startswith("event: ping")]
+    assert pings and all("id:" not in b for b in pings)
+    assert blocks[-1].startswith("id: ") and "event: message.end" in blocks[-1]
+
+
 async def test_reconnect_with_last_event_id(
     make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
 ) -> None:

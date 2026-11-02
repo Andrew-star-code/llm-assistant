@@ -362,6 +362,8 @@ def parse_sse(text: str) -> list[SseEvent]:
                 continue
             key, value = line.split(": ", 1)
             fields[key] = value
+        if fields.get("event") == "ping":
+            continue  # heartbeat — без id, позицию потока не сдвигает
         if "event" in fields:
             events.append(SseEvent(int(fields["id"]), fields["event"], json.loads(fields["data"])))
     return events
