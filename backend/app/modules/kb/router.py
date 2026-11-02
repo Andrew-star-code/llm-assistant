@@ -42,7 +42,7 @@ async def personal(request: Request, db: DbDep, current: CurrentUserDep) -> Pers
     return PersonalKbOut(
         id=kb.id,
         name=kb.name,
-        quota=await service.quota(db, kb.id, settings),
+        quota=await service.quota(db, kb, settings),
         documents=[service.document_out(d, f) for d, f in rows],
     )
 

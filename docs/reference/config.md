@@ -124,8 +124,6 @@
 | `rag.chunking.min_tokens` | int | 400 | `APP_RAG__CHUNKING__MIN_TOKENS` | Мельче — склеивается с соседом раздела. |
 | `rag.chunking.overlap` | float | 0.12 | `APP_RAG__CHUNKING__OVERLAP` | Перекрытие соседних чанков, доля. |
 | `rag.context_share` | float | 0.25 | `APP_RAG__CONTEXT_SHARE` | Доля бюджета контекста под фрагменты RAG. |
-| `kb.personal_quota.max_documents` | int | 100 | `APP_KB__PERSONAL_QUOTA__MAX_DOCUMENTS` | Документов в личной базе. |
-| `kb.personal_quota.max_mb` | int | 500 | `APP_KB__PERSONAL_QUOTA__MAX_MB` | Объём личной базы, МБ. |
 | `kb.import_root` | Path | `/srv/import` | `APP_KB__IMPORT_ROOT` | Корень папок для массового импорта; путь импорта не может выйти за него. |
 | `exports.ttl_days` | int | 7 | `APP_EXPORTS__TTL_DAYS` | Сколько дней хранится файл выгрузки. |
 | `exports.max_messages` | int | 100000 | `APP_EXPORTS__MAX_MESSAGES` | Предел сообщений в одной выгрузке (больше — сузьте фильтр). |
@@ -146,6 +144,10 @@
 | `monitoring.model_health_failures` | int | 2 | `APP_MONITORING__MODEL_HEALTH_FAILURES` | Сколько проверок модели подряд должно упасть до инцидента. |
 | `monitoring.model_health_timeout_s` | float | 5.0 | `APP_MONITORING__MODEL_HEALTH_TIMEOUT_S` | Тайм-аут проверки модели, с. |
 | `monitoring.docker_url` | str \| null | null | `APP_MONITORING__DOCKER_URL` | Docker API только на чтение (unix:///var/run/docker.sock или http://docker-proxy:2375): логи контейнера модели в инциденте; пусто — без логов. |
+| `limits.enabled` | bool | true | `APP_LIMITS__ENABLED` | Проверять лимиты (выключение — только для отладки). |
+| `limits.defaults` | list[LimitRule] | [LimitRule(metric='messages', window='day', limit=200, model_role=None, thinking=False), LimitRule(metric='tokens', window='day', limit=2000000, model_role=None, thinking=False), LimitRule(metric='concurrent_generations', window=None, limit=2, model_role=None, thinking=False), LimitRule(metric='uploads', window='day', limit=100, model_role=None, thinking=False), LimitRule(metric='personal_kb_storage', window=None, limit=500, model_role=None, thinking=False), LimitRule(metric='personal_kb_documents', window=None, limit=100, model_role=None, thinking=False)] | `APP_LIMITS__DEFAULTS` | Глобальные политики по умолчанию (§12.1); глобальная политика из админки с тем же ключом (метрика, окно, роль модели, thinking) их перекрывает. |
+| `limits.slot_ttl_s` | int | 120 | `APP_LIMITS__SLOT_TTL_S` | Слот одновременной генерации без продления освобождается через столько секунд (упавший процесс не держит лимит). |
+| `limits.partitions_ahead` | int | 2 | `APP_LIMITS__PARTITIONS_AHEAD` | На сколько месяцев вперёд создавать разделы usage_records. |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`

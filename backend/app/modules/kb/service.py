@@ -28,6 +28,7 @@ from app.modules.kb.models import (
     KnowledgeBase,
 )
 from app.modules.kb.schemas import DocumentOut, ImportOut, QuotaOut, StatusCounts
+from app.modules.limits import service as limits
 from app.modules.rag.service import accessible_bases
 from app.modules.rag.store import KB_COLLECTION, PERSONAL_COLLECTION, delete_document, qdrant_client
 
@@ -91,7 +92,7 @@ async def documents(
     return [(d, f) for d, f in rows.all()]
 
 
-async def quota(db: AsyncSession, kb_id: UUID, settings: Settings) -> QuotaOut:
+async def _usage(db: AsyncSession, kb_id: UUID) -> tuple[int, int]:
     count, size = (
         await db.execute(
             select(func.count(KbDocument.id), func.coalesce(func.sum(File.size), 0))
@@ -99,12 +100,28 @@ async def quota(db: AsyncSession, kb_id: UUID, settings: Settings) -> QuotaOut:
             .where(KbDocument.kb_id == kb_id, KbDocument.deleted_at.is_(None))
         )
     ).one()
-    q = settings.kb.personal_quota
+    return int(count), int(size)
+
+
+async def personal_usage(db: AsyncSession, user_id: UUID) -> tuple[int, int]:
+    """(документов, байт) в личной базе пользователя; базы ещё нет — (0, 0)."""
+    kb_id = await db.scalar(
+        select(KnowledgeBase.id).where(KnowledgeBase.code == f"personal:{user_id}")
+    )
+    return await _usage(db, kb_id) if kb_id else (0, 0)
+
+
+async def quota(db: AsyncSession, kb: KnowledgeBase, settings: Settings) -> QuotaOut:
+    """Квота личной базы — из политик лимитов (§7.8, §12): по ролям, персонально, временно."""
+    count, size = await _usage(db, kb.id)
+    max_documents, max_mb = (
+        await limits.kb_quota(db, settings, kb.owner_id) if kb.owner_id else (0, 0)
+    )
     return QuotaOut(
-        max_documents=q.max_documents,
-        max_bytes=q.max_mb * 1024 * 1024,
-        used_documents=int(count),
-        used_bytes=int(size),
+        max_documents=max_documents,
+        max_bytes=max_mb * 1024 * 1024,
+        used_documents=count,
+        used_bytes=size,
     )
 
 
@@ -118,7 +135,7 @@ async def add_document(
     upload: UploadFile,
 ) -> tuple[KbDocument, File]:
     """Проверки §9.3, дедупликация по SHA-256 внутри базы, квота личной базы; статус «в очереди»."""
-    used = await quota(db, kb.id, settings) if kb.level == LEVEL_PERSONAL else None
+    used = await quota(db, kb, settings) if kb.level == LEVEL_PERSONAL else None
     if used is not None and used.used_documents >= used.max_documents:
         raise AppError(
             f"В личной базе уже {used.max_documents} документов — удалите ненужные",

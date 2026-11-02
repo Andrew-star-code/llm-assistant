@@ -222,3 +222,15 @@ async def models_health_job(settings: Settings) -> int:
     finally:
         await redis.aclose()
     return sum(1 for h in results if not h.ok)
+
+
+async def usage_partitions_job(settings: Settings) -> int:
+    """Разделы ``usage_records`` на месяцы вперёд; возвращает число созданных."""
+    from app.modules.limits.partitions import ensure_partitions
+
+    async with worker_context(settings) as ctx, ctx.sessions() as db:
+        created = await ensure_partitions(db, settings, utcnow())
+        await db.commit()
+    if created:
+        log.info("limits.partitions_created", partitions=created)
+    return len(created)
