@@ -112,6 +112,9 @@ async def test_incident_lifecycle_comments_and_permissions(
     assert (await admin.get("/api/admin/incidents", params={"status": "open"})).json()[
         "items"
     ] == []
+    # Дашборд считает открытыми те же статусы, что список и меню (дефект проверки этапа 7).
+    board = (await admin.get("/api/admin/dashboard")).json()
+    assert board["incidents"] == {"open": 0, "high": 0}
 
     assert (await petrov.get(url)).status_code == 403
     assert (await petrov.request("PATCH", url, json={"status": "resolved"})).status_code == 403

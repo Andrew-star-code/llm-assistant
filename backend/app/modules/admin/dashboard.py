@@ -27,6 +27,7 @@ from app.modules.auth.deps import CurrentUser, require
 from app.modules.chats.models import Chat, Message
 from app.modules.feedback.models import Feedback
 from app.modules.files.models import File
+from app.modules.incidents import service as incidents
 from app.modules.incidents.models import Incident
 from app.modules.kb.models import KbDocument, KbImport
 from app.modules.llm.health import check_all
@@ -260,7 +261,7 @@ async def _queues(db: AsyncSession) -> Queues:
 
 
 async def _incidents(db: AsyncSession) -> Incidents:
-    open_ = Incident.status != "resolved"
+    open_ = Incident.status.in_(incidents.OPEN)  # как в списке и счётчике меню
     total, high = (
         await db.execute(
             select(
