@@ -32,7 +32,7 @@
 | `sources` | `items`: **полный** текущий список карточек — `index` (номер для `[n]`), `kind` (`kb` / `attachment`), `title`, `kb_name`, `document_id`, `file_id`, `page`, `section`, `snippet`, `score`; клиент заменяет список, а не дописывает | после авто-поиска RAG и после каждого инструмента, нашедшего фрагменты |
 | `file` | `file_id`, `name`, `mime`, `size`, `preview` (есть PDF-превью) | создан файл (после `tool.end` его инструмента) |
 | `usage` | `prompt_tokens`, `completion_tokens`, `reasoning_tokens` | в конце |
-| `limits` | остатки по метрикам пользователя | в конце |
+| `limits` | `timezone`, `items` (метрика, окно, роль модели, thinking, `limit`, `used`, `remaining`, `reset_at`), `nearest` — ближайшая к исчерпанию, `blocked` — исчерпан лимит на все сообщения; то же, что `GET /api/limits` | в конце, после `usage` |
 | `title` | `chat_id`, `title` | сгенерирован заголовок |
 | `error` | `code`, `message`, `retryable` | ошибка |
 | `message.end` | `status` (`completed`, `stopped`, `error`, `interrupted`), `finish_reason` (`stop`, `length`, `max_iterations` — модель не уложилась в `tools.max_iterations`, …) | конец |

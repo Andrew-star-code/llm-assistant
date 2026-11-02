@@ -9,7 +9,7 @@
 | [add-model.md](add-model.md) — новая модель в реестре, режимы thinking | 2 ✅ |
 | [add-tool.md](add-tool.md) — новый инструмент для модели | 3 ✅ |
 | [add-scenario.md](add-scenario.md) — корпоративный сценарий | 5 ✅ |
-| `add-limit-metric.md` — метрика лимитов | 8 |
+| [add-limit-metric.md](add-limit-metric.md) — новая метрика лимитов | 8 ✅ |
 | `dev-coding-setup.md` — подключение IDE разработчиков к `coder` | 10 |
 | `deploy.md`, `offline-bundle.md` — выкатка и офлайн-бандл | 10 |
 

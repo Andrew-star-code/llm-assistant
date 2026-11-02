@@ -184,7 +184,7 @@ async def test_exceeded_limit_gives_429_with_reset_at(
             ).all()
     finally:
         await engine.dispose()
-    by_kind = dict(rows)
+    by_kind: dict[str, int] = {kind: int(total) for kind, total in rows}
     assert set(by_kind) == {"chat", "title"}
     assert tokens["used"] == by_kind["chat"] > 0  # заголовок лимит пользователя не тратит
 

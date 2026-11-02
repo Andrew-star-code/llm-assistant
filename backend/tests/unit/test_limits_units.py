@@ -117,7 +117,8 @@ def test_exceeded_message_is_human_and_carries_reset_at() -> None:
         "Недельный лимит токенов в режиме размышлений исчерпан, обновится 09.11 в 00:00"
     )
     slots = exceeded(Key("concurrent_generations"), 2, 2, now, TZ)
-    assert "не больше 2 ответов" in slots.message and slots.details["reset_at"] is None
+    assert "не больше 2 ответов" in slots.message
+    assert slots.details is not None and slots.details["reset_at"] is None
 
 
 def test_usage_partitions_cover_current_and_next_months() -> None:

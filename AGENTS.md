@@ -79,7 +79,7 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 | Изменить системный промпт | `config/prompts/system/` | прогон `eval/scenarios` |
 | Добавить поле профиля из AD | маппинг атрибутов в конфиге + `modules/users/` + миграция + `features/profile/` | `docs/guides/ad-setup.md` |
 | Добавить страницу админки | `frontend/src/admin/pages/` + `backend/app/modules/admin/` | новое право в `docs/reference/permissions.md` |
-| Добавить метрику лимитов | `backend/app/modules/limits/` | админка «Лимиты», `docs/reference/config.md` |
+| Добавить метрику лимитов | `core/config.py::LimitMetric` + `modules/limits/` + место проверки | `docs/guides/add-limit-metric.md`, админка «Лимиты», i18n, `make docs-config` |
 | Добавить тип инцидента | `backend/app/modules/incidents/` | фильтры в админке |
 | Добавить набор данных или функцию SQL | `services/data-gateway/catalog/` | описания полей и примеры запросов |
 | Изменить формат стрима | `docs/architecture/sse-protocol.md` → `modules/completions/streaming.py` → `frontend/src/api/sse.ts` | версия протокола, тесты обеих сторон |
@@ -207,6 +207,13 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 - **IP клиента на дев-стенде** приходит через прокси Vite (`xfwd`) в `X-Forwarded-For`, которому
   api верит из частных сетей Docker (`trusted_proxies` в `config/app.dev.yaml`); в проде доверять
   только адресу nginx. Заблокировали свой адрес — `python -m app.cli ip unblock <IP>`.
+- **Лимиты — до запроса и по факту**: любой новый путь к генерации для пользователя резервирует
+  `limits.reserve_generation` до создания ответа и возвращает резерв `limits.cancel`, если запрос
+  сорвался; слот и списание токенов делает `GenerationManager`. Счётчики пишите только через
+  `counters.spread` (все окна сразу), а не прямым INCR. Нет политики — метрика без ограничения;
+  список `limits.defaults` в оверлее заменяет базовый целиком.
+- **`usage_records` секционирована по месяцам**: ключ — `(id, ts)`; разделы вперёд создаёт задача
+  `limits.partitions`, без раздела строки идут в `usage_records_default`.
 - **Скрытый `report_incident`** всегда в наборе инструментов (сценарий его не убирает), а его
   инструкция — отдельный шаблон `system/moderation.md.j2`, не заменяемый промптом из админки.
 - **Номера цитат** выдаёт `SourceBook` (общая на ответ); не нумеруйте фрагменты в инструментах
