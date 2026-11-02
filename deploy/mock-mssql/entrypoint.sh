@@ -10,7 +10,12 @@ for _ in $(seq 1 90); do
   fi
   sleep 2
 done
-"$sqlcmd" -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -b -i /seed/seed.sql \
-  -v READER_PASSWORD="$MSSQL_READER_PASSWORD"
+# После перезапуска master отвечает раньше, чем восстановлена corp (Msg 904) — seed повторяем.
+for attempt in $(seq 1 30); do
+  "$sqlcmd" -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -b -i /seed/seed.sql \
+    -v READER_PASSWORD="$MSSQL_READER_PASSWORD" && break
+  [ "$attempt" -lt 30 ] || exit 1
+  sleep 2
+done
 touch /tmp/seeded
 wait "$server"
