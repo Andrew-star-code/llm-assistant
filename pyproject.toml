@@ -9,16 +9,18 @@ requires-python = ">=3.12,<3.13"
 package = false
 
 [tool.uv.workspace]
-members = ["backend", "services/fake-llm"]
+members = ["backend", "services/fake-llm", "services/data-gateway"]
 
 [tool.uv.sources]
 ai-assistant-api = { workspace = true }
 fake-llm = { workspace = true }
+data-gateway = { workspace = true }
 
 [dependency-groups]
 dev = [
     "ai-assistant-api",
     "fake-llm",
+    "data-gateway",
     "ruff",
     "mypy",
     "pytest",
@@ -55,7 +57,7 @@ known-first-party = ["app", "fake_llm"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
-mypy_path = ["backend", "services/fake-llm/src"]
+mypy_path = ["backend", "services/fake-llm/src", "services/data-gateway/src"]
 explicit_package_bases = true
 exclude = ["backend/migrations/"]
 
@@ -67,7 +69,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["backend/tests", "services/fake-llm/tests"]
+testpaths = ["backend/tests", "services/fake-llm/tests", "services/data-gateway/tests"]
 addopts = "--import-mode=importlib"
 filterwarnings = [
     # ldap3 2.9.1 импортирует устаревшие имена pyasn1; версия pyasn1 закреплена в uv.lock.

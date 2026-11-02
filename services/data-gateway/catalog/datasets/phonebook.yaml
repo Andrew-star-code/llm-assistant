@@ -1,0 +1,29 @@
+# Телефонный справочник (§9.5). TODO(question): имя и колонки представления — уточнить у владельцев
+# БД при деплое (§21); здесь — структура тестового представления дев-стенда (deploy/mock-mssql).
+name: phonebook
+title: Телефонный справочник
+description: >-
+  Сотрудники компании: ФИО, должность, отдел, телефоны, электронная почта и офис. Одна строка —
+  один сотрудник.
+source: mssql_main
+view: dbo.v_phonebook
+columns:
+  - {name: full_name, type: string, description: "ФИО полностью", synonyms: [сотрудник, ФИО], examples: ["Петров Сергей Алексеевич"], pii: true}
+  - {name: position, type: string, description: Должность, synonyms: [должность], examples: [Бухгалтер]}
+  - {name: department, type: string, description: Отдел, synonyms: [подразделение, отдел], examples: [Бухгалтерия, ИТ-отдел]}
+  - {name: phone, type: string, description: Городской телефон, examples: ["+7 (495) 100-20-02"], pii: true}
+  - {name: internal_phone, type: string, description: Внутренний номер, synonyms: [добавочный], examples: ["2002"]}
+  - {name: email, type: string, description: Электронная почта, pii: true}
+  - {name: office, type: string, description: Офис и кабинет, examples: ["Москва, офис 1, каб. 214"]}
+metrics:
+  - "Число сотрудников отдела: COUNT(*) с группировкой по department"
+roles: []
+examples:
+  - question: Телефон Петрова из бухгалтерии
+    sql: "SELECT TOP 5 full_name, phone, internal_phone FROM dbo.v_phonebook WHERE full_name LIKE N'Петров%' AND department = N'Бухгалтерия'"
+  - question: Сколько сотрудников в каждом отделе
+    sql: "SELECT department, COUNT(*) AS employees FROM dbo.v_phonebook GROUP BY department ORDER BY employees DESC"
+  - question: Кто работает в ИТ-отделе
+    sql: "SELECT full_name, position, internal_phone FROM dbo.v_phonebook WHERE department = N'ИТ-отдел' ORDER BY full_name"
+  - question: Почта руководителя юридического отдела
+    sql: "SELECT TOP 5 full_name, position, email FROM dbo.v_phonebook WHERE department = N'Юридический отдел' AND position LIKE N'%Руководитель%'"

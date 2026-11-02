@@ -1,0 +1,19 @@
+# Поиск сотрудников (§9.5, «Кадровый бот»). Строки склеиваются CONCAT (а не «+»): так запрос
+# одинаково переводится в диалект любого источника.
+name: search_employees
+description: >-
+  Найти сотрудников по ФИО (или его части), телефону или должности, при необходимости — в одном
+  отделе. Возвращает ФИО, должность, отдел, телефоны, почту и офис.
+source: mssql_main
+roles: []                 # всем
+params:
+  query: {type: string, min_length: 2, max_length: 100, description: "ФИО или его часть, телефон, должность"}
+  department: {type: string, required: false, max_length: 100, description: "Отдел, например «Бухгалтерия»"}
+  limit: {type: integer, required: false, default: 20, min: 1, max: 50, description: "Сколько строк вернуть"}
+sql: |
+  SELECT TOP (:limit) full_name, position, department, phone, internal_phone, email, office
+  FROM dbo.v_phonebook
+  WHERE (full_name LIKE CONCAT('%', :query, '%') OR phone LIKE CONCAT('%', :query, '%')
+         OR position LIKE CONCAT('%', :query, '%'))
+    AND (:department IS NULL OR department = :department)
+  ORDER BY full_name
