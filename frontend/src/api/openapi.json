@@ -1601,6 +1601,28 @@
         }
       }
     },
+    "/api/limits": {
+      "get": {
+        "tags": [
+          "limits"
+        ],
+        "summary": "My Limits",
+        "description": "То же, что событие SSE ``limits`` в конце ответа (§8.5).",
+        "operationId": "getMyLimits",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/kb/search-settings": {
       "get": {
         "tags": [
@@ -4826,6 +4848,304 @@
         }
       }
     },
+    "/api/admin/limits/policies": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Policies",
+        "operationId": "adminListLimitPolicies",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "global",
+                    "role",
+                    "user"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "name": "target_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "name": "include_expired",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Expired"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoliciesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Policy",
+        "operationId": "adminCreateLimitPolicy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/limits/policies/{policy_id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Policy",
+        "operationId": "adminUpdateLimitPolicy",
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Policy",
+        "operationId": "adminDeleteLimitPolicy",
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/limits": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "User Limits",
+        "description": "Эффективные лимиты пользователя, расход и откуда взялся каждый лимит.",
+        "operationId": "adminUserLimits",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLimitsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{user_id}/limits/reset": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reset Limits",
+        "description": "Сброс счётчиков пользователя (всех или одной метрики) — расход с нуля до конца окна.",
+        "operationId": "adminResetUserLimits",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/branding": {
       "get": {
         "tags": [
@@ -7559,6 +7879,53 @@
         ],
         "title": "DayPoint"
       },
+      "DefaultOut": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "model_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Role"
+          },
+          "thinking": {
+            "type": "boolean",
+            "title": "Thinking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "window",
+          "limit",
+          "model_role",
+          "thinking"
+        ],
+        "title": "DefaultOut"
+      },
       "DevUserOut": {
         "properties": {
           "login": {
@@ -7905,6 +8272,125 @@
           "indexed_at"
         ],
         "title": "DocumentOut"
+      },
+      "EffectiveOut": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          },
+          "model_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Role"
+          },
+          "thinking": {
+            "type": "boolean",
+            "title": "Thinking"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "used": {
+            "type": "integer",
+            "title": "Used"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          },
+          "reset_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset At"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "config",
+              "global",
+              "role",
+              "user"
+            ],
+            "title": "Source"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "policy_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "window",
+          "model_role",
+          "thinking",
+          "limit",
+          "used",
+          "remaining",
+          "reset_at",
+          "source",
+          "source_name",
+          "policy_id",
+          "expires_at"
+        ],
+        "title": "EffectiveOut"
       },
       "ExportIn": {
         "properties": {
@@ -9306,6 +9792,113 @@
         "type": "object",
         "title": "KbUpdate"
       },
+      "LimitItem": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          },
+          "model_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Role"
+          },
+          "thinking": {
+            "type": "boolean",
+            "title": "Thinking"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "used": {
+            "type": "integer",
+            "title": "Used"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          },
+          "reset_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "window",
+          "model_role",
+          "thinking",
+          "limit",
+          "used",
+          "remaining",
+          "reset_at"
+        ],
+        "title": "LimitItem"
+      },
+      "LimitsOut": {
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LimitItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "nearest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NearestLimit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timezone",
+          "items",
+          "nearest",
+          "blocked"
+        ],
+        "title": "LimitsOut"
+      },
       "LoginEventOut": {
         "properties": {
           "id": {
@@ -10024,6 +10617,59 @@
         ],
         "title": "NamedRef"
       },
+      "NearestLimit": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "used": {
+            "type": "integer",
+            "title": "Used"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          },
+          "reset_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "window",
+          "limit",
+          "used",
+          "remaining",
+          "reset_at"
+        ],
+        "title": "NearestLimit"
+      },
       "Notice": {
         "properties": {
           "required": {
@@ -10339,6 +10985,311 @@
           "documents"
         ],
         "title": "PersonalKbOut"
+      },
+      "PoliciesOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "defaults": {
+            "items": {
+              "$ref": "#/components/schemas/DefaultOut"
+            },
+            "type": "array",
+            "title": "Defaults"
+          },
+          "model_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Model Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "defaults",
+          "model_roles"
+        ],
+        "title": "PoliciesOut"
+      },
+      "PolicyIn": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "global",
+              "role",
+              "user"
+            ],
+            "title": "Scope"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "messages",
+              "tokens",
+              "concurrent_generations",
+              "uploads",
+              "personal_kb_storage",
+              "personal_kb_documents"
+            ],
+            "title": "Metric"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "minute",
+                  "hour",
+                  "day",
+                  "week",
+                  "month"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 1000000000000.0,
+            "minimum": 0.0,
+            "title": "Limit"
+          },
+          "model_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Role"
+          },
+          "thinking": {
+            "type": "boolean",
+            "title": "Thinking",
+            "default": false
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "metric",
+          "limit"
+        ],
+        "title": "PolicyIn"
+      },
+      "PolicyOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "global",
+              "role",
+              "user"
+            ],
+            "title": "Scope"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Target"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "model_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Role"
+          },
+          "thinking": {
+            "type": "boolean",
+            "title": "Thinking"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scope",
+          "target",
+          "metric",
+          "window",
+          "limit",
+          "model_role",
+          "thinking",
+          "expires_at",
+          "active",
+          "note",
+          "created_at",
+          "created_by"
+        ],
+        "title": "PolicyOut"
+      },
+      "PolicyPatch": {
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "title": "PolicyPatch"
       },
       "Profile": {
         "properties": {
@@ -10767,11 +11718,25 @@
       "QuotaOut": {
         "properties": {
           "max_documents": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Max Documents"
           },
           "max_bytes": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Max Bytes"
           },
           "used_documents": {
@@ -10852,6 +11817,32 @@
           "user_ids"
         ],
         "title": "RemoveIn"
+      },
+      "ResetIn": {
+        "properties": {
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "messages",
+                  "tokens",
+                  "concurrent_generations",
+                  "uploads",
+                  "personal_kb_storage",
+                  "personal_kb_documents"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric",
+            "description": "Пусто — все счётчики пользователя."
+          }
+        },
+        "type": "object",
+        "title": "ResetIn"
       },
       "RevokedOut": {
         "properties": {
@@ -12423,6 +13414,47 @@
         ],
         "title": "Summary"
       },
+      "Target": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "login": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Target"
+      },
       "TestChatOut": {
         "properties": {
           "chat_id": {
@@ -12898,6 +13930,27 @@
           "recent_logins"
         ],
         "title": "UserCard"
+      },
+      "UserLimitsOut": {
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EffectiveOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timezone",
+          "items"
+        ],
+        "title": "UserLimitsOut"
       },
       "UserListItem": {
         "properties": {

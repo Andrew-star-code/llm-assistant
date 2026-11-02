@@ -35,6 +35,7 @@ class NearestLimit(BaseModel):
 
 
 class LimitsOut(BaseModel):
+    timezone: str  # пояс компании: «обновится в 00:00» — по её часам
     items: list[LimitItem]
     nearest: NearestLimit | None
     blocked: bool  # исчерпан лимит, действующий на все сообщения: поле ввода блокируется
@@ -44,4 +45,5 @@ class LimitsOut(BaseModel):
 async def my_limits(request: Request, db: DbDep, current: CurrentUserDep) -> LimitsOut:
     """То же, что событие SSE ``limits`` в конце ответа (§8.5)."""
     limits: Limits = request.app.state.limits
-    return LimitsOut.model_validate(status_payload(await limits.status(db, current.id)))
+    statuses = await limits.status(db, current.id)
+    return LimitsOut.model_validate(status_payload(statuses, limits.tz))

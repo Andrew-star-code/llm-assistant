@@ -9,6 +9,7 @@ import { useMe } from "@/features/auth/useMe";
 import { greetingKey } from "@/features/home/greeting";
 import { useScenarios, useSelectedScenario } from "@/features/scenarios/api";
 import { ScenarioCards } from "@/features/scenarios/ScenarioCards";
+import { errorText } from "@/features/limits/api";
 
 const EXAMPLES = [
   "home.examples.letter",
@@ -92,7 +93,7 @@ export function HomePage() {
       />
       {send.isError && (
         <p role="alert" className="text-sm text-red-600">
-          {send.error.message}
+          {errorText(t, send.error)}
         </p>
       )}
       <ScenarioCards scenarios={scenarios.data ?? []} selectedId={selectedId} onSelect={select} />

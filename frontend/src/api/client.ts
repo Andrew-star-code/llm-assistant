@@ -75,13 +75,15 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    /** Подробности ошибки, например `{metric, limit, used, reset_at}` у 429 (§12.3). */
+    readonly details: Record<string, unknown> | null = null,
   ) {
     super(message);
   }
 }
 
 interface ErrorBody {
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: Record<string, unknown> | null };
 }
 
 export function toApiError(response: Response, body: unknown): ApiError {
@@ -90,6 +92,7 @@ export function toApiError(response: Response, body: unknown): ApiError {
     response.status,
     error?.code ?? "unknown",
     error?.message ?? response.statusText,
+    error?.details ?? null,
   );
 }
 

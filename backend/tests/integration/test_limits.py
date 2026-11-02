@@ -274,14 +274,14 @@ async def test_personal_policy_overrides_role_and_temporary_expires(
         "/api/admin/limits/policies", json=policy(scope="role", target_id=role_id, limit=3)
     )
     assert role.status_code == 201 and role.json()["target"]["code"] == "dept:Бухгалтерия"
-    row = _effective((await admin.get(url)).json(), "messages")
+    row = _effective((await admin.get(url)).json()["items"], "messages")
     assert (row["limit"], row["source"], row["source_name"]) == (3, "role", "Отдел: Бухгалтерия")
 
     personal = await admin.post(
         "/api/admin/limits/policies", json=policy(scope="user", target_id=user_id, limit=1)
     )
     assert personal.status_code == 201
-    row = _effective((await admin.get(url)).json(), "messages")
+    row = _effective((await admin.get(url)).json()["items"], "messages")
     assert (row["limit"], row["source"]) == (1, "user")  # персональная ниже ролевой — действует
     chat_id = await new_chat(petrov)
     sent = await send(petrov, chat_id, "Один")
@@ -297,12 +297,12 @@ async def test_personal_policy_overrides_role_and_temporary_expires(
         json=policy(scope="user", target_id=user_id, limit=10, expires_at=expires.isoformat()),
     )
     assert temporary.status_code == 201
-    row = _effective((await admin.get(url)).json(), "messages")
+    row = _effective((await admin.get(url)).json()["items"], "messages")
     assert (row["limit"], row["source"], row["expires_at"] is not None) == (10, "user", True)
     sent = await send(petrov, chat_id, "Два")
     await read_stream(petrov, sent["assistant_message"]["id"])
     await asyncio.sleep(max(0.0, (expires - datetime.now(UTC)).total_seconds()) + 0.3)
-    row = _effective((await admin.get(url)).json(), "messages")
+    row = _effective((await admin.get(url)).json()["items"], "messages")
     assert (row["limit"], row["source"], row["used"]) == (3, "role", 2)  # без действий админа
     listed = (await admin.get("/api/admin/limits/policies")).json()
     assert [p["scope"] for p in listed["items"]] == ["role"]  # истёкшая не в списке
@@ -313,7 +313,7 @@ async def test_personal_policy_overrides_role_and_temporary_expires(
 
     # Сброс счётчиков и аудит.
     assert (await admin.post(f"{url}/reset", json={"metric": "messages"})).status_code == 204
-    assert _effective((await admin.get(url)).json(), "messages")["used"] == 0
+    assert _effective((await admin.get(url)).json()["items"], "messages")["used"] == 0
     audit = (await admin.get("/api/admin/audit", params={"q": "limits"})).json()["items"]
     actions = {a["action"] for a in audit}
     assert {"limits.policy.create", "limits.policy.delete", "limits.reset"} <= actions

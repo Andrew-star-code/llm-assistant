@@ -59,7 +59,8 @@ export function PersonalKbPage() {
   });
 
   const quota = kb.data?.quota;
-  const percent = quota ? Math.min(100, (quota.used_bytes / quota.max_bytes) * 100) : 0;
+  // Без политики лимита квоты нет (null) — полоса пустая, подпись «без ограничения».
+  const percent = quota?.max_bytes ? Math.min(100, (quota.used_bytes / quota.max_bytes) * 100) : 0;
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-8">
       <div>
@@ -74,9 +75,9 @@ export function PersonalKbPage() {
           <span className="text-xs text-muted-foreground">
             {t("kb.quota", {
               used: formatBytes(quota.used_bytes),
-              max: formatBytes(quota.max_bytes),
+              max: quota.max_bytes === null ? t("kb.unlimited") : formatBytes(quota.max_bytes),
               docs: quota.used_documents,
-              maxDocs: quota.max_documents,
+              maxDocs: quota.max_documents ?? t("kb.unlimited"),
             })}
           </span>
         </div>

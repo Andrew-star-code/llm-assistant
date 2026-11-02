@@ -1,3 +1,4 @@
+import type { Schemas } from "@/api/client";
 /**
  * SSE-клиент потока ответа (docs/architecture/sse-protocol.md, версия 1).
  *
@@ -54,6 +55,8 @@ export interface StreamHandlers {
     reasoning_tokens: number | null;
   }) => void;
   onTitle?: (data: { chat_id: string; title: string }) => void;
+  /** Остатки по лимитам после ответа (§8.5) — то же, что `GET /api/limits`. */
+  onLimits?: (data: Schemas["LimitsOut"]) => void;
   onError?: (data: { code: string; message: string; retryable: boolean }) => void;
   onEnd?: (data: { status: string; finish_reason: string | null }) => void;
   /** Поток не открылся совсем (нет прав, сообщение не найдено, сессия истекла). */
@@ -105,6 +108,9 @@ export function subscribeMessageStream(messageId: string, handlers: StreamHandle
   });
   on("usage", (d: Parameters<NonNullable<StreamHandlers["onUsage"]>>[0]) => {
     handlers.onUsage?.(d);
+  });
+  on("limits", (d: Schemas["LimitsOut"]) => {
+    handlers.onLimits?.(d);
   });
   on("title", (d: { chat_id: string; title: string }) => {
     handlers.onTitle?.(d);

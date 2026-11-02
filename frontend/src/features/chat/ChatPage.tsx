@@ -16,6 +16,7 @@ import { activeBranch, latestLeaf, siblings, type Message } from "@/features/cha
 import { Composer } from "@/features/composer/Composer";
 import { MessageItem, type MessageActions } from "@/features/message/MessageItem";
 import { useScenarios } from "@/features/scenarios/api";
+import { errorText } from "@/features/limits/api";
 
 /** Страница чата (§7.1–7.4): лента активной ветки и поле ввода. */
 export function ChatPage() {
@@ -198,7 +199,7 @@ export function ChatView({
         />
         {send.isError && (
           <p role="alert" className="mt-2 text-sm text-red-600">
-            {send.error.message}
+            {errorText(t, send.error)}
           </p>
         )}
       </div>

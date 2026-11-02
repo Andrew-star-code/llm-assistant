@@ -127,6 +127,7 @@ def exceeded(key: Key, limit: int, used: int, now: datetime, tz: str) -> LimitEx
             "limit": limit,
             "used": used,
             "reset_at": reset_at.isoformat() if reset_at else None,
+            "timezone": tz,  # время сброса показывается по часам компании (§12.1)
         },
     )
 
@@ -370,10 +371,11 @@ def record_usage(
     )
 
 
-def status_payload(statuses: list[MetricStatus]) -> dict[str, Any]:
+def status_payload(statuses: list[MetricStatus], tz: str) -> dict[str, Any]:
     """Остатки для SSE-события ``limits`` и ``GET /api/limits``."""
     near = nearest(statuses)
     return {
+        "timezone": tz,
         "items": [
             {
                 "metric": s.key.metric,

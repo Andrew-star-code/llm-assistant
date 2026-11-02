@@ -646,6 +646,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/limits": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My Limits
+     * @description То же, что событие SSE ``limits`` в конце ответа (§8.5).
+     */
+    get: operations["getMyLimits"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/kb/search-settings": {
     parameters: {
       query?: never;
@@ -1484,6 +1504,82 @@ export interface paths {
      * @description Отметить событие входа проверенным (флаги риска разобраны).
      */
     post: operations["adminReviewLogin"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/limits/policies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Policies */
+    get: operations["adminListLimitPolicies"];
+    put?: never;
+    /** Create Policy */
+    post: operations["adminCreateLimitPolicy"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/limits/policies/{policy_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Policy */
+    delete: operations["adminDeleteLimitPolicy"];
+    options?: never;
+    head?: never;
+    /** Update Policy */
+    patch: operations["adminUpdateLimitPolicy"];
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/limits": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * User Limits
+     * @description Эффективные лимиты пользователя, расход и откуда взялся каждый лимит.
+     */
+    get: operations["adminUserLimits"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/limits/reset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reset Limits
+     * @description Сброс счётчиков пользователя (всех или одной метрики) — расход с нуля до конца окна.
+     */
+    post: operations["adminResetUserLimits"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2373,6 +2469,19 @@ export interface components {
       /** Ttft P95 Ms */
       ttft_p95_ms: number | null;
     };
+    /** DefaultOut */
+    DefaultOut: {
+      /** Metric */
+      metric: string;
+      /** Window */
+      window: string | null;
+      /** Limit */
+      limit: number;
+      /** Model Role */
+      model_role: string | null;
+      /** Thinking */
+      thinking: boolean;
+    };
     /** DevUserOut */
     DevUserOut: {
       /** Login */
@@ -2477,6 +2586,36 @@ export interface components {
       created_at: string;
       /** Indexed At */
       indexed_at: string | null;
+    };
+    /** EffectiveOut */
+    EffectiveOut: {
+      /** Metric */
+      metric: string;
+      /** Window */
+      window: string | null;
+      /** Model Role */
+      model_role: string | null;
+      /** Thinking */
+      thinking: boolean;
+      /** Limit */
+      limit: number;
+      /** Used */
+      used: number;
+      /** Remaining */
+      remaining: number;
+      /** Reset At */
+      reset_at: string | null;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "config" | "global" | "role" | "user";
+      /** Source Name */
+      source_name: string | null;
+      /** Policy Id */
+      policy_id: string | null;
+      /** Expires At */
+      expires_at: string | null;
     };
     /** ExportIn */
     ExportIn: {
@@ -2960,6 +3099,35 @@ export interface components {
       /** Role Ids */
       role_ids?: string[] | null;
     };
+    /** LimitItem */
+    LimitItem: {
+      /** Metric */
+      metric: string;
+      /** Window */
+      window: string | null;
+      /** Model Role */
+      model_role: string | null;
+      /** Thinking */
+      thinking: boolean;
+      /** Limit */
+      limit: number;
+      /** Used */
+      used: number;
+      /** Remaining */
+      remaining: number;
+      /** Reset At */
+      reset_at: string | null;
+    };
+    /** LimitsOut */
+    LimitsOut: {
+      /** Timezone */
+      timezone: string;
+      /** Items */
+      items: components["schemas"]["LimitItem"][];
+      nearest: components["schemas"]["NearestLimit"] | null;
+      /** Blocked */
+      blocked: boolean;
+    };
     /** LoginEventOut */
     LoginEventOut: {
       /**
@@ -3195,6 +3363,21 @@ export interface components {
       /** Name */
       name: string;
     };
+    /** NearestLimit */
+    NearestLimit: {
+      /** Metric */
+      metric: string;
+      /** Window */
+      window: string | null;
+      /** Limit */
+      limit: number;
+      /** Used */
+      used: number;
+      /** Remaining */
+      remaining: number;
+      /** Reset At */
+      reset_at: string | null;
+    };
     /** Notice */
     Notice: {
       /** Required */
@@ -3289,6 +3472,97 @@ export interface components {
       quota: components["schemas"]["QuotaOut"];
       /** Documents */
       documents: components["schemas"]["DocumentOut"][];
+    };
+    /** PoliciesOut */
+    PoliciesOut: {
+      /** Items */
+      items: components["schemas"]["PolicyOut"][];
+      /** Defaults */
+      defaults: components["schemas"]["DefaultOut"][];
+      /** Model Roles */
+      model_roles: string[];
+    };
+    /** PolicyIn */
+    PolicyIn: {
+      /**
+       * Scope
+       * @enum {string}
+       */
+      scope: "global" | "role" | "user";
+      /** Target Id */
+      target_id?: string | null;
+      /**
+       * Metric
+       * @enum {string}
+       */
+      metric:
+        | "messages"
+        | "tokens"
+        | "concurrent_generations"
+        | "uploads"
+        | "personal_kb_storage"
+        | "personal_kb_documents";
+      /** Window */
+      window?: ("minute" | "hour" | "day" | "week" | "month") | null;
+      /** Limit */
+      limit: number;
+      /** Model Role */
+      model_role?: string | null;
+      /**
+       * Thinking
+       * @default false
+       */
+      thinking: boolean;
+      /** Expires At */
+      expires_at?: string | null;
+      /** Note */
+      note?: string | null;
+    };
+    /** PolicyOut */
+    PolicyOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Scope
+       * @enum {string}
+       */
+      scope: "global" | "role" | "user";
+      target: components["schemas"]["Target"] | null;
+      /** Metric */
+      metric: string;
+      /** Window */
+      window: string | null;
+      /** Limit */
+      limit: number;
+      /** Model Role */
+      model_role: string | null;
+      /** Thinking */
+      thinking: boolean;
+      /** Expires At */
+      expires_at: string | null;
+      /** Active */
+      active: boolean;
+      /** Note */
+      note: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Created By */
+      created_by: string | null;
+    };
+    /** PolicyPatch */
+    PolicyPatch: {
+      /** Limit */
+      limit?: number | null;
+      /** Expires At */
+      expires_at?: string | null;
+      /** Note */
+      note?: string | null;
     };
     /** Profile */
     Profile: {
@@ -3413,9 +3687,9 @@ export interface components {
     /** QuotaOut */
     QuotaOut: {
       /** Max Documents */
-      max_documents: number;
+      max_documents: number | null;
       /** Max Bytes */
-      max_bytes: number;
+      max_bytes: number | null;
       /** Used Documents */
       used_documents: number;
       /** Used Bytes */
@@ -3442,6 +3716,23 @@ export interface components {
     RemoveIn: {
       /** User Ids */
       user_ids: string[];
+    };
+    /** ResetIn */
+    ResetIn: {
+      /**
+       * Metric
+       * @description Пусто — все счётчики пользователя.
+       */
+      metric?:
+        | (
+            | "messages"
+            | "tokens"
+            | "concurrent_generations"
+            | "uploads"
+            | "personal_kb_storage"
+            | "personal_kb_documents"
+          )
+        | null;
     };
     /** RevokedOut */
     RevokedOut: {
@@ -4074,6 +4365,20 @@ export interface components {
       /** Open */
       open: number;
     };
+    /** Target */
+    Target: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Login */
+      login?: string | null;
+      /** Code */
+      code?: string | null;
+    };
     /** TestChatOut */
     TestChatOut: {
       /**
@@ -4226,6 +4531,13 @@ export interface components {
       sessions: components["schemas"]["SessionOut"][];
       /** Recent Logins */
       recent_logins: components["schemas"]["LoginEventOut"][];
+    };
+    /** UserLimitsOut */
+    UserLimitsOut: {
+      /** Timezone */
+      timezone: string;
+      /** Items */
+      items: components["schemas"]["EffectiveOut"][];
     };
     /** UserListItem */
     UserListItem: {
@@ -5519,6 +5831,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  getMyLimits: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LimitsOut"];
         };
       };
     };
@@ -7344,6 +7676,200 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["LoginEventOut"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListLimitPolicies: {
+    parameters: {
+      query?: {
+        scope?: ("global" | "role" | "user") | null;
+        target_id?: string | null;
+        include_expired?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PoliciesOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminCreateLimitPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PolicyIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PolicyOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminDeleteLimitPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        policy_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUpdateLimitPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        policy_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PolicyPatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PolicyOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUserLimits: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserLimitsOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminResetUserLimits: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResetIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Validation Error */
       422: {

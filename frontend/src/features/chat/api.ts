@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 
 import { api, unwrap, type Schemas } from "@/api/client";
 import type { Message } from "@/features/chat/tree";
+import { LIMITS_QUERY_KEY } from "@/features/limits/api";
 
 export type ChatDetail = Schemas["ChatDetail"];
 export type ChatListItem = Schemas["ChatListItem"];
@@ -103,6 +104,8 @@ export function useSendMessage() {
       return { chatId, ...result };
     },
     onSuccess: () => invalidateChatLists(queryClient),
+    // Сообщение списано из лимита (или упёрлось в него) — индикатор в поле ввода обновляется.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: LIMITS_QUERY_KEY }),
   });
 }
 
@@ -119,6 +122,7 @@ export function useRegenerate(chatId: string) {
     onSuccess: (message) => {
       upsertMessages(queryClient, chatId, [message], message.id);
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: LIMITS_QUERY_KEY }),
   });
 }
 

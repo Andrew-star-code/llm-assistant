@@ -15,6 +15,7 @@ import { KbBasePage } from "@/admin/pages/KbBasePage";
 import { KbListPage } from "@/admin/pages/KbListPage";
 import { ScenarioEditorPage } from "@/admin/pages/ScenarioEditorPage";
 import { ScenarioListPage } from "@/admin/pages/ScenarioListPage";
+import { LimitsPage } from "@/admin/pages/LimitsPage";
 import { LoginsPage } from "@/admin/pages/LoginsPage";
 import { ModelsPage } from "@/admin/pages/ModelsPage";
 import { RolePage } from "@/admin/pages/RolePage";
@@ -69,6 +70,7 @@ export const routes: RouteObject[] = [
       { path: "incidents", element: <IncidentsPage /> },
       { path: "incidents/:incidentId", element: <IncidentPage /> },
       { path: "security", element: <SecurityPage /> },
+      { path: "limits", element: <LimitsPage /> },
       { path: "scenarios", element: <ScenarioListPage /> },
       { path: "scenarios/:scenarioId", element: <ScenarioEditorPage /> },
       { path: "dashboard", element: <DashboardPage /> },

@@ -22,6 +22,8 @@ import { AttachmentChip } from "@/features/composer/AttachmentChip";
 import { useDrafts } from "@/features/composer/drafts";
 import { ScenarioBadge } from "@/features/scenarios/ScenarioBadge";
 import { useFileLimits } from "@/features/files/api";
+import { blockingItem, useMyLimits } from "@/features/limits/api";
+import { LimitNote } from "@/features/limits/LimitNote";
 import { cn } from "@/lib/utils";
 
 export interface ComposerProps {
@@ -66,6 +68,9 @@ export function Composer({
   const attachments = useAttachmentList(draftKey);
   const { ids, pending } = attachmentSummary(attachments);
   const clearAttachments = useAttachments((s) => s.clear);
+  const myLimits = useMyLimits();
+  // Лимит, действующий на все сообщения, исчерпан — поле закрыто до сброса (§12.4).
+  const blocked = blockingItem(myLimits.data) !== null;
 
   const rejectText = (reason: RejectReason) =>
     t(`composer.attachments.${reason}`, {
@@ -90,7 +95,7 @@ export function Composer({
   const needsFile = Boolean(attachmentRequired) && ids.length === 0;
   const submit = () => {
     const value = text.trim();
-    if (!value || busy || sending || pending || needsFile) return;
+    if (!value || busy || sending || pending || needsFile || blocked) return;
     onSend(value, ids);
     setDraft(draftKey, "");
     clearAttachments(draftKey);
@@ -172,6 +177,7 @@ export function Composer({
         }}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
+        disabled={blocked}
         className="max-h-60 w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
       />
       <div className="flex items-center justify-between gap-2 px-1">
@@ -239,7 +245,7 @@ export function Composer({
           <Button
             size="icon"
             onClick={submit}
-            disabled={!text.trim() || sending || pending || needsFile}
+            disabled={!text.trim() || sending || pending || needsFile || blocked}
             aria-label={t("composer.send")}
             title={
               pending
@@ -254,6 +260,7 @@ export function Composer({
           </Button>
         )}
       </div>
+      <LimitNote limits={myLimits.data} />
     </div>
   );
 }

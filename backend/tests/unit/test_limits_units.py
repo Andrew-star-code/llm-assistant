@@ -110,6 +110,7 @@ def test_exceeded_message_is_human_and_carries_reset_at() -> None:
         "limit": 200,
         "used": 200,
         "reset_at": "2026-11-03T00:00:00+03:00",
+        "timezone": TZ,
     }
     weekly = exceeded(Key("tokens", "week", thinking=True), 10, 12, now, TZ)
     assert weekly.message.startswith(

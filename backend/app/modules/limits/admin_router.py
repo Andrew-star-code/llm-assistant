@@ -103,6 +103,11 @@ class EffectiveOut(BaseModel):
     expires_at: datetime | None
 
 
+class UserLimitsOut(BaseModel):
+    timezone: str  # пояс компании: время сброса — по её часам
+    items: list[EffectiveOut]
+
+
 class ResetIn(BaseModel):
     metric: LimitMetric | None = Field(None, description="Пусто — все счётчики пользователя.")
 
@@ -327,10 +332,10 @@ async def delete_policy(policy_id: UUID, request: Request, db: DbDep, actor: Man
 
 @router.get(
     "/users/{user_id}/limits",
-    response_model=list[EffectiveOut],
+    response_model=UserLimitsOut,
     operation_id="adminUserLimits",
 )
-async def user_limits(user_id: UUID, request: Request, db: DbDep, _: Manager) -> list[EffectiveOut]:
+async def user_limits(user_id: UUID, request: Request, db: DbDep, _: Manager) -> UserLimitsOut:
     """Эффективные лимиты пользователя, расход и откуда взялся каждый лимит."""
     if await db.get(User, user_id) is None:
         raise NotFoundError("Пользователь не найден")
@@ -341,7 +346,7 @@ async def user_limits(user_id: UUID, request: Request, db: DbDep, _: Manager) ->
         if role_ids
         else {}
     )
-    return [
+    items = [
         EffectiveOut(
             metric=s.key.metric,
             window=s.key.window,
@@ -358,6 +363,7 @@ async def user_limits(user_id: UUID, request: Request, db: DbDep, _: Manager) ->
         )
         for s in statuses
     ]
+    return UserLimitsOut(timezone=_limits(request).tz, items=items)
 
 
 @router.post("/users/{user_id}/limits/reset", status_code=204, operation_id="adminResetUserLimits")

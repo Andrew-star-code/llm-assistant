@@ -4,6 +4,7 @@ import { create } from "zustand";
 
 import { subscribeMessageStream, type FileEvent, type SourceCard } from "@/api/sse";
 import { chatKeys, invalidateChatLists, type ChatDetail } from "@/features/chat/api";
+import { LIMITS_QUERY_KEY } from "@/features/limits/api";
 import type { Message } from "@/features/chat/tree";
 
 /** Шаг инструмента в ленте ответа (§7.4): живой из SSE или из истории (`MessageOut.tools`). */
@@ -127,6 +128,9 @@ export function useMessageStream(message: Message): void {
       },
       onError: (error) => {
         update(id, () => ({ error }));
+      },
+      onLimits: (limits) => {
+        queryClient.setQueryData(LIMITS_QUERY_KEY, limits);
       },
       onTitle: ({ title }) => {
         queryClient.setQueryData<ChatDetail>(chatKeys.detail(chatId), (chat) =>

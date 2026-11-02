@@ -852,7 +852,7 @@ class GenerationManager:
                 )  # fmt: skip
             async with self.sessions() as db:
                 statuses = await self.limits.status(db, result.user_id)
-            return limits_service.status_payload(statuses)
+            return limits_service.status_payload(statuses, self.limits.tz)
         except Exception:
             log.exception("completions.limits_charge_failed")
             return None
