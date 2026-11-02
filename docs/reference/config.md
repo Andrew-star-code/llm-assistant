@@ -148,6 +148,11 @@
 | `limits.defaults` | list[LimitRule] | [LimitRule(metric='messages', window='day', limit=200, model_role=None, thinking=False), LimitRule(metric='tokens', window='day', limit=2000000, model_role=None, thinking=False), LimitRule(metric='concurrent_generations', window=None, limit=2, model_role=None, thinking=False), LimitRule(metric='uploads', window='day', limit=100, model_role=None, thinking=False), LimitRule(metric='personal_kb_storage', window=None, limit=500, model_role=None, thinking=False), LimitRule(metric='personal_kb_documents', window=None, limit=100, model_role=None, thinking=False)] | `APP_LIMITS__DEFAULTS` | Глобальные политики по умолчанию (§12.1); глобальная политика из админки с тем же ключом (метрика, окно, роль модели, thinking) их перекрывает. |
 | `limits.slot_ttl_s` | int | 120 | `APP_LIMITS__SLOT_TTL_S` | Слот одновременной генерации без продления освобождается через столько секунд (упавший процесс не держит лимит). |
 | `limits.partitions_ahead` | int | 2 | `APP_LIMITS__PARTITIONS_AHEAD` | На сколько месяцев вперёд создавать разделы usage_records. |
+| `data_gateway.url` | str \| null | null | `APP_DATA_GATEWAY__URL` | Адрес data-gateway, например http://data-gateway:8090. |
+| `data_gateway.secret` | secret \| null | — | `APP_DATA_GATEWAY__SECRET` | Общий секрет подписи идентичности пользователя (не короче 16 символов). |
+| `data_gateway.timeout_s` | float | 40.0 | `APP_DATA_GATEWAY__TIMEOUT_S` | Тайм-аут запроса к шлюзу, с. |
+| `data_gateway.preview_rows` | int | 50 | `APP_DATA_GATEWAY__PREVIEW_ROWS` | Строк результата SQL, которые видит модель (§9.5). |
+| `data_gateway.max_failed_attempts` | int | 3 | `APP_DATA_GATEWAY__MAX_FAILED_ATTEMPTS` | Неудачных SQL-запросов на один ответ, дальше — отказ. |
 | `models` | dict[str, ModelEndpoint] | {} | `APP_MODELS` | Реестр моделей по ролям (config/models.yaml). |
 
 ## Модель в реестре `models.<роль>`

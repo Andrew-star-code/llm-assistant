@@ -1,3 +1,9 @@
 """Встроенные инструменты (§9.2). Импорт модулей регистрирует их в реестре."""
 
-from app.modules.tools.builtin import documents, generation, knowledge, moderation  # noqa: F401
+from app.modules.tools.builtin import (  # noqa: F401
+    data,
+    documents,
+    generation,
+    knowledge,
+    moderation,
+)

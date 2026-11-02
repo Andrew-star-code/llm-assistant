@@ -44,6 +44,7 @@ from app.modules.chats.router import router as chats_router
 from app.modules.completions.generation import GenerationManager
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.router import router as completions_router
+from app.modules.data.admin_router import router as admin_data_router
 from app.modules.exports.router import router as exports_router
 from app.modules.feedback.router import router as feedback_router
 from app.modules.files.router import router as files_router
@@ -228,6 +229,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(admin_roles_router)
     api.include_router(admin_security_router)
     api.include_router(admin_limits_router)
+    api.include_router(admin_data_router)
     api.include_router(branding_router)
     api.include_router(exports_router)
     api.include_router(admin_router)

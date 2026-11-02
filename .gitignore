@@ -26,9 +26,9 @@ deploy/compose/secrets/
 *.pem
 *.key
 
-# Данные локального стенда
-data/
-storage/
+# Данные локального стенда (в корне репозитория; модуль backend/app/modules/data — код)
+/data/
+/storage/
 
 # Редакторы и ОС
 .idea/

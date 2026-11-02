@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
 from data_gateway.app import GatewaySettings, create_app
 from data_gateway.identity import Identity, sign
+from data_gateway.testing import make_catalog
 from fastapi.testclient import TestClient
 
 SECRET = "test-secret-0123456789"
@@ -23,12 +23,9 @@ SALARIES: dict[str, Any] = {
 }  # fmt: skip
 
 
-MakeCatalog = Callable[..., Path]
-
-
 @pytest.fixture
-def client(tmp_path: Path, catalog_factory: MakeCatalog) -> TestClient:
-    settings = GatewaySettings(catalog_dir=catalog_factory(tmp_path), secret=SECRET)
+def client(tmp_path: Path) -> TestClient:
+    settings = GatewaySettings(catalog_dir=make_catalog(tmp_path), secret=SECRET)
     return TestClient(create_app(settings))
 
 
@@ -104,9 +101,9 @@ def test_query_rejects_changes_and_applies_limit(client: TestClient) -> None:
         assert broken.status_code in (200, 422)  # SQLite делит на ноль без ошибки
 
 
-def test_rls_filters_rows_by_department(tmp_path: Path, catalog_factory: MakeCatalog) -> None:
+def test_rls_filters_rows_by_department(tmp_path: Path) -> None:
     settings = GatewaySettings(
-        catalog_dir=catalog_factory(tmp_path, extra_datasets=[SALARIES]), secret=SECRET
+        catalog_dir=make_catalog(tmp_path, extra_datasets=[SALARIES]), secret=SECRET
     )
     with TestClient(create_app(settings)) as client:
         sql = {"sql": "SELECT full_name, department FROM dbo.v_dept_staff ORDER BY full_name"}
@@ -124,12 +121,10 @@ def test_rls_filters_rows_by_department(tmp_path: Path, catalog_factory: MakeCat
         assert len(client.post("/v1/query", json=sql, headers=_headers(hr)).json()["rows"]) == 6
 
 
-def test_catalog_by_roles_describe_and_admin_view(
-    tmp_path: Path, catalog_factory: MakeCatalog
-) -> None:
+def test_catalog_by_roles_describe_and_admin_view(tmp_path: Path) -> None:
     restricted = {**SALARIES, "name": "hr_only", "view": "hr.v_x", "roles": ["hr"], "rls": []}
     settings = GatewaySettings(
-        catalog_dir=catalog_factory(tmp_path, extra_datasets=[restricted]), secret=SECRET
+        catalog_dir=make_catalog(tmp_path, extra_datasets=[restricted]), secret=SECRET
     )
     with TestClient(create_app(settings)) as client:
         names = {

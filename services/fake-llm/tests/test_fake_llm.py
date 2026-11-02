@@ -323,3 +323,53 @@ async def test_moderation_reports_then_refuses(client: AsyncOpenAI) -> None:
     ]
     response = await client.chat.completions.create(model="fake-chat", messages=messages)
     assert response.choices[0].message.content == "Извините, с этим запросом я помочь не могу."
+
+
+TOOLS_WITH_PHONEBOOK: list[Any] = [
+    {"type": "function", "function": {"name": "search_employees", "parameters": {}}}
+]
+
+
+async def test_phonebook_question_calls_search_employees(client: AsyncOpenAI) -> None:
+    """«Кадровый бот» (§9.5): вопрос о сотруднике при доступном search_employees — поиск."""
+    question = "Найди телефон Петрова из бухгалтерии"
+    response = await client.chat.completions.create(
+        model="fake-chat",
+        messages=[{"role": "user", "content": question}],
+        tools=TOOLS_WITH_PHONEBOOK,
+    )
+    [call] = response.choices[0].message.tool_calls or []
+    assert call.type == "function"
+    assert call.function.name == "search_employees"
+    assert json.loads(call.function.arguments) == {"query": "Петров", "department": "Бухгалтерия"}
+    table = (
+        "Найдено строк: 1.\n\n| full_name | department | phone | internal_phone |\n"
+        "| --- | --- | --- | --- |\n| Петров Сергей Алексеевич | Бухгалтерия | "
+        "+7 (495) 100-20-02 | 2002 |"
+    )
+    messages: list[Any] = [
+        {"role": "user", "content": question},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "c",
+                    "type": "function",
+                    "function": {"name": "search_employees", "arguments": "{}"},
+                },
+            ],
+        },
+        {"role": "tool", "tool_call_id": "c", "content": table},
+    ]
+    answer = await client.chat.completions.create(
+        model="fake-chat", messages=messages, tools=TOOLS_WITH_PHONEBOOK
+    )
+    assert answer.choices[0].message.content == (
+        "Телефон Петров Сергей Алексеевич (Бухгалтерия): +7 (495) 100-20-02, внутренний 2002."
+    )
+    # Без инструмента справочника — обычный ответ.
+    plain = await client.chat.completions.create(
+        model="fake-chat", messages=[{"role": "user", "content": question}]
+    )
+    assert not plain.choices[0].message.tool_calls

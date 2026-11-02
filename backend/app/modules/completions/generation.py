@@ -399,6 +399,7 @@ class GenerationManager:
                         permissions=permissions,
                         has_attachments=bool(attachments.files),
                         has_knowledge=has_kb and rag_mode != "off",
+                        has_data=bool(self.settings.data_gateway.url),
                     )
                     if plan.endpoint.supports_tools
                     else []

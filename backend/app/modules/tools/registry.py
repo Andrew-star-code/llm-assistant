@@ -36,6 +36,7 @@ def available_tools(
     permissions: frozenset[str],
     has_attachments: bool,
     has_knowledge: bool = False,
+    has_data: bool = False,
 ) -> list[Tool]:
     tools = all_tools()
     names = set(tools)
@@ -52,6 +53,8 @@ def available_tools(
         if tool.needs_attachments and not has_attachments:
             continue
         if tool.needs_knowledge and not has_knowledge:
+            continue
+        if tool.needs_data and not has_data:
             continue
         result.append(tool)
     return result

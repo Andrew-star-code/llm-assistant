@@ -84,6 +84,7 @@ class Tool(ABC):
     required_permissions: ClassVar[frozenset[str]] = frozenset()
     needs_attachments: ClassVar[bool] = False  # без вложений в чате инструмент не предлагается
     needs_knowledge: ClassVar[bool] = False  # без доступных баз знаний не предлагается
+    needs_data: ClassVar[bool] = False  # без настроенного шлюза данных не предлагается
 
     @abstractmethod
     async def run(self, ctx: ToolContext, args: Any) -> ToolResult: ...

@@ -10,6 +10,7 @@
 | [add-tool.md](add-tool.md) — новый инструмент для модели | 3 ✅ |
 | [add-scenario.md](add-scenario.md) — корпоративный сценарий | 5 ✅ |
 | [add-limit-metric.md](add-limit-metric.md) — новая метрика лимитов | 8 ✅ |
+| [add-dataset.md](add-dataset.md) — набор данных или функция SQL семантического слоя | 9 ✅ |
 | `dev-coding-setup.md` — подключение IDE разработчиков к `coder` | 10 |
 | `deploy.md`, `offline-bundle.md` — выкатка и офлайн-бандл | 10 |
 

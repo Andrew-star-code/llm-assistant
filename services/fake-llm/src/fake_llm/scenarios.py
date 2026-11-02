@@ -209,7 +209,60 @@ def tool_arguments(name: str, messages: list[dict[str, Any]], clean: str) -> dic
         return {"file": file}
     if name == "search_in_documents":
         return {"query": needle_of(clean) or "документ"}
+    if name == "search_employees":
+        return person_query(clean) or {"query": clean[:100] or "сотрудник"}
+    if name == "run_sql_query":
+        return {"sql": clean}
+    if name == "describe_dataset":
+        return {"name": "phonebook", "question": clean}
+    if name == "call_data_function":
+        return {"name": "search_employees", "params": person_query(clean) or {"query": clean}}
     return {}
+
+
+# «Найди телефон Петрова из бухгалтерии», «почта Смирновой», «кто такой Ким».
+PERSON_QUESTION = re.compile(
+    r"(?:телефон\w*|номер\w*|почт\w*|контакт\w*|найди|кто так\w*)\s+"
+    r"(?:(?:телефон\w*|номер\w*|почт\w*)\s+)?([А-ЯЁ][а-яё]+)(?:\s+из\s+([\w-]+))?",
+)
+
+
+def _stem(surname: str) -> str:
+    # «Петрова», «Смирновой», «Иванову» → «Петров», «Смирнов», «Иванов»: поиск идёт по LIKE.
+    for ending in ("ой", "ым", "ому", "а", "у", "е"):
+        if surname.endswith(ending) and len(surname) - len(ending) >= 3:
+            return surname[: -len(ending)]
+    return surname
+
+
+def _department(word: str) -> str:
+    # «бухгалтерии» → «Бухгалтерия», «ИТ-отдела» → «ИТ-отдел».
+    base = word[:-2] + "ия" if word.endswith("ии") else word[:-1] if word.endswith("а") else word
+    return base[:1].upper() + base[1:]
+
+
+def person_query(text: str) -> dict[str, Any] | None:
+    match = PERSON_QUESTION.search(text)
+    if match is None:
+        return None
+    args: dict[str, Any] = {"query": _stem(match.group(1))}
+    if match.group(2):
+        args["department"] = _department(match.group(2))
+    return args
+
+
+def phonebook_answer(result: str) -> str:
+    """Ответ по таблице результата ``search_employees``: первая найденная строка."""
+    rows = [line for line in result.splitlines() if line.startswith("|")]
+    if len(rows) < 3:
+        return "В телефонном справочнике никого не нашёл."
+    header = [c.strip() for c in rows[0].strip("|").split("|")]
+    first = [c.strip() for c in rows[2].strip("|").split("|")]
+    row = dict(zip(header, first, strict=False))
+    phone = row.get("phone") or "—"
+    internal = row.get("internal_phone")
+    extra = f", внутренний {internal}" if internal else ""
+    return f"Телефон {row.get('full_name', '?')} ({row.get('department', '?')}): {phone}{extra}."
 
 
 # Псевдонимы сценариев: имя инструмента и формат файла.
@@ -277,6 +330,23 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
     def greet(text: str) -> str:
         return f"{address}, {text[:1].lower()}{text[1:]}" if address else text
 
+    offered = {t.get("function", {}).get("name") for t in body.get("tools") or []}
+    if name == "default" and "search_employees" in offered and person_query(clean):
+        name = "phonebook"  # «Кадровый бот»: вопрос о сотруднике — поиск в справочнике (§9.5)
+    if name == "phonebook":
+        if last.get("role") == "tool":
+            return Scenario(name, [Step("content", phonebook_answer(_text_of(last)))])
+        return Scenario(
+            name,
+            [
+                Step(
+                    "tool_call",
+                    tool_name="search_employees",
+                    tool_arguments=person_query(clean) or {"query": clean[:100]},
+                )
+            ],
+            finish_reason="tool_calls",
+        )
     if name == "default":
         return Scenario(name, [Step("content", greet(f"Это ответ fake-llm на запрос: «{clean}»."))])
     if name == "thinking":

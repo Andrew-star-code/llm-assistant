@@ -1,12 +1,13 @@
-"""Тестовый каталог: источник SQLite с тем же справочником, что у mock-MSSQL дев-стенда."""
+"""Тестовый каталог шлюза: источник SQLite с тем же справочником, что у mock-MSSQL дев-стенда.
+
+Используют тесты шлюза и интеграционные тесты ``api`` (шлюз в процессе, без MS SQL).
+"""
 
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Callable
 from pathlib import Path
 
-import pytest
 import yaml
 
 EMPLOYEES = [
@@ -24,7 +25,7 @@ EMPLOYEES = [
      "3001", "sidorova@corp.local", "Москва, офис 1, каб. 301"),
 ]  # fmt: skip
 
-CATALOG = Path(__file__).resolve().parents[1] / "catalog"
+CATALOG = Path(__file__).resolve().parents[2] / "catalog"
 
 
 def make_db(path: Path) -> None:
@@ -65,9 +66,3 @@ def make_catalog(root: Path, *, extra_datasets: list[dict[str, object]] | None =
             yaml.safe_dump(extra, allow_unicode=True), encoding="utf-8"
         )
     return catalog
-
-
-@pytest.fixture
-def catalog_factory() -> Callable[..., Path]:
-    """``make_catalog`` для тестов (имя пакета ``tests`` занято тестами бэкенда)."""
-    return make_catalog

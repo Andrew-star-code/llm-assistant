@@ -1,0 +1,19 @@
+# Встроенный сценарий (§8.7, §9.5). При старте попадает в БД, если сценария с таким кодом ещё нет;
+# дальше его правят в админке «Сценарии» — этот файл правки не перезаписывает.
+code: hr_bot
+name: Кадровый бот
+description: Телефоны, почта, должность и офис коллег — из телефонного справочника
+icon: users
+roles: []
+model_role: chat
+thinking_default: false
+prompt_template: scenarios/hr_bot.md.j2
+tools: [search_employees]
+knowledge_bases: []
+rag_mode: "off"
+requires_attachment: false
+starter_prompts:
+  - Найди телефон Петрова из бухгалтерии
+  - Кто работает в ИТ-отделе?
+  - Почта Смирновой
+sort_order: 30

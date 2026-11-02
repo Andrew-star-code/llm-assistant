@@ -296,6 +296,37 @@ def fake_llm_url() -> Iterator[str]:
     thread.join(timeout=5)
 
 
+DATA_GATEWAY_SECRET = "test-data-gateway-secret"
+
+
+@pytest.fixture(scope="session")
+def data_gateway_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
+    """data-gateway в потоке: каталог репозитория, источник — SQLite с тестовым справочником."""
+    import socket
+    import threading
+
+    import uvicorn
+    from data_gateway.app import GatewaySettings
+    from data_gateway.app import create_app as create_gateway
+    from data_gateway.testing import make_catalog
+
+    catalog = make_catalog(tmp_path_factory.mktemp("data-gateway"))
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = int(s.getsockname()[1])
+    app = create_gateway(GatewaySettings(catalog_dir=catalog, secret=DATA_GATEWAY_SECRET))
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 10
+    while not server.started:
+        assert time.monotonic() < deadline, "data-gateway не стартовал"
+        time.sleep(0.02)
+    yield f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    thread.join(timeout=5)
+
+
 def chat_settings(infra: Infra, tmp_path: Path, fake_llm_url: str, **overrides: Any) -> Settings:
     models: dict[str, Any] = {
         role: {"base_url": fake_llm_url, "model": f"fake-{role}"}

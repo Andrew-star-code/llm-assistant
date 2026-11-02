@@ -599,6 +599,25 @@ class LimitsSettings(_Section):
         return self
 
 
+class DataGatewaySettings(_Section):
+    """Шлюз данных (§9.5): семантический слой над SQL-БД. Без ``url`` инструменты данных не
+    предлагаются модели."""
+
+    url: str | None = Field(
+        None, description="Адрес data-gateway, например http://data-gateway:8090."
+    )
+    secret: SecretStr | None = Field(
+        None, description="Общий секрет подписи идентичности пользователя (не короче 16 символов)."
+    )
+    timeout_s: float = Field(40.0, gt=0, description="Тайм-аут запроса к шлюзу, с.")
+    preview_rows: int = Field(
+        50, ge=1, le=500, description="Строк результата SQL, которые видит модель (§9.5)."
+    )
+    max_failed_attempts: int = Field(
+        3, ge=1, le=10, description="Неудачных SQL-запросов на один ответ, дальше — отказ."
+    )
+
+
 class StorageSettings(_Section):
     root: Path = Field(
         Path("/srv/storage"), description="Каталог тома с файлами (фото, загрузки, документы)."
@@ -651,6 +670,7 @@ class Settings(BaseSettings):
     retention: RetentionSettings = Field(default_factory=RetentionSettings)
     monitoring: MonitoringSettings = Field(default_factory=MonitoringSettings)
     limits: LimitsSettings = Field(default_factory=LimitsSettings)
+    data_gateway: DataGatewaySettings = Field(default_factory=DataGatewaySettings)
     models: dict[str, ModelEndpoint] = Field(
         default_factory=dict, description="Реестр моделей по ролям (config/models.yaml)."
     )
@@ -672,6 +692,9 @@ class Settings(BaseSettings):
         for rule in self.limits.defaults:
             if rule.model_role and rule.model_role not in self.models:
                 errors.append(f"limits.defaults: роль модели {rule.model_role!r} не описана")
+        gateway = self.data_gateway
+        if gateway.url and (gateway.secret is None or len(gateway.secret.get_secret_value()) < 16):
+            errors.append("data_gateway.secret: нужен секрет не короче 16 символов")
         for proxy in self.trusted_proxies:
             try:
                 ipaddress.ip_network(proxy, strict=False)
