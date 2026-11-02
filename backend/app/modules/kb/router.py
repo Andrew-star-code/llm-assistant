@@ -15,6 +15,7 @@ from app.modules.files.router import content_response, preview_response
 from app.modules.files.sniff import UploadRejected
 from app.modules.kb import service
 from app.modules.kb.schemas import DocumentOut, PersonalKbOut
+from app.modules.limits.service import Limits
 from app.workers.dispatch import Dispatcher
 
 router = APIRouter(prefix="/kb", tags=["kb"])
@@ -59,12 +60,14 @@ async def upload_personal(
     """Документ в личную базу: проверки, квота, дедупликация; индексация — в воркере."""
     settings = _settings(request)
     kb = await service.personal_base(db, current.id, settings)
-    try:
-        doc, row = await service.add_document(
-            db, storage, settings, kb=kb, uploader_id=current.id, upload=file
-        )
-    except UploadRejected as exc:
-        raise AppError(exc.message, code=exc.code, status_code=exc.status_code) from exc
+    limits: Limits = request.app.state.limits
+    async with limits.upload(db, current.id):  # документ личной базы — тоже загрузка (§12.1)
+        try:
+            doc, row = await service.add_document(
+                db, storage, settings, kb=kb, uploader_id=current.id, upload=file
+            )
+        except UploadRejected as exc:
+            raise AppError(exc.message, code=exc.code, status_code=exc.status_code) from exc
     await _dispatcher(request).index_document(str(doc.id))
     await db.refresh(doc)
     await db.refresh(row)

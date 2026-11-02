@@ -30,8 +30,8 @@ class DocumentOut(BaseModel):
 
 
 class QuotaOut(BaseModel):
-    max_documents: int
-    max_bytes: int
+    max_documents: int | None  # пусто — без ограничения (нет политики лимита)
+    max_bytes: int | None
     used_documents: int
     used_bytes: int
 

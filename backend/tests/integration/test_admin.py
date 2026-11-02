@@ -52,6 +52,7 @@ def _admin_routes() -> list[APIRoute]:
     from app.modules.exports.router import router as exports_router
     from app.modules.incidents.router import router as incidents_router
     from app.modules.kb.admin_router import router as kb_admin_router
+    from app.modules.limits.admin_router import router as limits_admin_router
     from app.modules.scenarios.admin_router import router as scenarios_admin_router
 
     routers = (
@@ -67,6 +68,7 @@ def _admin_routes() -> list[APIRoute]:
         kb_admin_router,
         incidents_router,
         scenarios_admin_router,
+        limits_admin_router,
     )
     return [r for router in routers for r in router.routes if isinstance(r, APIRoute)]
 

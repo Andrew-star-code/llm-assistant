@@ -115,11 +115,11 @@ async def quota(db: AsyncSession, kb: KnowledgeBase, settings: Settings) -> Quot
     """Квота личной базы — из политик лимитов (§7.8, §12): по ролям, персонально, временно."""
     count, size = await _usage(db, kb.id)
     max_documents, max_mb = (
-        await limits.kb_quota(db, settings, kb.owner_id) if kb.owner_id else (0, 0)
+        await limits.kb_quota(db, settings, kb.owner_id) if kb.owner_id else (None, None)
     )
     return QuotaOut(
         max_documents=max_documents,
-        max_bytes=max_mb * 1024 * 1024,
+        max_bytes=max_mb * 1024 * 1024 if max_mb is not None else None,
         used_documents=count,
         used_bytes=size,
     )
@@ -136,7 +136,11 @@ async def add_document(
 ) -> tuple[KbDocument, File]:
     """Проверки §9.3, дедупликация по SHA-256 внутри базы, квота личной базы; статус «в очереди»."""
     used = await quota(db, kb, settings) if kb.level == LEVEL_PERSONAL else None
-    if used is not None and used.used_documents >= used.max_documents:
+    if (
+        used is not None
+        and used.max_documents is not None
+        and used.used_documents >= used.max_documents
+    ):
         raise AppError(
             f"В личной базе уже {used.max_documents} документов — удалите ненужные",
             code="quota_documents",
@@ -146,7 +150,11 @@ async def add_document(
         db, storage, settings.files, owner_id=uploader_id, upload=upload, kind="kb_document",
         commit=False,
     )  # fmt: skip
-    if used is not None and used.used_bytes + file.size > used.max_bytes:
+    if (
+        used is not None
+        and used.max_bytes is not None
+        and used.used_bytes + file.size > used.max_bytes
+    ):
         await db.rollback()
         await storage.delete(file.storage_key)
         raise AppError(

@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -27,6 +29,7 @@ from app.modules.limits.counters import Check, Counters, Slot, counter_key, slot
 from app.modules.limits.models import UsageRecord
 from app.modules.limits.policies import Effective, Key
 from app.modules.limits.windows import period
+from app.modules.llm.stream import Usage
 from app.modules.rbac import service as rbac
 
 GENERATION_METRICS = ("messages", "tokens")
@@ -42,16 +45,9 @@ _WINDOW_ADJ = {
 _METRIC_GEN = {"messages": "сообщений", "tokens": "токенов", "uploads": "загрузок файлов"}
 
 
-@dataclass(frozen=True)
-class Usage:
-    prompt_tokens: int
-    completion_tokens: int
-    reasoning_tokens: int | None = None
-
-    @property
-    def total(self) -> int:
-        # completion_tokens у vLLM уже включает размышления (§12.1: «включая размышления»).
-        return self.prompt_tokens + self.completion_tokens
+def total_tokens(usage: Usage) -> int:
+    """Вход + выход; ``completion_tokens`` у vLLM уже включает размышления (§12.1)."""
+    return usage.prompt_tokens + usage.completion_tokens
 
 
 @dataclass(frozen=True)
@@ -63,6 +59,7 @@ class MetricStatus:
     source: str
     expires_at: datetime | None
     target_id: UUID | None
+    policy_id: UUID | None = None
 
     @property
     def remaining(self) -> int:
@@ -143,10 +140,12 @@ async def effective(
     )
 
 
-async def kb_quota(db: AsyncSession, settings: Settings, user_id: UUID) -> tuple[int, int]:
-    """Квота личной базы по политикам (§7.8): (документов, МБ)."""
+async def kb_quota(
+    db: AsyncSession, settings: Settings, user_id: UUID
+) -> tuple[int | None, int | None]:
+    """Квота личной базы по политикам (§7.8): (документов, МБ); нет политики — без ограничения."""
     limits = {e.key.metric: e.limit for e in await effective(db, settings, user_id)}
-    return limits.get("personal_kb_documents", 0), limits.get("personal_kb_storage", 0)
+    return limits.get("personal_kb_documents"), limits.get("personal_kb_storage")
 
 
 class Limits:
@@ -238,11 +237,12 @@ class Limits:
         usage: Usage,
     ) -> None:
         """Фактические токены ответа — в счётчики (после commit строки ``usage_records``)."""
-        if usage.total <= 0:
+        total = total_tokens(usage)
+        if total <= 0:
             return
         await self.counters.add(
             spread(
-                user_id, "tokens", usage.total, utcnow(), self.tz,
+                user_id, "tokens", total, utcnow(), self.tz,
                 model_role=model_role, thinking=thinking,
             )
         )  # fmt: skip
@@ -263,6 +263,16 @@ class Limits:
             rule = rules[failed - 1]
             raise exceeded(rule.key, rule.limit, used, now, self.tz)
         return Reservation(user_id, None, increments)
+
+    @asynccontextmanager
+    async def upload(self, db: AsyncSession, user_id: UUID) -> AsyncIterator[None]:
+        """Загрузка файла: лимит ``uploads`` до приёма; отказ в приёме возвращает его."""
+        reservation = await self.reserve_upload(db, user_id)
+        try:
+            yield
+        except BaseException:
+            await self.cancel(reservation)
+            raise
 
     # ------------------------------------------------------------------ остатки
 
@@ -301,6 +311,7 @@ class Limits:
                     source=e.source,
                     expires_at=e.expires_at,
                     target_id=e.target_id,
+                    policy_id=e.policy_id,
                 )
             )
         return result
@@ -394,18 +405,3 @@ def status_payload(statuses: list[MetricStatus]) -> dict[str, Any]:
             and not s.key.thinking
         ),
     }
-
-
-__all__ = [
-    "LimitExceeded",
-    "Limits",
-    "MetricStatus",
-    "Reservation",
-    "Usage",
-    "effective",
-    "exceeded",
-    "kb_quota",
-    "nearest",
-    "record_usage",
-    "status_payload",
-]

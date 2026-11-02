@@ -37,6 +37,7 @@ class Perm(StrEnum):
     MODELS_MANAGE = "admin.models.manage"
     TOOLS_MANAGE = "admin.tools.manage"
     SETTINGS_MANAGE = "admin.settings.manage"
+    LIMITS_MANAGE = "admin.limits.manage"
 
 
 PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
@@ -66,6 +67,9 @@ PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
     Perm.SETTINGS_MANAGE: (
         "Настройки: название, логотип, уведомление, сроки хранения, лимиты файлов, обращение, "
         "системный промпт"
+    ),
+    Perm.LIMITS_MANAGE: (
+        "Лимиты: политики, эффективные лимиты пользователя, сброс счётчиков, временное повышение"
     ),
 }
 
