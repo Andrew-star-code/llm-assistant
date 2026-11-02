@@ -85,19 +85,26 @@ def configure_logging(settings: LoggingSettings) -> None:
         cache_logger_on_first_use=True,
     )
 
-    formatter = structlog.stdlib.ProcessorFormatter(
-        foreign_pre_chain=shared,
-        processors=[
-            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-            structlog.processors.format_exc_info,
-            renderer,
-        ],
-    )
+    def formatter(render: structlog.types.Processor) -> logging.Formatter:
+        return structlog.stdlib.ProcessorFormatter(
+            foreign_pre_chain=shared,
+            processors=[
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.processors.format_exc_info,
+                render,
+            ],
+        )
+
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
+    handler.setFormatter(formatter(renderer))
     # Те же строки — в буферы для инцидентов (core/log_capture): лог запроса и последние строки.
+    # Без цветов: ANSI-коды консоли в карточке инцидента нечитаемы.
     capture = CaptureHandler()
-    capture.setFormatter(formatter)
+    capture.setFormatter(
+        formatter(
+            renderer if settings.format == "json" else structlog.dev.ConsoleRenderer(colors=False)
+        )
+    )
 
     root = logging.getLogger()
     root.handlers[:] = [handler, capture]
