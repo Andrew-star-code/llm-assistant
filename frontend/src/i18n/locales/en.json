@@ -127,6 +127,7 @@
     "title": "Admin",
     "back": "Back to chat",
     "forbidden": "You do not have access to the admin area.",
+    "sectionForbidden": "You do not have access to this section.",
     "nav": {
       "users": "Users",
       "logins": "Sign-ins",
@@ -293,6 +294,8 @@
       "category": "Category",
       "summary": "Summary",
       "evidence": "Quote",
+      "firstEvidence": "First quote",
+      "lastEvidence": "Latest quote",
       "verdict": "Verdict",
       "categories": "Categories",
       "excerpt": "Message",

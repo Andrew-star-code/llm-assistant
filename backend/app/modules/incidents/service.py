@@ -40,10 +40,12 @@ async def report(
     message_id: UUID | None = None,
     redis: Redis | None = None,
     throttle_s: int = 0,
+    keep: tuple[str, ...] = (),
 ) -> bool:
     """Создаёт или обновляет инцидент; False — запись пропущена из-за ``throttle_s``.
 
     Ошибка записи инцидента не должна ломать основной сценарий — она только логируется.
+    ``keep`` — ключи payload, которые повтор не перезаписывает (например, первая цитата).
     """
     key = fingerprint or f"{type}:{title}"
     if redis is not None and throttle_s > 0:
@@ -62,6 +64,7 @@ async def report(
                 user_id=user_id,
                 chat_id=chat_id,
                 message_id=message_id,
+                keep=keep,
             )
             await db.commit()
     except Exception:
@@ -82,6 +85,7 @@ async def upsert(
     user_id: UUID | None,
     chat_id: UUID | None,
     message_id: UUID | None,
+    keep: tuple[str, ...] = (),
 ) -> Incident:
     now = utcnow()
     existing = await db.scalar(
@@ -93,7 +97,10 @@ async def upsert(
     if existing is not None:
         existing.occurrences += 1
         existing.last_seen = now
-        existing.payload = payload or existing.payload
+        if payload:
+            previous = existing.payload or {}
+            kept = {k: previous[k] for k in keep if k in previous}
+            existing.payload = {**payload, **kept}
         if existing.status == "resolved":
             existing.status = "new"  # повтор после решения открывает инцидент снова
             existing.resolution = None

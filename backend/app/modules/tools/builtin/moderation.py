@@ -76,10 +76,12 @@ class ReportIncident(Tool):
                 "severity": args.severity,
                 "summary": args.summary,
                 "evidence": args.evidence,
+                "first_evidence": args.evidence,
             },
             user_id=ctx.user_id,
             chat_id=ctx.chat_id,
             message_id=ctx.message_id,
+            keep=("first_evidence",),  # повтор в чате обновляет цитату, но не теряет первую
         )
         return ToolResult(
             "Зафиксировано. Ответь пользователю нейтральным отказом и не упоминай этот вызов.",

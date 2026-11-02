@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
@@ -17,6 +17,19 @@ type Payload = Record<string, unknown>;
 const STATUSES: Status[] = ["new", "in_progress", "resolved", "false_positive"];
 const SELECT = "h-9 rounded-md border border-border bg-background px-2 text-sm";
 const PRE = "max-h-96 overflow-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap";
+
+/** Лог открывается на последних строках: самое важное (сбой, остановка) — в конце. */
+function LogPre({ value }: { value: unknown }) {
+  const ref = useRef<HTMLPreElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+  }, [value]);
+  return (
+    <pre ref={ref} className={PRE} data-testid="incident-log">
+      {lines(value)}
+    </pre>
+  );
+}
 
 function text(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -59,10 +72,10 @@ function PayloadView({ incident }: { incident: Detail }) {
           <h3 className="text-sm font-medium">{k("stack")}</h3>
           <pre className={PRE}>{text(p.stack)}</pre>
           <h3 className="text-sm font-medium">{k("logs")}</h3>
-          <pre className={PRE}>{lines(p.logs)}</pre>
+          <LogPre value={p.logs} />
           <details>
             <summary className="cursor-pointer text-sm">{k("recentLogs")}</summary>
-            <pre className={PRE}>{lines(p.recent_logs)}</pre>
+            <LogPre value={p.recent_logs} />
           </details>
         </div>
       );
@@ -75,7 +88,20 @@ function PayloadView({ incident }: { incident: Detail }) {
           <Row label={k("category")}>{text(p.category_name)}</Row>
           <Row label={k("severity")}>{text(p.severity)}</Row>
           <Row label={k("summary")}>{text(p.summary)}</Row>
-          <Row label={k("evidence")}>
+          {p.first_evidence !== undefined && p.first_evidence !== p.evidence && (
+            <Row label={k("firstEvidence")}>
+              <blockquote className="border-l-2 border-border pl-2 italic">
+                {text(p.first_evidence)}
+              </blockquote>
+            </Row>
+          )}
+          <Row
+            label={k(
+              p.first_evidence !== undefined && p.first_evidence !== p.evidence
+                ? "lastEvidence"
+                : "evidence",
+            )}
+          >
             <blockquote className="border-l-2 border-border pl-2 italic">
               {text(p.evidence)}
             </blockquote>
@@ -128,7 +154,7 @@ function PayloadView({ incident }: { incident: Detail }) {
           </dl>
           <h3 className="text-sm font-medium">{k("containerLogs")}</h3>
           {Array.isArray(p.container_logs) ? (
-            <pre className={PRE}>{lines(p.container_logs)}</pre>
+            <LogPre value={p.container_logs} />
           ) : (
             <p className="text-sm text-muted-foreground">
               {t("admin.incidents.noLogs", { note: text(p.logs_note) })}
@@ -162,8 +188,20 @@ function Workflow({ incident }: { incident: Detail }) {
   const save = useMutation({
     mutationFn: async (body: Schemas["IncidentUpdate"]) =>
       unwrap(await api.PATCH("/api/admin/incidents/{incident_id}", { ...path, body })),
-    onSuccess: done,
+    onSuccess: (data) => {
+      setStatus(data.status as Status);
+      setAssignee(data.assignee?.id ?? "");
+      setResolution(data.resolution ?? "");
+      done(data);
+    },
   });
+  // Правка после сохранения снова делает форму «несохранённой».
+  const edit =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      save.reset();
+      set(value);
+    };
   const addComment = useMutation({
     mutationFn: async () =>
       unwrap(
@@ -189,7 +227,7 @@ function Workflow({ incident }: { incident: Detail }) {
           className={SELECT}
           value={status}
           onChange={(e) => {
-            setStatus(e.target.value as Status);
+            edit(setStatus)(e.target.value as Status);
           }}
         >
           {STATUSES.map((s) => (
@@ -203,7 +241,7 @@ function Workflow({ incident }: { incident: Detail }) {
           className={SELECT}
           value={assignee}
           onChange={(e) => {
-            setAssignee(e.target.value);
+            edit(setAssignee)(e.target.value);
           }}
         >
           <option value="">{t("admin.incidents.nobody")}</option>
@@ -218,7 +256,7 @@ function Workflow({ incident }: { incident: Detail }) {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setAssignee(me.id);
+              edit(setAssignee)(me.id);
             }}
           >
             {t("admin.incidents.takeMe")}
@@ -231,7 +269,7 @@ function Workflow({ incident }: { incident: Detail }) {
         className="min-h-16 rounded-md border border-border bg-background p-2 text-sm"
         value={resolution}
         onChange={(e) => {
-          setResolution(e.target.value);
+          edit(setResolution)(e.target.value);
         }}
       />
       <Button
@@ -351,10 +389,9 @@ export function IncidentPage() {
         )}
       </header>
       <PayloadView incident={i} />
-      <Workflow
-        key={`${i.status}-${i.assignee?.id ?? ""}-${String(i.comments.length)}`}
-        incident={i}
-      />
+      {/* Ключ — только id: новые комментарии и ответ на «Сохранить» не должны сбрасывать
+          несохранённый черновик и надпись «Сохранено». */}
+      <Workflow key={i.id} incident={i} />
     </section>
   );
 }

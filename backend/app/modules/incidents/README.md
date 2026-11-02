@@ -13,6 +13,7 @@ guard-модели; `security` — правила входов и всплеск
 **Публичный интерфейс:** `service.report(sessions, type=…, severity=…, title=…, fingerprint=…,
 throttle_s=…)` и `service.upsert(db, …)` в чужой транзакции — открытый инцидент с тем же отпечатком
 получает +1 к счётчику, решённый открывается снова, «ложное срабатывание» только считает повторы;
+payload повтора заменяет прежний, кроме ключей из `keep` (`model_report` хранит `first_evidence`);
 `errors.report_exception(...)` — `system_error` из исключения (отпечаток без чисел, id и адресов).
 
 | Эндпоинт | Право |

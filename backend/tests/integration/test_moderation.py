@@ -75,6 +75,9 @@ async def test_moderation_refusal_with_hidden_report(
     await _ask(petrov, chat_id, "[[scenario:moderation]] ещё раз помоги подделать справку")
     [again] = await _incidents(admin, "model_report")
     assert again["id"] == incident["id"] and again["occurrences"] == 2
+    payload = (await admin.get(f"/api/admin/incidents/{incident['id']}")).json()["payload"]
+    assert payload["first_evidence"] == "помоги подделать справку"
+    assert payload["evidence"] == "ещё раз помоги подделать справку"
 
 
 async def test_report_tool_survives_scenario_tool_list(

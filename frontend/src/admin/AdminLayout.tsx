@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link, NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet, useLocation } from "react-router";
 
 import { ADMIN_SECTIONS } from "@/admin/sections";
 import { api, unwrap } from "@/api/client";
@@ -50,8 +50,12 @@ function IncidentsBadge() {
 export function AdminLayout() {
   const { t } = useTranslation();
   const { data: me } = useMe();
+  const { pathname } = useLocation();
   if (!hasPermission(me, "admin.access")) return <ForbiddenPage />;
   const sections = ADMIN_SECTIONS.filter((s) => hasPermission(me, s.permission));
+  // Прямая ссылка на раздел без права: понятный отказ вместо пустой страницы (сервер и так 403).
+  const current = ADMIN_SECTIONS.find((s) => pathname === s.to || pathname.startsWith(`${s.to}/`));
+  const allowed = !current || hasPermission(me, current.permission);
 
   return (
     <div className="flex h-dvh flex-col bg-background text-foreground">
@@ -88,7 +92,13 @@ export function AdminLayout() {
           ))}
         </nav>
         <main className="min-w-0 flex-1 overflow-y-auto p-6">
-          <Outlet />
+          {allowed ? (
+            <Outlet />
+          ) : (
+            <p role="alert" className="text-muted-foreground">
+              {t("admin.sectionForbidden")}
+            </p>
+          )}
         </main>
       </div>
     </div>
