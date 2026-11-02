@@ -16,6 +16,8 @@ import structlog
 from prometheus_client import Counter, Histogram
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core import log_capture
+
 REQUEST_ID_HEADER = "x-request-id"
 _VALID_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 _QUIET_PATHS = frozenset({"/health", "/ready", "/metrics"})
@@ -48,7 +50,11 @@ class RequestContextMiddleware:
             return
 
         request_id = _incoming_request_id(scope) or uuid.uuid4().hex
-        scope.setdefault("state", {})["request_id"] = request_id
+        state = scope.setdefault("state", {})
+        state["request_id"] = request_id
+        # Строки лога этого запроса — для инцидента при ошибке (обработчик ошибок работает уже
+        # снаружи middleware, поэтому буфер лежит и в state запроса).
+        state["log_lines"] = log_capture.start_request()
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
 

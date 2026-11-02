@@ -15,6 +15,7 @@ const VALUES = {
   max_files_per_message: 10,
   default_address_form: "name_patronymic",
   system_prompt: "Ты ассистент.",
+  guard_block_categories: [],
 };
 const SETTINGS = {
   ...VALUES,
@@ -22,6 +23,7 @@ const SETTINGS = {
   logo_version: null,
   overridden: [],
   defaults: VALUES,
+  guard_categories: ["Violent", "PII"],
 };
 
 describe("Админка «Настройки»", () => {

@@ -28,6 +28,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core import log_capture
 from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.storage import Storage
@@ -51,10 +52,14 @@ from app.modules.completions.streaming import (
     cancel_key,
 )
 from app.modules.files.service import chat_files
+from app.modules.incidents.errors import report_exception
 from app.modules.kb.models import KnowledgeBase
 from app.modules.llm.registry import ModelRegistry
 from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_stream
 from app.modules.llm.tokens import TokenCounter
+from app.modules.moderation import guard
+from app.modules.moderation.guard import Verdict
+from app.modules.moderation.policy import load_policy
 from app.modules.rag.models import MessageSource
 from app.modules.rag.search import Fragment
 from app.modules.rag.service import (
@@ -86,6 +91,10 @@ UTILITY_ROLE = "utility"
 CANCEL_CHECK_INTERVAL = 0.2
 TITLE_MAX_WORDS = 6
 TITLE_MAX_CHARS = 80
+
+
+class _GuardBlocked(Exception):  # noqa: N818 — сигнал, а не ошибка
+    """Guard-модель заблокировала запрос: модель не вызывается, в ответе — отказ."""
 
 
 @dataclass
@@ -174,6 +183,7 @@ class GenerationManager:
         self.settings = settings
         self.redis = redis
         self.sessions = sessions
+        self.background: set[asyncio.Task[Any]] = set()
         self.registry = registry
         self.renderer = renderer
         self.storage = storage
@@ -201,6 +211,8 @@ class GenerationManager:
         await self.redis.set(cancel_key(message_id), "1", ex=ALIVE_TTL_SECONDS * 10)
 
     async def shutdown(self) -> None:
+        for pending in list(self.background):
+            pending.cancel()
         tasks = list(self.tasks.values())
         for task in tasks:
             task.cancel()
@@ -225,6 +237,27 @@ class GenerationManager:
         return count
 
     # ------------------------------------------------------------------ генерация
+
+    def _guard(
+        self,
+        question: str,
+        user_id: UUID,
+        chat_id: UUID,
+        message_id: UUID,
+        blocked: list[str],
+    ) -> asyncio.Task[Verdict | None] | None:
+        if not question or not guard.available(self.settings):
+            return None
+        task = asyncio.create_task(
+            guard.check(
+                self.registry, self.settings, self.sessions, text=question, user_id=user_id,
+                chat_id=chat_id, message_id=message_id, blocked=blocked,
+            )
+        )  # fmt: skip
+        # Ссылка на фоновую задачу, чтобы её не собрал сборщик мусора до завершения.
+        self.background.add(task)
+        task.add_done_callback(self.background.discard)
+        return task
 
     async def _keep_alive(self, message_id: UUID) -> None:
         while True:
@@ -297,9 +330,18 @@ class GenerationManager:
                     counter=counter,
                 )
                 now = utcnow()
+                enabled = await app_settings.enabled_tools(db, self.settings)
+                policy = load_policy(self.settings.config_dir)
                 base_system = system_prompt(
-                    self.renderer, effective, prompt_user, now, base_template=base_override
-                )
+                    self.renderer, effective, prompt_user, now, base_template=base_override,
+                    moderation={
+                        "categories": [c.model_dump() for c in policy.categories],
+                        "refusal": policy.refusal,
+                        "self_harm_help": policy.self_harm_help,
+                        "report_tool": plan.endpoint.supports_tools
+                        and (enabled is None or "report_incident" in enabled),
+                    },
+                )  # fmt: skip
                 if scenario is not None:
                     scenario_text = render_scenario(
                         scenario,
@@ -338,7 +380,7 @@ class GenerationManager:
                 # Инструменты: включены ∩ разрешены сценарием ∩ доступны ролям (§9.1).
                 tools = (
                     available_tools(
-                        enabled=await app_settings.enabled_tools(db, self.settings),
+                        enabled=enabled,
                         scenario=scenario.tools if scenario else None,
                         permissions=permissions,
                         has_attachments=bool(attachments.files),
@@ -360,6 +402,8 @@ class GenerationManager:
                     sources=book,
                 )
                 chat_id, parent_id = chat.id, message.parent_id
+                user_id = user.id
+                guard_block = await app_settings.guard_block_categories(db)
                 message.model = plan.endpoint.model
                 message.thinking = plan.thinking
                 await db.commit()
@@ -375,6 +419,21 @@ class GenerationManager:
                     "protocol_version": PROTOCOL_VERSION,
                 },
             )
+            # Guard-модель (§9.6): фоном; при блокировке категорий — до ответа модели.
+            guard_task = self._guard(question, user_id, chat_id, message_id, guard_block)
+            if guard_task is not None and guard_block:
+                verdict = await guard_task
+                hit = verdict.blocked_by(guard_block) if verdict else []
+                if hit:
+                    refusal = policy.refusal
+                    result.content.append(refusal)
+                    await writer.delta("content", refusal)
+                    result.finish_reason = "guard"
+                    trace.update(
+                        model_role=plan.role, model=plan.endpoint.model,
+                        guard={"verdict": verdict.label if verdict else None, "blocked": hit},
+                    )  # fmt: skip
+                    raise _GuardBlocked
             knowledge: str | None = None
             rag_trace: dict[str, Any] | None = None
             if rag_mode == "auto" and not scope.empty:
@@ -429,6 +488,8 @@ class GenerationManager:
                     reasoning_tokens=counter.count("".join(result.reasoning)) or None,
                 )
                 trace["usage_estimated"] = True
+        except _GuardBlocked:
+            pass  # нейтральный отказ уже в ответе, модель не вызывалась
         except asyncio.CancelledError:
             result.status = "interrupted"
             result.error = {"code": "interrupted", "message": "Генерация прервана"}
@@ -438,6 +499,14 @@ class GenerationManager:
             log.exception("completions.failed", message_id=str(message_id))
             result.status = "error"
             result.error = _error_payload(exc)
+            if result.error["code"] == "internal_error":
+                # Ошибка нашего кода (не модели): инцидент со стеком и логами генерации.
+                await report_exception(
+                    self.sessions, exc,
+                    context={"stage": "generation", "message_id": str(message_id)},
+                    request_lines=log_capture.request_lines(),
+                    message_id=message_id,
+                )  # fmt: skip
             trace["error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
             await writer.emit("error", result.error)
         finally:

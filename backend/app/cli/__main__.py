@@ -19,6 +19,10 @@
   kb list                       — общие и ролевые базы знаний с документами по статусам
   kb import --kb <код> <папка>  — массовый импорт из папки внутри kb.import_root
 
+Этап 7:
+  ip list                        — активные блокировки IP
+  ip unblock <IP или подсеть>    — снять блокировку (если админка недоступна с этого адреса)
+
 Дальше появятся: ``purge``.
 """
 
@@ -125,6 +129,17 @@ def cmd_kb(args: argparse.Namespace) -> int:
     return kb.cmd_kb_import(settings, args.kb, args.folder)
 
 
+def cmd_ip(args: argparse.Namespace) -> int:
+    from app.cli import security
+
+    settings = _settings_or_exit()
+    if settings is None:
+        return 1
+    if args.ip_command == "list":
+        return security.cmd_ip_list(settings)
+    return security.cmd_ip_unblock(settings, args.target)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -174,6 +189,13 @@ def build_parser() -> argparse.ArgumentParser:
     kb_import.add_argument("--kb", required=True, help="Код базы, например regulations")
     kb_import.add_argument("folder", help="Папка внутри kb.import_root (или абсолютный путь в нём)")
     kb_import.set_defaults(func=cmd_kb)
+
+    ip = sub.add_parser("ip", help="Блокировки IP")
+    ip_sub = ip.add_subparsers(dest="ip_command", required=True)
+    ip_sub.add_parser("list", help="Активные блокировки").set_defaults(func=cmd_ip)
+    unblock = ip_sub.add_parser("unblock", help="Снять блокировку IP или подсети")
+    unblock.add_argument("target", help="IP (снимет все блокировки, что его содержат) или подсеть")
+    unblock.set_defaults(func=cmd_ip)
     return parser
 
 

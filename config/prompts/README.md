@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | `system/base.md.j2` | Базовые правила: кто ассистент, дата и время, язык, форматирование, безопасность | `company`, `now`, `timezone` |
 | `system/user.md.j2` | Пользователь: ФИО, должность, отдел, форма обращения (§11.1) | `user.full_name`, `user.title`, `user.department`, `user.address` |
+| `system/moderation.md.j2` | Модерация (§9.6): когда вызывать скрытый `report_incident`, текст нейтрального отказа, категории, помощь при угрозе себе; данные — `config/moderation/policy.yaml`. Отдельно от базового: промпт из админки его не заменяет | `categories[].code/name/description`, `refusal`, `self_harm_help`, `report_tool` |
 | `system/attachments.md.j2` | Вложения чата: целиком (`full`) или оглавление и начало (`outline`) + подсказка про инструменты чтения (§9.3) | `files[].name/type/pages/text/outline/preview`, `mode` |
 | `system/knowledge.md.j2` | Фрагменты RAG с номерами для цитат `[n]` или пометка «ничего не найдено» (§10.4) | `fragments[].index/title/kb_name/page/section/text` |
 | `utility/rag_query.md.j2` | Переформулировка запроса для поиска с дословным переносом кодов и ФИО (§10.4) | `history[].role/text`, `message` |

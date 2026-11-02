@@ -44,6 +44,7 @@ class LoginEventOut(BaseModel):
     success: bool
     failure_reason: str | None
     risk_flags: list[str]
+    reviewed_at: datetime | None = None
 
 
 class UserCard(BaseModel):

@@ -7,12 +7,12 @@ from app.modules.chats.models import Chat, Folder, Message
 from app.modules.exports.models import Export
 from app.modules.feedback.models import Feedback
 from app.modules.files.models import File
-from app.modules.incidents.models import Incident
+from app.modules.incidents.models import Incident, IncidentComment
 from app.modules.kb.models import KbDocument, KbImport, KbRole, KnowledgeBase
 from app.modules.rag.models import MessageSource
 from app.modules.rbac.models import Permission, Role, RolePermission, UserRole
 from app.modules.scenarios.models import Scenario
-from app.modules.security.models import LoginEvent
+from app.modules.security.models import IpBlock, LoginEvent, TrustedNetwork
 from app.modules.tools.models import ToolCall
 from app.modules.users.models import User
 
@@ -25,6 +25,8 @@ __all__ = [
     "File",
     "Folder",
     "Incident",
+    "IncidentComment",
+    "IpBlock",
     "KbDocument",
     "KbImport",
     "KbRole",
@@ -37,6 +39,7 @@ __all__ = [
     "RolePermission",
     "Scenario",
     "ToolCall",
+    "TrustedNetwork",
     "User",
     "UserRole",
     "UserSession",

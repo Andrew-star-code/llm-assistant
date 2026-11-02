@@ -819,6 +819,78 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/incidents/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Summary */
+    get: operations["adminIncidentsSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/incidents/assignees": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Assignees
+     * @description Кому можно назначить инцидент: администраторы и суперадминистраторы.
+     */
+    get: operations["adminIncidentAssignees"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/incidents/{incident_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Incident */
+    get: operations["adminGetIncident"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Incident */
+    patch: operations["adminUpdateIncident"];
+    trace?: never;
+  };
+  "/api/admin/incidents/{incident_id}/comments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Comment */
+    post: operations["adminCommentIncident"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/scenarios": {
     parameters: {
       query?: never;
@@ -1322,6 +1394,96 @@ export interface paths {
      * @description Снять роль, назначенную вручную; роли из AD пересчитывает синхронизация.
      */
     post: operations["adminRemoveRoleMembers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/ip-blocks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Blocks */
+    get: operations["adminListIpBlocks"];
+    put?: never;
+    /** Block Ip */
+    post: operations["adminBlockIp"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/ip-blocks/{block_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Unblock Ip */
+    delete: operations["adminUnblockIp"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/trusted-networks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Trusted */
+    get: operations["adminListTrustedNetworks"];
+    put?: never;
+    /** Trust */
+    post: operations["adminTrustNetwork"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/trusted-networks/{network_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Untrust */
+    delete: operations["adminUntrustNetwork"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/logins/{event_id}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Review
+     * @description Отметить событие входа проверенным (флаги риска разобраны).
+     */
+    post: operations["adminReviewLogin"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2133,6 +2295,27 @@ export interface components {
       /** Error */
       error?: string | null;
     };
+    /** CommentIn */
+    CommentIn: {
+      /** Text */
+      text: string;
+    };
+    /** CommentOut */
+    CommentOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      author: components["schemas"]["PersonRef"] | null;
+      /** Text */
+      text: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** ControllerOut */
     ControllerOut: {
       /** Url */
@@ -2588,6 +2771,48 @@ export interface components {
       /** Finished At */
       finished_at: string | null;
     };
+    /** IncidentDetail */
+    IncidentDetail: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Type */
+      type: string;
+      /** Severity */
+      severity: string;
+      /** Status */
+      status: string;
+      /** Title */
+      title: string;
+      /** Occurrences */
+      occurrences: number;
+      /**
+       * First Seen
+       * Format: date-time
+       */
+      first_seen: string;
+      /**
+       * Last Seen
+       * Format: date-time
+       */
+      last_seen: string;
+      user: components["schemas"]["PersonRef"] | null;
+      assignee: components["schemas"]["PersonRef"] | null;
+      /** Chat Id */
+      chat_id: string | null;
+      /** Message Id */
+      message_id: string | null;
+      /** Resolution */
+      resolution: string | null;
+      /** Payload */
+      payload: {
+        [key: string]: unknown;
+      } | null;
+      /** Comments */
+      comments: components["schemas"]["CommentOut"][];
+    };
     /** IncidentOut */
     IncidentOut: {
       /**
@@ -2615,16 +2840,21 @@ export interface components {
        * Format: date-time
        */
       last_seen: string;
-      /** User Id */
-      user_id: string | null;
+      user: components["schemas"]["PersonRef"] | null;
+      assignee: components["schemas"]["PersonRef"] | null;
       /** Chat Id */
       chat_id: string | null;
       /** Message Id */
       message_id: string | null;
-      /** Payload */
-      payload: {
-        [key: string]: unknown;
-      } | null;
+    };
+    /** IncidentUpdate */
+    IncidentUpdate: {
+      /** Status */
+      status?: ("new" | "in_progress" | "resolved" | "false_positive") | null;
+      /** Assigned To */
+      assigned_to?: string | null;
+      /** Resolution */
+      resolution?: string | null;
     };
     /** Incidents */
     Incidents: {
@@ -2632,6 +2862,46 @@ export interface components {
       open: number;
       /** High */
       high: number;
+    };
+    /** IpBlockIn */
+    IpBlockIn: {
+      /**
+       * Cidr
+       * @description IP или подсеть: 10.1.2.3, 10.1.2.0/24
+       */
+      cidr: string;
+      /** Reason */
+      reason: string;
+      /**
+       * Minutes
+       * @description Срок; пусто — бессрочно.
+       */
+      minutes?: number | null;
+    };
+    /** IpBlockOut */
+    IpBlockOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Cidr */
+      cidr: string;
+      /** Reason */
+      reason: string;
+      /** Source */
+      source: string;
+      /** Until */
+      until: string | null;
+      /** Active */
+      active: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Created By */
+      created_by: string | null;
     };
     /** KbIn */
     KbIn: {
@@ -2718,6 +2988,8 @@ export interface components {
       failure_reason: string | null;
       /** Risk Flags */
       risk_flags: string[];
+      /** Reviewed At */
+      reviewed_at?: string | null;
     };
     /** LoginIn */
     LoginIn: {
@@ -2965,6 +3237,13 @@ export interface components {
       /** Next Cursor */
       next_cursor?: string | null;
     };
+    /** Page[IncidentOut] */
+    Page_IncidentOut_: {
+      /** Items */
+      items: components["schemas"]["IncidentOut"][];
+      /** Next Cursor */
+      next_cursor?: string | null;
+    };
     /** Page[LoginEventOut] */
     Page_LoginEventOut_: {
       /** Items */
@@ -2985,6 +3264,18 @@ export interface components {
       items: components["schemas"]["UserListItem"][];
       /** Next Cursor */
       next_cursor?: string | null;
+    };
+    /** PersonRef */
+    PersonRef: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Login */
+      login: string;
+      /** Full Name */
+      full_name: string;
     };
     /** PersonalKbOut */
     PersonalKbOut: {
@@ -3625,6 +3916,8 @@ export interface components {
       default_address_form?: ("name_patronymic" | "first_name" | "full_name" | "formal") | null;
       /** System Prompt */
       system_prompt?: string | null;
+      /** Guard Block Categories */
+      guard_block_categories?: string[] | null;
     };
     /** SettingsOut */
     SettingsOut: {
@@ -3647,6 +3940,11 @@ export interface components {
       default_address_form: "name_patronymic" | "first_name" | "full_name" | "formal";
       /** System Prompt */
       system_prompt: string;
+      /**
+       * Guard Block Categories
+       * @description Категории guard-модели, по которым ответ блокируется.
+       */
+      guard_block_categories?: string[];
       /** @description Значения из конфигурации. */
       defaults: components["schemas"]["SettingsValues"];
       /**
@@ -3660,6 +3958,11 @@ export interface components {
       has_logo: boolean;
       /** Logo Version */
       logo_version: string | null;
+      /**
+       * Guard Categories
+       * @description Категории guard-модели из политики.
+       */
+      guard_categories: string[];
     };
     /** SettingsValues */
     SettingsValues: {
@@ -3682,6 +3985,11 @@ export interface components {
       default_address_form: "name_patronymic" | "first_name" | "full_name" | "formal";
       /** System Prompt */
       system_prompt: string;
+      /**
+       * Guard Block Categories
+       * @description Категории guard-модели, по которым ответ блокируется.
+       */
+      guard_block_categories?: string[];
     };
     /**
      * SourceOut
@@ -3751,6 +4059,21 @@ export interface components {
       /** Error */
       error?: string | null;
     };
+    /** Summary */
+    Summary: {
+      /**
+       * New
+       * @description Новые инциденты — счётчик в меню.
+       */
+      new: number;
+      /**
+       * New High
+       * @description Из них high и critical — подсветка.
+       */
+      new_high: number;
+      /** Open */
+      open: number;
+    };
     /** TestChatOut */
     TestChatOut: {
       /**
@@ -3818,6 +4141,32 @@ export interface components {
     ToolToggleIn: {
       /** Enabled */
       enabled: boolean;
+    };
+    /** TrustedIn */
+    TrustedIn: {
+      /** Cidr */
+      cidr: string;
+      /** Note */
+      note?: string | null;
+    };
+    /** TrustedOut */
+    TrustedOut: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Cidr */
+      cidr: string;
+      /** Note */
+      note: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Created By */
+      created_by: string | null;
     };
     /** UserCard */
     UserCard: {
@@ -5566,6 +5915,9 @@ export interface operations {
       query?: {
         status?: string | null;
         type?: string | null;
+        severity?: string | null;
+        q?: string | null;
+        cursor?: string | null;
         limit?: number;
       };
       header?: never;
@@ -5580,7 +5932,148 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["IncidentOut"][];
+          "application/json": components["schemas"]["Page_IncidentOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminIncidentsSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Summary"];
+        };
+      };
+    };
+  };
+  adminIncidentAssignees: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PersonRef"][];
+        };
+      };
+    };
+  };
+  adminGetIncident: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        incident_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUpdateIncident: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        incident_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IncidentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminCommentIncident: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        incident_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CommentIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentDetail"];
         };
       };
       /** @description Validation Error */
@@ -6657,6 +7150,212 @@ export interface operations {
       };
     };
   };
+  adminListIpBlocks: {
+    parameters: {
+      query?: {
+        include_expired?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IpBlockOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminBlockIp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IpBlockIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IpBlockOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUnblockIp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        block_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminListTrustedNetworks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrustedOut"][];
+        };
+      };
+    };
+  };
+  adminTrustNetwork: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TrustedIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrustedOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminUntrustNetwork: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        network_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  adminReviewLogin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        event_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LoginEventOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   getBranding: {
     parameters: {
       query?: never;
@@ -7079,6 +7778,9 @@ export interface operations {
         login?: string | null;
         user_id?: string | null;
         success?: boolean | null;
+        flagged?: boolean | null;
+        unreviewed?: boolean | null;
+        ip?: string | null;
         cursor?: string | null;
         limit?: number;
       };

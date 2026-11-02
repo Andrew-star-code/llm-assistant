@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import sys
 from enum import StrEnum
@@ -273,6 +274,9 @@ class ModelEndpoint(_Section):
         "без него — оценка по длине текста.",
     )
     timeout_s: float = Field(600, gt=0, description="Тайм-аут запроса к модели, с.")
+    container: str | None = Field(
+        None, description="Имя контейнера модели — для логов в инциденте model_health."
+    )
 
 
 REQUIRED_MODEL_ROLES = ("chat", "utility", "embed", "rerank")
@@ -369,6 +373,44 @@ class WorkerSettings(_Section):
     eager: bool = Field(False, description="Выполнять задачи в процессе api (только тесты).")
 
 
+class WorkHours(_Section):
+    start: str = Field("07:00", pattern=r"^\d{2}:\d{2}$", description="Начало рабочего дня.")
+    end: str = Field("21:00", pattern=r"^\d{2}:\d{2}$", description="Конец рабочего дня.")
+    weekdays: list[int] = Field(
+        default_factory=lambda: [1, 2, 3, 4, 5],
+        description="Рабочие дни ISO (1 — понедельник). Время — в chat.timezone.",
+    )
+
+
+class MessageBurst(_Section):
+    max_messages: int = Field(60, gt=0, description="Сколько сообщений за окно — ещё норма.")
+    window_minutes: int = Field(10, gt=0, description="Окно подсчёта, минут.")
+
+
+class SecuritySettings(_Section):
+    """Правила подозрительности (§13.4): флаги входа, всплеск запросов, кэш блокировок IP."""
+
+    work_hours: WorkHours = Field(default_factory=WorkHours)
+    subnet_prefix_v4: int = Field(24, ge=8, le=32, description="Подсеть IPv4 для «нового IP».")
+    subnet_prefix_v6: int = Field(64, ge=16, le=128, description="Подсеть IPv6 для «нового IP».")
+    message_burst: MessageBurst = Field(default_factory=MessageBurst)
+    blocklist_cache_s: int = Field(
+        15, ge=0, description="Сколько секунд процесс кэширует список блокировок IP."
+    )
+
+
+class ModerationSettings(_Section):
+    """Скрытый репорт и guard-модель (§9.6); категории и тексты — config/moderation/policy.yaml."""
+
+    report_window_s: int = Field(
+        600, gt=0, description="Не больше одного инцидента-репорта на чат за это время, с."
+    )
+    guard_enabled: bool = Field(
+        True, description="Проверять сообщения пользователей guard-моделью (роль guard)."
+    )
+    guard_timeout_s: float = Field(15, gt=0, description="Тайм-аут ответа guard-модели, с.")
+
+
 class ExportsSettings(_Section):
     """Выгрузки переписки из админки (§13.3)."""
 
@@ -393,6 +435,15 @@ class MonitoringSettings(_Section):
         None, description="Prometheus с метриками DCGM (GPU); пусто — блок GPU без данных."
     )
     timeout_s: float = Field(2.0, gt=0, description="Тайм-аут запроса к Prometheus, с.")
+    model_health_failures: int = Field(
+        2, ge=1, description="Сколько проверок модели подряд должно упасть до инцидента."
+    )
+    model_health_timeout_s: float = Field(5.0, gt=0, description="Тайм-аут проверки модели, с.")
+    docker_url: str | None = Field(
+        None,
+        description="Docker API только на чтение (unix:///var/run/docker.sock или "
+        "http://docker-proxy:2375): логи контейнера модели в инциденте; пусто — без логов.",
+    )
 
 
 class Bm25Settings(_Section):
@@ -513,7 +564,8 @@ class Settings(BaseSettings):
     readiness_timeout_s: float = Field(2.0, gt=0, description="Тайм-аут каждой проверки /ready, с.")
     trusted_proxies: list[str] = Field(
         default_factory=list,
-        description="IP прокси (nginx), чьему X-Forwarded-For доверяем при определении IP клиента.",
+        description="IP или подсети прокси (nginx), чьему X-Forwarded-For доверяем при "
+        "определении IP клиента.",
     )
 
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
@@ -528,6 +580,8 @@ class Settings(BaseSettings):
     rag: RagSettings = Field(default_factory=RagSettings)
     kb: KbSettings = Field(default_factory=KbSettings)
     exports: ExportsSettings = Field(default_factory=ExportsSettings)
+    security: SecuritySettings = Field(default_factory=SecuritySettings)
+    moderation: ModerationSettings = Field(default_factory=ModerationSettings)
     retention: RetentionSettings = Field(default_factory=RetentionSettings)
     monitoring: MonitoringSettings = Field(default_factory=MonitoringSettings)
     models: dict[str, ModelEndpoint] = Field(
@@ -548,6 +602,11 @@ class Settings(BaseSettings):
             target = m.thinking.model_role
             if m.thinking.mode == "separate_model" and target not in self.models:
                 errors.append(f"models.{role}.thinking.model_role: роль {target!r} не описана")
+        for proxy in self.trusted_proxies:
+            try:
+                ipaddress.ip_network(proxy, strict=False)
+            except ValueError:
+                errors.append(f"trusted_proxies: {proxy!r} — не IP и не подсеть")
         if errors:
             raise ValueError("; ".join(errors))
         return self

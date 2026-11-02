@@ -49,6 +49,7 @@ def make_celery(settings: Settings) -> Celery:
         timezone=settings.chat.timezone,
         beat_schedule={
             "exports-cleanup": {"task": "exports.cleanup", "schedule": crontab(minute=7)},
+            "models-health": {"task": "models.health", "schedule": crontab()},
             "retention-purge": {
                 "task": "retention.purge",
                 "schedule": crontab(minute=17, hour="1,7,13,19"),
@@ -88,6 +89,11 @@ def export_task(export_id: str) -> None:
 @celery_app.task(name="exports.cleanup")  # type: ignore[untyped-decorator]
 def cleanup_exports_task() -> int:
     return asyncio.run(export_jobs.cleanup_exports_job(get_settings()))
+
+
+@celery_app.task(name="models.health")  # type: ignore[untyped-decorator]
+def models_health_task() -> int:
+    return asyncio.run(export_jobs.models_health_job(get_settings()))
 
 
 @celery_app.task(name="retention.purge")  # type: ignore[untyped-decorator]

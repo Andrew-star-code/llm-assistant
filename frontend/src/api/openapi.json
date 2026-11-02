@@ -2206,14 +2206,63 @@
             }
           },
           {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 500,
+              "maximum": 200,
               "minimum": 1,
-              "default": 100,
+              "default": 50,
               "title": "Limit"
             }
           }
@@ -2224,11 +2273,201 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
+                  "$ref": "#/components/schemas/Page_IncidentOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/incidents/summary": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Summary",
+        "operationId": "adminIncidentsSummary",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/incidents/assignees": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Assignees",
+        "description": "Кому можно назначить инцидент: администраторы и суперадминистраторы.",
+        "operationId": "adminIncidentAssignees",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/IncidentOut"
+                    "$ref": "#/components/schemas/PersonRef"
                   },
-                  "title": "Response Adminlistincidents"
+                  "type": "array",
+                  "title": "Response Adminincidentassignees"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/incidents/{incident_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Incident",
+        "operationId": "adminGetIncident",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Incident Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Incident",
+        "operationId": "adminUpdateIncident",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Incident Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/incidents/{incident_id}/comments": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Comment",
+        "operationId": "adminCommentIncident",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Incident Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentDetail"
                 }
               }
             }
@@ -4321,6 +4560,272 @@
         }
       }
     },
+    "/api/admin/ip-blocks": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Blocks",
+        "operationId": "adminListIpBlocks",
+        "parameters": [
+          {
+            "name": "include_expired",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Expired"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IpBlockOut"
+                  },
+                  "title": "Response Adminlistipblocks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Block Ip",
+        "operationId": "adminBlockIp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IpBlockIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpBlockOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/ip-blocks/{block_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Unblock Ip",
+        "operationId": "adminUnblockIp",
+        "parameters": [
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/trusted-networks": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Trusted",
+        "operationId": "adminListTrustedNetworks",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrustedOut"
+                  },
+                  "type": "array",
+                  "title": "Response Adminlisttrustednetworks"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Trust",
+        "operationId": "adminTrustNetwork",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrustedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrustedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/trusted-networks/{network_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Untrust",
+        "operationId": "adminUntrustNetwork",
+        "parameters": [
+          {
+            "name": "network_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Network Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/logins/{event_id}/review": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Review",
+        "description": "Отметить событие входа проверенным (флаги риска разобраны).",
+        "operationId": "adminReviewLogin",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginEventOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/branding": {
       "get": {
         "tags": [
@@ -4950,6 +5455,54 @@
                 }
               ],
               "title": "Success"
+            }
+          },
+          {
+            "name": "flagged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Flagged"
+            }
+          },
+          {
+            "name": "unreviewed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unreviewed"
+            }
+          },
+          {
+            "name": "ip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ip"
             }
           },
           {
@@ -6765,6 +7318,57 @@
         ],
         "title": "CheckResult"
       },
+      "CommentIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "CommentIn"
+      },
+      "CommentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "author",
+          "text",
+          "created_at"
+        ],
+        "title": "CommentOut"
+      },
       "ControllerOut": {
         "properties": {
           "url": {
@@ -8136,6 +8740,138 @@
         ],
         "title": "ImportOut"
       },
+      "IncidentDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "occurrences": {
+            "type": "integer",
+            "title": "Occurrences"
+          },
+          "first_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "First Seen"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chat_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Id"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "comments": {
+            "items": {
+              "$ref": "#/components/schemas/CommentOut"
+            },
+            "type": "array",
+            "title": "Comments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "severity",
+          "status",
+          "title",
+          "occurrences",
+          "first_seen",
+          "last_seen",
+          "user",
+          "assignee",
+          "chat_id",
+          "message_id",
+          "resolution",
+          "payload",
+          "comments"
+        ],
+        "title": "IncidentDetail"
+      },
       "IncidentOut": {
         "properties": {
           "id": {
@@ -8173,17 +8909,25 @@
             "format": "date-time",
             "title": "Last Seen"
           },
-          "user_id": {
+          "user": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "$ref": "#/components/schemas/PersonRef"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "User Id"
+            ]
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "chat_id": {
             "anyOf": [
@@ -8208,18 +8952,6 @@
               }
             ],
             "title": "Message Id"
-          },
-          "payload": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payload"
           }
         },
         "type": "object",
@@ -8232,12 +8964,59 @@
           "occurrences",
           "first_seen",
           "last_seen",
-          "user_id",
+          "user",
+          "assignee",
           "chat_id",
-          "message_id",
-          "payload"
+          "message_id"
         ],
         "title": "IncidentOut"
+      },
+      "IncidentUpdate": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "new",
+                  "in_progress",
+                  "resolved",
+                  "false_positive"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "assigned_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
+          }
+        },
+        "type": "object",
+        "title": "IncidentUpdate"
       },
       "Incidents": {
         "properties": {
@@ -8256,6 +9035,108 @@
           "high"
         ],
         "title": "Incidents"
+      },
+      "IpBlockIn": {
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 2,
+            "title": "Cidr",
+            "description": "IP или подсеть: 10.1.2.3, 10.1.2.0/24"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 525600.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes",
+            "description": "Срок; пусто — бессрочно."
+          }
+        },
+        "type": "object",
+        "required": [
+          "cidr",
+          "reason"
+        ],
+        "title": "IpBlockIn"
+      },
+      "IpBlockOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "cidr": {
+            "type": "string",
+            "title": "Cidr"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "cidr",
+          "reason",
+          "source",
+          "until",
+          "active",
+          "created_at",
+          "created_by"
+        ],
+        "title": "IpBlockOut"
       },
       "KbIn": {
         "properties": {
@@ -8500,6 +9381,18 @@
             },
             "type": "array",
             "title": "Risk Flags"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
           }
         },
         "type": "object",
@@ -9284,6 +10177,33 @@
         ],
         "title": "Page[FeedbackItem]"
       },
+      "Page_IncidentOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[IncidentOut]"
+      },
       "Page_LoginEventOut_": {
         "properties": {
           "items": {
@@ -9364,6 +10284,30 @@
           "items"
         ],
         "title": "Page[UserListItem]"
+      },
+      "PersonRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login",
+          "full_name"
+        ],
+        "title": "PersonRef"
       },
       "PersonalKbOut": {
         "properties": {
@@ -11104,6 +12048,20 @@
               }
             ],
             "title": "System Prompt"
+          },
+          "guard_block_categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guard Block Categories"
           }
         },
         "type": "object",
@@ -11150,6 +12108,14 @@
             "type": "string",
             "title": "System Prompt"
           },
+          "guard_block_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Block Categories",
+            "description": "Категории guard-модели, по которым ответ блокируется."
+          },
           "defaults": {
             "$ref": "#/components/schemas/SettingsValues",
             "description": "Значения из конфигурации."
@@ -11188,6 +12154,14 @@
               }
             ],
             "title": "Logo Version"
+          },
+          "guard_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Categories",
+            "description": "Категории guard-модели из политики."
           }
         },
         "type": "object",
@@ -11204,7 +12178,8 @@
           "overridden",
           "notice_updated_at",
           "has_logo",
-          "logo_version"
+          "logo_version",
+          "guard_categories"
         ],
         "title": "SettingsOut"
       },
@@ -11247,6 +12222,14 @@
           "system_prompt": {
             "type": "string",
             "title": "System Prompt"
+          },
+          "guard_block_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Block Categories",
+            "description": "Категории guard-модели, по которым ответ блокируется."
           }
         },
         "type": "object",
@@ -11415,6 +12398,31 @@
         ],
         "title": "StepOut"
       },
+      "Summary": {
+        "properties": {
+          "new": {
+            "type": "integer",
+            "title": "New",
+            "description": "Новые инциденты — счётчик в меню."
+          },
+          "new_high": {
+            "type": "integer",
+            "title": "New High",
+            "description": "Из них high и critical — подсветка."
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          }
+        },
+        "type": "object",
+        "required": [
+          "new",
+          "new_high",
+          "open"
+        ],
+        "title": "Summary"
+      },
       "TestChatOut": {
         "properties": {
           "chat_id": {
@@ -11566,6 +12574,82 @@
           "enabled"
         ],
         "title": "ToolToggleIn"
+      },
+      "TrustedIn": {
+        "properties": {
+          "cidr": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 2,
+            "title": "Cidr"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cidr"
+        ],
+        "title": "TrustedIn"
+      },
+      "TrustedOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "cidr": {
+            "type": "string",
+            "title": "Cidr"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "cidr",
+          "note",
+          "created_at",
+          "created_by"
+        ],
+        "title": "TrustedOut"
       },
       "UserCard": {
         "properties": {

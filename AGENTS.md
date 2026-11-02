@@ -32,7 +32,8 @@ RAG по базам знаний трёх уровней, инструмента
 | `make deploy` | Выкатка на сервер — этап 10 |
 
 CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `openapi`, `api-docs`, `db-docs`,
-`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`, `kb list`, `kb import --kb <код> <папка>`.
+`ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`, `kb list`, `kb import --kb <код> <папка>`,
+`ip list`, `ip unblock <IP или подсеть>`.
 В дев-стенде: `docker compose … exec api python -m app.cli …`.
 
 Вход на дев-стенде: провайдер dev — кнопки на странице входа (seed из `config/app.dev.yaml`);
@@ -197,6 +198,17 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 - **Переписка в админке**: просмотр чата целиком — запись `chat.view` в аудит при каждом открытии;
   новый эндпоинт, отдающий переписку целиком, тоже пишет аудит. Списки и поиск показывают только
   фрагменты. Физическое удаление — `chats.purge.purge_chat`, файлы и точки Qdrant — после commit.
+- **Ошибки — уже инциденты**: необработанное исключение в API становится `system_error` со стеком
+  и логом запроса (`core/log_capture`), поэтому всё, что логируется, может оказаться в карточке
+  инцидента — тем строже правило «без секретов и текстов сообщений на INFO».
+- **Блокировки IP проверяются на каждом запросе** (`security.ipblocks.Blocklist` в `current_user` и
+  при входе); после изменения блокировок вызывайте `await blocklist.changed()` — иначе другие
+  процессы увидят их только через `security.blocklist_cache_s`.
+- **IP клиента на дев-стенде** приходит через прокси Vite (`xfwd`) в `X-Forwarded-For`, которому
+  api верит из частных сетей Docker (`trusted_proxies` в `config/app.dev.yaml`); в проде доверять
+  только адресу nginx. Заблокировали свой адрес — `python -m app.cli ip unblock <IP>`.
+- **Скрытый `report_incident`** всегда в наборе инструментов (сценарий его не убирает), а его
+  инструкция — отдельный шаблон `system/moderation.md.j2`, не заменяемый промптом из админки.
 - **Номера цитат** выдаёт `SourceBook` (общая на ответ); не нумеруйте фрагменты в инструментах
   сами — `render_fragments` в `tools/builtin/knowledge.py`.
 - **Сценарий читается из БД на каждое сообщение** (`completions/generation.py`) — не кэшируйте

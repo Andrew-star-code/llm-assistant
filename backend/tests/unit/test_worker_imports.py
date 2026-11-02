@@ -20,7 +20,9 @@ Base.metadata.sorted_tables  # разрешает все ForeignKey; без мо
 """
 
 
-@pytest.mark.parametrize("module", ["app.workers.celery_app", "app.cli.kb", "app.workers.kb_jobs"])
+@pytest.mark.parametrize(
+    "module", ["app.workers.celery_app", "app.cli.kb", "app.cli.security", "app.workers.kb_jobs"]
+)
 def test_entry_point_registers_all_tables(module: str) -> None:
     result = subprocess.run(  # noqa: S603 — фиксированная команда, текущий интерпретатор
         [sys.executable, "-c", CODE.format(module=module)],

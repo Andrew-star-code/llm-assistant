@@ -25,6 +25,8 @@ class Perm(StrEnum):
     KB_MANAGE = "admin.kb.manage"
     KB_MANAGE_ROLES = "admin.kb.manage_roles"
     INCIDENTS_VIEW = "admin.incidents.view"
+    INCIDENTS_MANAGE = "admin.incidents.manage"
+    SECURITY_MANAGE = "admin.security.manage"
     SCENARIOS_MANAGE = "admin.scenarios.manage"
     DASHBOARD_VIEW = "admin.dashboard.view"
     CHATS_VIEW = "admin.chats.view"
@@ -50,6 +52,8 @@ PERMISSION_DESCRIPTIONS: dict[Perm, str] = {
     Perm.KB_MANAGE: "Все базы знаний: создание, роли, документы, импорт, удаление",
     Perm.KB_MANAGE_ROLES: "Ролевые базы знаний тех ролей, что есть у самого менеджера",
     Perm.INCIDENTS_VIEW: "Просмотр инцидентов",
+    Perm.INCIDENTS_MANAGE: "Работа с инцидентами: статус, ответственный, решение, комментарии",
+    Perm.SECURITY_MANAGE: "Блокировки IP и подсетей, доверенные подсети, проверка событий входа",
     Perm.SCENARIOS_MANAGE: "Сценарии: создание, редактирование, тестовый чат",
     Perm.DASHBOARD_VIEW: "Дашборд: активность, токены, качество, состояние моделей и очередей",
     Perm.CHATS_VIEW: "Поиск и просмотр переписки всех пользователей (каждый просмотр — в аудит)",

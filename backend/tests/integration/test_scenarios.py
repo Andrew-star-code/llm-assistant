@@ -151,7 +151,8 @@ async def test_scenario_prompt_tools_kb_thinking_and_model_apply(stand: Any) -> 
     assert answer == (f"Нашёл в документе: Сценарий-маркер {scenario['name']} для Александр.")
     trace, row = await trace_of(app, message_id)
     assert trace["scenario"] == scenario["code"]
-    assert trace["tools_offered"] == ["search_knowledge_base"]  # ∩ с инструментами сценария
+    # ∩ с инструментами сценария; скрытый репорт (§9.6) сценарий не убирает.
+    assert trace["tools_offered"] == ["report_incident", "search_knowledge_base"]
     assert row.thinking is True  # thinking_default сценария
     searched = {c["document_id"] for c in trace["rag"]["candidates"]}
     async with app.state.db_sessions() as db:

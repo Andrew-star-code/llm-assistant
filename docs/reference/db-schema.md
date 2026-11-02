@@ -107,6 +107,16 @@
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 
+## `incident_comments`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `incident_id` | UUID | not null | → incidents.id, index |
+| `author_id` | UUID | null | → users.id, index |
+| `text` | TEXT | not null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
 ## `incidents`
 
 | Колонка | Тип | NULL | Ключи и индексы |
@@ -126,6 +136,18 @@
 | `assigned_to` | UUID | null | → users.id |
 | `resolution` | TEXT | null |  |
 | `id` | UUID | not null | PK |
+
+## `ip_blocks`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `cidr` | VARCHAR(64) | not null | index |
+| `reason` | VARCHAR(300) | not null |  |
+| `until` | TIMESTAMP WITH TIME ZONE | null |  |
+| `source` | VARCHAR(16) | not null |  |
+| `created_by` | UUID | null | → users.id, index |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 
 ## `kb_documents`
 
@@ -200,6 +222,7 @@
 | `risk_flags` | JSONB | not null |  |
 | `details` | JSONB | not null |  |
 | `reviewed_by` | UUID | null | → users.id, index |
+| `reviewed_at` | TIMESTAMP WITH TIME ZONE | null |  |
 | `id` | UUID | not null | PK |
 
 ## `message_sources`
@@ -329,6 +352,16 @@
 | `iteration` | INTEGER | not null |  |
 | `label` | VARCHAR(64) | not null |  |
 | `label_params` | JSONB | null |  |
+| `id` | UUID | not null | PK |
+| `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
+
+## `trusted_networks`
+
+| Колонка | Тип | NULL | Ключи и индексы |
+| --- | --- | --- | --- |
+| `cidr` | VARCHAR(64) | not null | unique |
+| `note` | VARCHAR(300) | null |  |
+| `created_by` | UUID | null | → users.id, index |
 | `id` | UUID | not null | PK |
 | `created_at` | TIMESTAMP WITH TIME ZONE | not null |  |
 

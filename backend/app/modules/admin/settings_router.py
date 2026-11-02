@@ -21,6 +21,7 @@ from app.core.errors import AppError, NotFoundError
 from app.modules.admin import app_settings as keys
 from app.modules.audit import service as audit
 from app.modules.auth.deps import CurrentUser, client_ip, require
+from app.modules.moderation.policy import load_policy
 from app.modules.rbac.permissions import Perm
 from app.modules.scenarios.service import check_template
 from app.modules.users.naming import AddressForm
@@ -43,6 +44,9 @@ class SettingsValues(BaseModel):
     max_files_per_message: int
     default_address_form: AddressForm
     system_prompt: str
+    guard_block_categories: list[str] = Field(
+        default_factory=list, description="Категории guard-модели, по которым ответ блокируется."
+    )
 
 
 class SettingsOut(SettingsValues):
@@ -51,6 +55,7 @@ class SettingsOut(SettingsValues):
     notice_updated_at: datetime | None
     has_logo: bool
     logo_version: str | None
+    guard_categories: list[str] = Field(description="Категории guard-модели из политики.")
 
 
 class SettingsIn(BaseModel):
@@ -67,6 +72,7 @@ class SettingsIn(BaseModel):
     max_files_per_message: int | None = Field(None, ge=1, le=50)
     default_address_form: AddressForm | None = None
     system_prompt: str | None = Field(None, min_length=1, max_length=20_000)
+    guard_block_categories: list[str] | None = None
 
 
 class Branding(BaseModel):
@@ -83,6 +89,7 @@ FIELDS: dict[str, str] = {
     "max_files_per_message": keys.MAX_FILES_PER_MESSAGE,
     "default_address_form": keys.DEFAULT_ADDRESS_FORM,
     "system_prompt": keys.SYSTEM_PROMPT,
+    "guard_block_categories": keys.GUARD_BLOCK,
 }
 
 
@@ -97,6 +104,7 @@ def _defaults(settings: Settings) -> SettingsValues:
         max_files_per_message=settings.files.max_files_per_message,
         default_address_form=settings.users.default_address_form,
         system_prompt=base.read_text("utf-8").strip() if base.exists() else "",
+        guard_block_categories=[],
     )
 
 
@@ -113,6 +121,7 @@ async def _out(db: DbDep, settings: Settings) -> SettingsOut:
         notice_updated_at=datetime.fromisoformat(updated) if updated else None,
         has_logo=bool(logo),
         logo_version=logo.get("version") if logo else None,
+        guard_categories=load_policy(settings.config_dir).guard_categories,
     )
 
 
@@ -127,6 +136,15 @@ async def update_settings(
 ) -> SettingsOut:
     if body.system_prompt:
         check_template(body.system_prompt)
+    if body.guard_block_categories:
+        known = set(load_policy(settings.config_dir).guard_categories)
+        unknown = [c for c in body.guard_block_categories if c not in known]
+        if unknown:
+            raise AppError(
+                f"Неизвестные категории guard: {', '.join(unknown)}",
+                code="bad_guard_category",
+                status_code=422,
+            )
     changed: dict[str, Any] = {}
     for field, key in FIELDS.items():
         if field not in body.model_fields_set:
