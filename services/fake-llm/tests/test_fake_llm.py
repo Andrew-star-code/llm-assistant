@@ -411,3 +411,13 @@ def test_read_document_page_range() -> None:
         "page_to": 12,
     }
     assert tool_arguments("read_document", [], "стр. 5")["page_to"] == 5
+
+
+async def test_flaky_fails_twice_then_answers(client: AsyncOpenAI) -> None:
+    text = "[[scenario:flaky]] один и тот же вопрос"
+    with pytest.raises(openai.InternalServerError):
+        await _collect(client, text)
+    with pytest.raises((openai.APIConnectionError, httpx.RemoteProtocolError, httpx.ReadError)):
+        await _collect(client, text)
+    result = await _collect(client, text)
+    assert result["content"] == "Ответ fake-llm после сбоев: «один и тот же вопрос»."

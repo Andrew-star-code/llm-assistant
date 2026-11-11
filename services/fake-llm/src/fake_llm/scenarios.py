@@ -428,6 +428,10 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
         return tool_scenario(name, name.removeprefix("tool:").split("+"), messages, clean)
     if name == "tool_loop":
         return tool_scenario(name, ["list_attachments"], messages, clean, loop=True)
+    if name == "flaky":
+        # Сами сбои (503, затем обрыв до первого слова) устраивает приложение: у него есть память
+        # о прошлых запросах. Здесь — ответ третьей, удачной попытки.
+        return Scenario(name, [Step("content", f"Ответ fake-llm после сбоев: «{clean}».")])
     if name == "error_500":
         return Scenario(name, [], http_error=500)
     if name == "disconnect":
@@ -467,6 +471,7 @@ SCENARIO_NAMES = (
     "tool:<имя>[+<имя>…]",
     "tool_loop",
     "recall",
+    "flaky",
     "error_500",
     "disconnect",
     "slow",

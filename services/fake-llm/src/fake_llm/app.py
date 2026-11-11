@@ -24,7 +24,14 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from fake_llm.scenarios import Scenario, Step, resolve, split_words, tool_call_payload
+from fake_llm.scenarios import (
+    Scenario,
+    Step,
+    last_user_text,
+    resolve,
+    split_words,
+    tool_call_payload,
+)
 
 
 @dataclass(frozen=True)
@@ -94,6 +101,7 @@ def _error(status: int, message: str) -> JSONResponse:
 def create_app(settings: FakeSettings | None = None) -> FastAPI:
     settings = settings or FakeSettings.from_env()
     app = FastAPI(title="fake-llm", version="0.1.0")
+    flaky_calls: dict[str, int] = {}  # сценарий flaky: сколько раз уже приходил этот запрос
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -111,6 +119,16 @@ def create_app(settings: FakeSettings | None = None) -> FastAPI:
     async def chat_completions(request: Request) -> JSONResponse | StreamingResponse:
         body: dict[str, Any] = await request.json()
         scenario = resolve(body, settings.slow_delay_s)
+        if scenario.name == "flaky":
+            # Кратковременный сбой модели: первый запрос — 503, второй — обрыв до первого слова,
+            # третий — ответ. Запросы различаются по тексту сообщения пользователя.
+            key = last_user_text(body.get("messages") or [])
+            seen = flaky_calls.get(key, 0)
+            flaky_calls[key] = seen + 1
+            if seen == 0:
+                return _error(503, "fake-llm: модель временно недоступна (flaky)")
+            if seen == 1:
+                scenario = Scenario("flaky", [Step("disconnect")])
         if scenario.http_error:
             return _error(scenario.http_error, f"fake-llm: ошибка по сценарию {scenario.name}")
         model = body.get("model", "fake-chat")
