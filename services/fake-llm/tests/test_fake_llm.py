@@ -382,3 +382,32 @@ def test_phonebook_answer_reports_tool_errors() -> None:
         "Не удалось обратиться к телефонному справочнику: шлюз данных недоступен"
     )
     assert phonebook_answer("Найдено строк: 0.") == "В телефонном справочнике никого не нашёл."
+
+
+def test_recall_reports_tool_history() -> None:
+    from fake_llm.scenarios import resolve
+
+    call = {"id": "c1", "type": "function", "function": {"name": "read_document"}}
+    messages = [
+        {"role": "user", "content": "прочитай"},
+        {"role": "assistant", "content": None, "tool_calls": [call]},
+        {"role": "tool", "tool_call_id": "c1", "content": "Вступление\nКод проекта: ZX-42"},
+        {"role": "assistant", "content": "Готово."},
+        {"role": "user", "content": "[[scenario:recall]] «Код проекта»"},
+    ]
+    assert resolve({"messages": messages}, 0).steps[0].text == (
+        "В истории вызовы: read_document; результатов: 1. Нашёл: Код проекта: ZX-42"
+    )
+    empty = resolve({"messages": messages[-1:]}, 0).steps[0].text
+    assert empty == "В истории вызовы: нет; результатов: 0."
+
+
+def test_read_document_page_range() -> None:
+    from fake_llm.scenarios import tool_arguments
+
+    assert tool_arguments("read_document", [], "стр. 3–12") == {
+        "file": "документ",
+        "page_from": 3,
+        "page_to": 12,
+    }
+    assert tool_arguments("read_document", [], "стр. 5")["page_to"] == 5

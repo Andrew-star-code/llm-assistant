@@ -113,7 +113,7 @@ def title_from(text: str) -> str:
 # Заголовок вложения в системном промпте (config/prompts/system/attachments.md.j2).
 ATTACHMENT_HEADER = re.compile(r"=== Файл «(.+?)»")
 QUOTED = re.compile(r"«([^»]+)»")
-PAGE_REF = re.compile(r"стр\w*\.?\s*(\d+)", re.IGNORECASE)
+PAGE_REF = re.compile(r"стр\w*\.?\s*(\d+)(?:\s*[-–]\s*(\d+))?", re.IGNORECASE)
 
 SPREADSHEET_ARGS: dict[str, Any] = {
     "format": "xlsx",
@@ -204,7 +204,8 @@ def tool_arguments(name: str, messages: list[dict[str, Any]], clean: str) -> dic
     if name == "read_document":
         page = PAGE_REF.search(clean)
         start = int(page.group(1)) if page else 1
-        return {"file": file, "page_from": start, "page_to": start}
+        end = int(page.group(2)) if page and page.group(2) else start
+        return {"file": file, "page_from": start, "page_to": end}
     if name in ("get_document_outline", "read_spreadsheet"):
         return {"file": file}
     if name == "search_in_documents":
@@ -396,6 +397,18 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
             else f"В документах нет «{needle}»."
         )
         return Scenario(name, [Step("content", text)])
+    if name == "recall":
+        # Что модель видит из прошлых ответов: вызовы инструментов и их результаты в истории.
+        calls = [
+            c.get("function", {}).get("name", "")
+            for m in messages
+            for c in m.get("tool_calls") or []
+        ]
+        results = [_text_of(m) for m in messages if m.get("role") == "tool"]
+        needle = needle_of(clean) if QUOTED.search(clean) else ""
+        found = find_line("\n".join(results), needle) if needle else None
+        text = f"В истории вызовы: {', '.join(calls) or 'нет'}; результатов: {len(results)}."
+        return Scenario(name, [Step("content", f"{text} Нашёл: {found}" if found else text)])
     if name == "moderation":
         # Явное нарушение: скрытый репорт, затем нейтральный отказ (§9.6).
         if last.get("role") == "tool":
@@ -453,6 +466,7 @@ SCENARIO_NAMES = (
     "find",
     "tool:<имя>[+<имя>…]",
     "tool_loop",
+    "recall",
     "error_500",
     "disconnect",
     "slow",
