@@ -1049,6 +1049,11 @@ make test-data-gateway
   `test_past_tool_results_stay_in_history`, `test_past_tool_results_can_be_switched_off`,
   `test_history_steps_skip_hidden_and_auto_search`.
 
+Проверено в песочнице агента: `make lint`, `make typecheck`, `make test` (Python 350, фронтенд 76),
+`make docs-check`. Сборка образов (`make images`, `test-worker`, `test-data-gateway`) в песочнице
+не прошла: сеть внутри `docker build` не доверяет её прокси; Dockerfile не менялись.
+**`make check` целиком и демо-сценарий повторить на рабочей станции.** e2e не запускались.
+
 ### Решения агента — подтвердить при ревью
 
 82. Порядок жертв при переполнении в цикле: старая история (целыми ходами) → результаты прошлых
