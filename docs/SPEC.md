@@ -106,7 +106,8 @@ flowchart LR
 | --- | --- | --- |
 | `gateway` | TLS, маршрутизация, лимит размера загрузок, SSE без буферизации | nginx |
 | `web` | SPA пользователя и админки (статика) | React + TypeScript |
-| `api` | Аутентификация, чаты, оркестратор LLM, RAG, инструменты, админ-API | Python 3.12, FastAPI |
+| `api` | Аутентификация, чаты, RAG, админ-API, SSE; ставит задания генерации | Python 3.12, FastAPI |
+| `generator` | Исполнитель генерации: оркестратор LLM, цикл инструментов (тот же образ, что `api`; ADR-0013) | Python 3.12, asyncio |
 | `worker` | Фон: индексация документов, экспорт, синхронизация с AD, память, очистка | Celery |
 | `scheduler` | Периодические задачи | Celery beat |
 | `data-gateway` | Семантический слой над SQL-БД: каталог, функции, контролируемый text-to-SQL | FastAPI, SQLAlchemy, sqlglot |
@@ -123,12 +124,12 @@ flowchart LR
 
 1. Браузер отправляет `POST /api/chats/{chat_id}/messages`: текст, id вложений, флаг thinking, id сценария.
 2. `api` проверяет сессию, блокировки и лимиты, сохраняет сообщение пользователя и пустой ответ ассистента со статусом `streaming`.
-3. `api` запускает генерацию фоновой asyncio-задачей и сразу возвращает `{message_id}`.
+3. `api` ставит задание генерации в очередь Redis и сразу возвращает `{message_id}`; задание забирает сервис `generator` и ведёт ответ фоновой asyncio-задачей (ADR-0013). В режиме `generation.mode: inline` (тесты) задача запускается в самом `api`.
 4. Генерация: сборка промпта → RAG по режиму сценария → вызов LLM со стримингом → цикл инструментов (§8). Каждое событие пишется в Redis Stream `gen:{message_id}`.
 5. Браузер читает `GET /api/messages/{message_id}/stream` (SSE). При обрыве он переподключается с `Last-Event-ID` и дочитывает пропущенное, поэтому перезагрузка страницы не теряет ответ.
 6. В конце ответ, источники, файлы и трассировка сохраняются в Postgres, токены списываются в лимиты, запускаются фоновые задачи: заголовок чата, модерация, ★ память.
 
-Кнопка «Стоп» может попасть в любой процесс `api`, поэтому отмена передаётся флагом в Redis, а генерирующий процесс прерывает запрос к модели. При перезапуске `api` незавершённые генерации помечаются статусом `interrupted`.
+Кнопка «Стоп» может попасть в любой процесс `api`, поэтому отмена передаётся флагом в Redis, а генерирующий процесс прерывает запрос к модели. Перезапуск `api` идущие ответы не трогает. `generator` при остановке перестаёт брать задания и дорабатывает свои (`generation.shutdown_grace_seconds`); не успевшие и ответы упавшего исполнителя помечаются статусом `interrupted`. Задание, не дождавшееся исполнителя за `generation.queue_ttl_seconds`, — тоже.
 
 ### 2.3 Ключевые решения (оформить как ADR)
 
@@ -1127,7 +1128,7 @@ rag:
 ### 16.2 Прод на GPU-сервере
 
 - Хост: Ubuntu 24.04 LTS, драйвер NVIDIA под CUDA 12.x (версию берём из требований выбранного vLLM), NVIDIA Container Toolkit, Docker, gVisor (`runsc`) как дополнительный рантайм, persistence mode, проверка `nvidia-smi topo -m`.
-- Compose-проекты: `app` (nginx, frontend, api, worker, scheduler, data-gateway, sandbox-runner), `data` (postgres, redis, qdrant), `models/chat`, `models/coder`, `models/aux`, `monitoring`. Перезапуск моделей не трогает приложение.
+- Compose-проекты: `app` (nginx, frontend, api, generator, worker, scheduler, data-gateway, sandbox-runner), `data` (postgres, redis, qdrant), `models/chat`, `models/coder`, `models/aux`, `monitoring`. Перезапуск моделей не трогает приложение.
 - У всех сервисов `restart: unless-stopped`, healthcheck, лимиты памяти и CPU, ротация логов.
 - nginx для SSE: `proxy_buffering off` и увеличенный `proxy_read_timeout`; `client_max_body_size` — под лимит загрузок.
 - Миграции применяются отдельной командой `make migrate` перед стартом новой версии.

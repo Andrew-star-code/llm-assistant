@@ -36,7 +36,7 @@
 | Входит | Откладывается на доводку |
 | --- | --- |
 | PostgreSQL, Redis, Qdrant | Модель для разработчиков `llm-coder` и `dev-gateway` (GPU 2) |
-| api, worker, worker-kb, scheduler, frontend | guard-модель (`moderation.guard_enabled: false`) |
+| api, generator, worker, worker-kb, scheduler, frontend | guard-модель (`moderation.guard_enabled: false`) |
 | `llm-chat` (GPU 0–1, TP = 2) | Prometheus, Grafana, алерты |
 | `llm-utility`, `embed`, `rerank` (GPU 3) | Офлайн-бандл — нужен только к отключению интернета |
 | nginx с TLS | data-gateway — пока не известно представление справочника |
@@ -597,6 +597,13 @@ services:
     secrets: [ldap_bind_password, corp_ca.pem]
     depends_on:
       llm-chat: {condition: service_healthy}
+  generator:                              # исполнитель генерации (ADR-0013) — к модели ходит он
+    environment:
+      APP_ENV: prod
+      APP_DATA_GATEWAY__URL: ""
+    volumes: ["../../config:/srv/config:ro"]
+    depends_on:
+      llm-chat: {condition: service_healthy}
   worker:
     environment: {APP_ENV: prod}
     volumes: ["../../config:/srv/config:ro"]
@@ -879,7 +886,10 @@ docker compose -f docker-compose.yml -f compose.prod.yml exec api python -m app.
 3. Образы: сборка (8.1, вариант A) или `docker load` (вариант B). Старые образы **не удалять** до
    конца проверки — по ним идёт откат.
 4. `config check`, затем `up -d`: `migrate` применит миграции, сервисы перезапустятся. Идущие ответы
-   сохранятся как прерванные, у пользователей чат переподключится сам.
+   не прерываются: их ведёт `generator`, который при остановке дорабатывает свои ответы (до
+   `generation.shutdown_grace_seconds`, 180 с — столько может длиться его перезапуск). Сообщения,
+   отправленные в это время, ждут в очереди нового исполнителя. Чат у пользователей
+   переподключится сам.
 5. Smoke-проверка 11.2 (пункты 1, 2, 6).
 
 Перезапуск моделей не нужен, если не менялись они сами.
@@ -1087,9 +1097,16 @@ api стартует после здорового `llm-chat`. Инцидент�
 `chat.timezone` в конфиге. Время сервера и NTP (4.1) — для логов и бэкапов.
 
 **Г9. После `up -d` с новой версией у пользователей «висит» ответ.**
-Ожидаемое поведение — ответ сохраняется как прерванный, чат переподключается сам (этап 9). Если
-висит дольше минуты — `stop_grace_period` у api не меньше 20 с, логи api; страница перечитывается
-кнопкой обновления.
+Ожидаемое поведение — идущие ответы дорабатывает старый `generator` (до 180 с), новые сообщения
+ждут в очереди и начинаются, когда поднимется новый; чат переподключается сам. Если ответ не
+начинается дольше 3–4 минут — см. Г10; страница перечитывается кнопкой обновления.
+
+**Г10. Сообщение отправлено, ответ не начинается, через несколько минут — «Генерация прервана».**
+Не работает `generator`: api только ставит задания в очередь Redis (`generation.mode: queue`).
+`ps` — сервис должен быть `healthy`; логи `generator`; `docker compose … exec generator python -m
+app.cli generator check`. Длина очереди: `redis-cli LLEN gen:queue` — растёт, значит задания никто
+не забирает. Если `stop_grace_period` у `generator` меньше `generation.shutdown_grace_seconds`,
+Docker убивает его при остановке, и ответы остаются прерванными.
 
 ### Д. Вход и AD
 

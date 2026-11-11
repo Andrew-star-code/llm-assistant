@@ -1,20 +1,22 @@
 # Как проходит одно сообщение
 
-Реализация §2.2 на этапе 2 (без инструментов и RAG — они встраиваются в шаг генерации на этапах 3–4).
+Реализация §2.2 (инструменты и RAG встраиваются в шаг генерации). Исполнитель — сервис
+`generator` ([ADR-0013](../adr/0013-generation-executor.md)); в режиме `generation.mode: inline`
+его роль играет сам `api`.
 
 ```mermaid
 sequenceDiagram
   participant B as Браузер
   participant A as api (любой процесс)
-  participant G as api (исполнитель)
+  participant G as generator (исполнитель)
   participant R as Redis
   participant M as Модель (vLLM / fake-llm)
   participant P as PostgreSQL
   B->>A: POST /api/chats/{id}/messages
   A->>P: вопрос + ответ status=streaming, active_leaf_id
-  A->>R: gen:alive:{msg} (TTL 30 с)
+  A->>R: gen:alive:{msg} (TTL ожидания), RPUSH gen:queue
   A-->>B: 202 {user_message, assistant_message}
-  A->>G: фоновая задача
+  R-->>G: BLPOP gen:queue → задача, gen:alive:{msg} (TTL 30 с, продлевается)
   B->>A: GET /api/messages/{msg}/stream (SSE)
   G->>P: история активной ветки, пользователь
   G->>M: chat.completions stream
@@ -34,7 +36,12 @@ sequenceDiagram
   лежат в Redis Stream ещё 10 минут после конца.
 - **«Стоп».** `POST /api/messages/{id}/stop` может попасть в любой процесс: он ставит флаг в Redis,
   исполнитель закрывает запрос к модели и сохраняет частичный ответ `stopped`.
-- **Падение процесса.** Ключ живости истекает; читатель SSE или старт следующего процесса помечают
-  ответ `interrupted`, пользователь видит «Повторить».
+- **Перезапуск api.** Ответы не затрагивает: браузер переподключается к новому процессу и
+  дочитывает поток из Redis.
+- **Остановка исполнителя.** По SIGTERM он не берёт новые задания и дорабатывает идущие; новые
+  сообщения ждут в очереди следующего исполнителя.
+- **Падение исполнителя.** Ключ живости истекает; читатель SSE или проверка в api помечают
+  ответ `interrupted`, пользователь видит «Повторить». Так же — задание, не дождавшееся
+  исполнителя.
 - **Ветки.** Перегенерация создаёт сестринский ответ; переключатель «‹ 2/3 ›» меняет
   `active_leaf_id` (свежий лист выбранной версии).

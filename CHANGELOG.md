@@ -15,6 +15,12 @@
   - прошлые вызовы инструментов и начало их результатов идут в историю диалога
     (`tools.history_result_max_chars`, по умолчанию 2000; 0 — выключено);
   - fake-llm: сценарий `recall`, диапазон страниц «стр. N–M» для `read_document`.
+- Генерация вынесена из `api` в сервис `generator` ([ADR-0013](docs/adr/0013-generation-executor.md)):
+  `api` ставит задание в очередь Redis, исполнитель ведёт ответ; перезапуск `api` не прерывает
+  ответы, `generator` по SIGTERM дорабатывает свои; предел параллельных ответов
+  `generation.max_concurrent`; CLI `generator run|check`; режим `generation.mode: inline` для
+  тестов. **При обновлении:** в compose появился сервис `generator` — без него в режиме `queue`
+  ответы не начинаются.
 - Живучесть генерации: автоповтор запроса к модели при кратком сбое до первого слова ответа
   (`chat.model_retries`, `chat.model_retry_backoff_seconds`); в трассировке — `model_retries`;
   fake-llm: сценарий `flaky`.

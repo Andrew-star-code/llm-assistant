@@ -1110,8 +1110,18 @@ make dev-up
   тесты `test_chat.py::test_transient_model_failure_is_retried`,
   `test_model_failure_without_retries_and_broken_stream`, `test_transient_model_failures`.
 
-Проверено в песочнице агента: `make lint`, `make typecheck`, `make test`, `make docs-check`;
-образы и e2e — как выше, повторить на рабочей станции.
+- [x] п. 2 — `completions/executor.py` (`Executor`, `serve`), `GenerationManager.start` (очередь) /
+  `launch` / `drain`, `cli/generator.py`, сервис `generator` в `docker-compose.yml` и
+  `compose.dev.yml`, `generation.mode: queue` в `config/app.yaml`; тесты `test_generator.py`
+  (задание ждёт исполнителя и переживает проверку осиротевших; просроченное не выполняется; «Стоп»
+  в очереди; остановка дорабатывает ответ, а без запаса времени — прерывает; предел
+  параллельности; настоящий процесс `generator run` выполняет задание и выходит по SIGTERM с
+  кодом 0), `test_worker_imports.py`.
+
+Проверено в песочнице агента: `make lint`, `make typecheck`, `make test`, `make docs-check`,
+`docker compose … config`. **Не проверено:** сборка образов и сервис `generator` в контейнере
+(healthcheck, `watchfiles` на дев-стенде, `stop_grace_period`), e2e — в песочнице образы не
+собираются. **На рабочей станции:** `make check`, `make dev-up`, `make e2e` и демо ниже.
 
 ### Решения агента — подтвердить при ревью
 
@@ -1121,6 +1131,55 @@ make dev-up
 87. Повтор — только пока запрос не дал ни одной дельты (ни размышлений, ни ответа), зато в любой
     итерации цикла инструментов. После первой дельты повтор задвоил бы текст — как и прежде,
     ошибка и кнопка «Повторить». «Стоп» во время паузы завершает ответ статусом `stopped`.
+
+88. Очередь — список Redis (`RPUSH`/`BLPOP`), задание исполняется один раз; упавший посреди
+    ответа исполнитель оставляет `interrupted`. Повторная доставка задвоила бы события.
+89. Ожидание исполнителя — до 300 с (`generation.queue_ttl_seconds`), доработка при остановке —
+    до 180 с (`generation.shutdown_grace_seconds`, `stop_grace_period: 200s`), одновременно —
+    до 64 ответов на исполнитель (`generation.max_concurrent`). Числа — без нагрузочного теста;
+    уточнить на этапе 10.
+90. `generation.mode` в коде по умолчанию `inline`, в `config/app.yaml` — `queue`: прод и
+    дев-стенд работают через `generator`, тесты — задачей в api. Задание, полученное уже после
+    SIGTERM, возвращается в голову очереди.
+91. Проверку осиротевших ответов по-прежнему ведёт api; исполнитель её не дублирует.
+92. Слот лимита одновременных генераций в очереди не продлевается: при ожидании дольше
+    `limits.slot_ttl_s` (120 с) пользователь может начать ещё один ответ. Принято как редкий случай.
+
+### Осталось по направлению
+
+- [ ] Алерт «очередь `gen:queue` не разбирается / нет исполнителя» и длина очереди на дашборде
+  админки — вместе с мониторингом этапа 10 (§16.6). Сейчас симптом — «Генерация прервана» через
+  `queue_ttl_seconds` (runbook, проблема Г10).
+- [ ] Порядок обновления без ожидания доработки (новый исполнитель рядом со старым) — проверить и
+  описать в runbook на этапе 10.
+- [ ] Показ пользователю «в очереди» (событие SSE) — после нагрузочного теста (п. 3 плана).
+
+### Демо-сценарий (исполнитель)
+
+```bash
+make dev-up
+```
+
+1. Отправьте `[[scenario:slow]] длинный ответ` и, пока он идёт, перезапустите api:
+
+   ```bash
+   docker compose -f deploy/compose/docker-compose.yml -f deploy/compose/compose.dev.yml restart api
+   ```
+
+   Ответ продолжается и завершается (раньше — «Генерация прервана»).
+2. Остановите исполнитель и отправьте сообщение — ответ ждёт; запустите снова — ответ начинается:
+
+   ```bash
+   docker compose -f deploy/compose/docker-compose.yml -f deploy/compose/compose.dev.yml stop generator
+   ```
+
+   ```bash
+   docker compose -f deploy/compose/docker-compose.yml -f deploy/compose/compose.dev.yml start generator
+   ```
+
+3. Отправьте `[[scenario:slow]] ещё один` и сразу остановите исполнитель (`stop generator`) —
+   команда ждёт, пока ответ допишется; в чате он завершён, а не прерван.
+4. `[[scenario:flaky]] проверка` — ответ приходит без ошибки; в трассировке `model_retries: 2`.
 
 ## Отложенные задачи
 

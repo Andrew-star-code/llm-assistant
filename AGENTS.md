@@ -13,7 +13,7 @@ RAG по базам знаний трёх уровней, инструмента
 | Команда | Что делает |
 | --- | --- |
 | `make install` | Зависимости (uv, pnpm) и pre-commit-хуки |
-| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, mock-mssql, fake-llm, embed, api, worker, worker-kb, scheduler, data-gateway, frontend |
+| `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, mock-mssql, fake-llm, embed, api, generator, worker, worker-kb, scheduler, data-gateway, frontend |
 | `make dev-down` / `make dev-reset` | Остановить стенд / остановить и удалить данные |
 | `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → сборка образов |
 | `make test` | Unit- и интеграционные тесты (pytest, Vitest; нужен Docker: testcontainers и mock-AD) |
@@ -34,7 +34,7 @@ RAG по базам знаний трёх уровней, инструмента
 
 CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `openapi`, `api-docs`, `db-docs`,
 `ad check --user L [--password-prompt]`, `ad sync`, `create-admin --login L`, `worker check`, `kb list`, `kb import --kb <код> <папка>`,
-`ip list`, `ip unblock <IP или подсеть>`.
+`ip list`, `ip unblock <IP или подсеть>`, `generator run|check`.
 В дев-стенде: `docker compose … exec api python -m app.cli …`.
 
 Вход на дев-стенде: провайдер dev — кнопки на странице входа (seed из `config/app.dev.yaml`);
@@ -189,6 +189,12 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
   не через очередь: «пропадает из поиска за минуту» — это гарантирует api.
 - **Новая версия документа** пишется с новым `version` в id точек и вытесняет старые
   (`rag.store.write_document`); переиндексация = `mark_reindex` (version + 1) и задача `kb.index`.
+- **Генерация живёт в `generator`, а не в `api`** (ADR-0013): `GenerationManager.start` в api
+  только ставит задание в `gen:queue`. Код генерации и инструментов не должен опираться на
+  `app.state` и объекты запроса — их в исполнителе нет; новая модель SQLAlchemy регистрируется
+  через `import app.models` (ловит `test_worker_imports.py`). В тестах — `generation.mode: inline`
+  (задача в api, как `worker.eager`); очередь, остановку и сам процесс проверяет
+  `test_generator.py`. `stop_grace_period` сервиса — больше `generation.shutdown_grace_seconds`.
 - **Сообщения цикла инструментов — только через `LoopContext`** (`completions/context.py`):
   `add_calls`/`add_result` считают токены, `fit()` перед запросом возвращает промпт в бюджет.
   Прямой `messages.append` в цикле обходит бюджет — модель ответит ошибкой на длинном чате.
