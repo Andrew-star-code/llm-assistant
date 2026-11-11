@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +21,14 @@ from tests.integration.conftest import (
 
 
 async def _client(
-    make_client: Any, infra: Infra, tmp_path: Path, url: str, login: str = "petrov"
+    make_client: Any,
+    infra: Infra,
+    tmp_path: Path,
+    url: str,
+    login: str = "petrov",
+    **overrides: Any,
 ) -> tuple[Any, ApiClient]:
-    app, client = await make_client(chat_settings(infra, tmp_path, url))
+    app, client = await make_client(chat_settings(infra, tmp_path, url, **overrides))
     await client.login(login)
     return app, client
 
@@ -186,6 +192,50 @@ async def test_model_error_then_retry(
     }
     # По упавшему ответу модель заголовок не придумывает — берутся первые слова вопроса.
     assert detail["title"] == "[[scenario:error_500]] упади"
+
+
+async def test_transient_model_failure_is_retried(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Краткий сбой модели до первого слова ответа пользователь не замечает."""
+    app, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    chat_id = await new_chat(client)
+    question = f"[[scenario:flaky]] вопрос {uuid.uuid4().hex[:8]}"
+    sent = await send(client, chat_id, question)
+    events = await read_stream(client, sent["assistant_message"]["id"])
+    # 503, затем обрыв до первого слова, затем ответ — два автоповтора, ошибки в стриме нет.
+    assert "error" not in {e.event for e in events}
+    text = "".join(e.data["text"] for e in events if e.event == "content.delta")
+    assert text.startswith("Ответ fake-llm после сбоев")
+    assert events[-1].data == {"status": "completed", "finish_reason": "stop"}
+    async with app.state.db_sessions() as db:
+        row = await db.get(Message, uuid.UUID(sent["assistant_message"]["id"]))
+        assert row is not None and row.trace is not None
+        assert row.trace["model_retries"] == 2
+
+
+async def test_model_failure_without_retries_and_broken_stream(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    _, client = await _client(make_client, infra, tmp_path, fake_llm_url, chat={"model_retries": 0})
+    chat_id = await new_chat(client)
+    sent = await send(client, chat_id, f"[[scenario:flaky]] вопрос {uuid.uuid4().hex[:8]}")
+    events = await read_stream(client, sent["assistant_message"]["id"])
+    assert next(e for e in events if e.event == "error").data["code"] == "model_http_503"
+
+    # Обрыв после начала ответа не повторяется (текст задвоился бы): частичный ответ и ошибка
+    # «модель недоступна» с кнопкой «Повторить».
+    _, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    chat_id = await new_chat(client)
+    sent = await send(client, chat_id, "[[scenario:disconnect]] оборвись")
+    events = await read_stream(client, sent["assistant_message"]["id"])
+    assert next(e for e in events if e.event == "error").data == {
+        "code": "model_unavailable",
+        "message": "Модель недоступна",
+        "retryable": True,
+    }
+    text = "".join(e.data["text"] for e in events if e.event == "content.delta")
+    assert text.startswith("Начинаю отвечать")
 
 
 async def test_thinking_mode(

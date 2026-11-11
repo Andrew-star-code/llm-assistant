@@ -125,6 +125,7 @@ class GenerationResult:
     model_role: str | None = None
     thinking: bool = False
     title_usage: Usage | None = None
+    model_retries: int = 0  # автоповторов запроса к модели за ответ
 
     def add_usage(self, usage: Usage) -> None:
         if self.usage is None:
@@ -184,6 +185,19 @@ def _error_payload(exc: Exception) -> dict[str, Any]:
         # повтор не поможет, инцидент не нужен.
         return {"code": exc.code, "message": exc.message, "retryable": False}
     return {"code": "internal_error", "message": "Не удалось получить ответ", "retryable": True}
+
+
+def transient(exc: Exception) -> bool:
+    """Краткий сбой модели, который может пройти сам: соединение, перегрузка, 5xx, обрыв.
+
+    Тайм-аут — не он: модель уже молчала ``timeout_s``, ждать столько же ещё раз незачем.
+    """
+    if isinstance(exc, openai.APITimeoutError):
+        return False
+    if isinstance(exc, openai.APIStatusError):
+        return exc.status_code >= 500 or exc.status_code == 429
+    # Обрыв посреди стрима SDK тоже отдаёт как APIConnectionError.
+    return isinstance(exc, openai.APIConnectionError)
 
 
 HISTORY_CUT_NOTE = "\n[…результат сокращён в истории диалога]"
@@ -596,6 +610,8 @@ class GenerationManager:
                 )
             finally:
                 trace["context"] = loop_context.stats.trace()
+                if result.model_retries:
+                    trace["model_retries"] = result.model_retries
             if result.usage is None:
                 result.usage = Usage(
                     prompt_tokens=prompt.prompt_tokens,
@@ -826,6 +842,53 @@ class GenerationManager:
         return outcome
 
     async def _stream(
+        self,
+        message_id: UUID,
+        role: str,
+        messages: list[dict[str, Any]],
+        params: dict[str, Any],
+        writer: EventWriter,
+        result: GenerationResult,
+        started: float,
+        *,
+        schemas: list[dict[str, Any]],
+    ) -> tuple[str, list[PendingCall]]:
+        """Запрос к модели с автоповтором при кратком сбое (``chat.model_retries``).
+
+        Повтор возможен, пока запрос не дал ни одной дельты: пользователь ещё ничего не увидел,
+        а работа прошлых шагов цикла инструментов не пропадает. После первой дельты повтор
+        задвоил бы текст — ошибка уходит пользователю, дальше решает он (§7.4: «Повторить»).
+        """
+        retries = self.settings.chat.model_retries
+        delay = self.settings.chat.model_retry_backoff_seconds
+        for attempt in range(retries):
+            seen = len(result.content) + len(result.reasoning)
+            try:
+                return await self._stream_once(
+                    message_id, role, messages, params, writer, result, started, schemas=schemas
+                )
+            except Exception as exc:
+                emitted = len(result.content) + len(result.reasoning) != seen
+                if emitted or not transient(exc):
+                    raise
+                log.warning(
+                    "completions.model_retry",
+                    message_id=str(message_id),
+                    attempt=attempt + 1,
+                    error=type(exc).__name__,
+                )
+                result.model_retries += 1
+            await asyncio.sleep(delay * 2**attempt)
+            if await self.redis.exists(cancel_key(message_id)):
+                # «Стоп» во время ожидания: ответа ещё нет, повторять незачем.
+                result.status = "stopped"
+                result.finish_reason = "stop_requested"
+                return "", []
+        return await self._stream_once(
+            message_id, role, messages, params, writer, result, started, schemas=schemas
+        )
+
+    async def _stream_once(
         self,
         message_id: UUID,
         role: str,

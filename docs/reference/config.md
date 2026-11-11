@@ -78,6 +78,8 @@
 | `chat.stream_ttl_seconds` | int | 600 | `APP_CHAT__STREAM_TTL_SECONDS` | Сколько поток генерации хранится в Redis после завершения (§8.5). |
 | `chat.heartbeat_seconds` | int | 15 | `APP_CHAT__HEARTBEAT_SECONDS` | Интервал heartbeat в SSE, с. |
 | `chat.title_timeout_seconds` | float | 15 | `APP_CHAT__TITLE_TIMEOUT_SECONDS` | Тайм-аут генерации заголовка, с. |
+| `chat.model_retries` | int | 2 | `APP_CHAT__MODEL_RETRIES` | Сколько раз повторить запрос к модели при кратком сбое (нет соединения, 429, 5xx, обрыв), пока пользователю не ушло ни слова ответа; 0 — без повторов. |
+| `chat.model_retry_backoff_seconds` | float | 1.0 | `APP_CHAT__MODEL_RETRY_BACKOFF_SECONDS` | Пауза перед первым повтором, с; каждая следующая — вдвое. |
 | `files.max_file_mb` | int | 50 | `APP_FILES__MAX_FILE_MB` | Максимальный размер файла, МБ. |
 | `files.max_files_per_message` | int | 10 | `APP_FILES__MAX_FILES_PER_MESSAGE` | Сколько файлов можно приложить. |
 | `files.max_unpacked_mb` | int | 300 | `APP_FILES__MAX_UNPACKED_MB` | Лимит распакованного объёма DOCX/XLSX/PPTX/ODF (защита от zip-бомб). |

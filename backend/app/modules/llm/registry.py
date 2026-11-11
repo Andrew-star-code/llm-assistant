@@ -42,7 +42,9 @@ class ModelRegistry:
             self._clients[role] = AsyncOpenAI(
                 base_url=endpoint.base_url,
                 api_key=api_key,
-                max_retries=0,  # повтор решает пользователь кнопкой «Повторить» (§7.4)
+                # Повторы — в completions (``chat.model_retries``): только до первой дельты;
+                # дальше решает пользователь кнопкой «Повторить» (§7.4).
+                max_retries=0,
                 timeout=endpoint.timeout_s,
             )
         return self._clients[role]

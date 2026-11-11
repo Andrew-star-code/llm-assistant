@@ -306,6 +306,16 @@ class ChatSettings(_Section):
     )
     heartbeat_seconds: int = Field(15, gt=0, description="Интервал heartbeat в SSE, с.")
     title_timeout_seconds: float = Field(15, gt=0, description="Тайм-аут генерации заголовка, с.")
+    model_retries: int = Field(
+        2,
+        ge=0,
+        le=5,
+        description="Сколько раз повторить запрос к модели при кратком сбое (нет соединения, "
+        "429, 5xx, обрыв), пока пользователю не ушло ни слова ответа; 0 — без повторов.",
+    )
+    model_retry_backoff_seconds: float = Field(
+        1.0, gt=0, le=30, description="Пауза перед первым повтором, с; каждая следующая — вдвое."
+    )
 
     @model_validator(mode="after")
     def _check_timezone(self) -> Self:

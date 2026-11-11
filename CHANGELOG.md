@@ -15,6 +15,9 @@
   - прошлые вызовы инструментов и начало их результатов идут в историю диалога
     (`tools.history_result_max_chars`, по умолчанию 2000; 0 — выключено);
   - fake-llm: сценарий `recall`, диапазон страниц «стр. N–M» для `read_document`.
+- Живучесть генерации: автоповтор запроса к модели при кратком сбое до первого слова ответа
+  (`chat.model_retries`, `chat.model_retry_backoff_seconds`); в трассировке — `model_retries`;
+  fake-llm: сценарий `flaky`.
 
 ### Fixed
 

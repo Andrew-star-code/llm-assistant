@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+import httpx
+import openai
 import pytest
 from openai.types.chat import ChatCompletionChunk
 
@@ -15,6 +17,7 @@ from app.modules.completions.generation import (
     clean_title,
     fallback_title,
     history_steps,
+    transient,
 )
 from app.modules.completions.prompt import (
     PromptRenderer,
@@ -399,3 +402,19 @@ def test_expected_errors_are_not_internal() -> None:
     payload = _error_payload(AppError("Не помещается", code="context_overflow", status_code=413))
     assert payload == {"code": "context_overflow", "message": "Не помещается", "retryable": False}
     assert _error_payload(RuntimeError("x"))["code"] == "internal_error"
+
+
+def test_transient_model_failures() -> None:
+    # SDK openai типизирован своим HTTP-клиентом; для исключений годится любой запрос и ответ.
+    request: Any = httpx.Request("POST", "http://llm/v1/chat/completions")
+
+    def status(code: int) -> openai.APIStatusError:
+        response: Any = httpx.Response(code, request=request)
+        return openai.APIStatusError("x", response=response, body=None)
+
+    assert transient(openai.APIConnectionError(request=request))
+    assert transient(status(503)) and transient(status(429))
+    # Тайм-аут и ошибка запроса сами не пройдут; сбой нашего кода — тем более.
+    assert not transient(openai.APITimeoutError(request=request))
+    assert not transient(status(400))
+    assert not transient(RuntimeError("bug"))

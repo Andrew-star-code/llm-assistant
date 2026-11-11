@@ -8,7 +8,8 @@
 инструментов. Фрагменты RAG ограничены ``rag.context_share`` (``generation._auto_rag``), вложения —
 ``files.full_text_budget_share`` (``attachments.py``); в цикле инструментов бюджет держит
 ``context.LoopContext``.
-SHOULD: краткое саммари усечённой истории служебной моделью.
+TODO(context-summary): краткое саммари усечённой истории служебной моделью (SHOULD §8.3) —
+отложено, план в ``docs/status.md`` («Отложенные задачи»).
 """
 
 from __future__ import annotations

@@ -337,7 +337,13 @@ def chat_settings(infra: Infra, tmp_path: Path, fake_llm_url: str, **overrides: 
         infra,
         tmp_path,
         models=models,
-        chat={"heartbeat_seconds": 1, "stream_ttl_seconds": 60},
+        # Автоповтор запроса к модели — без секундных пауз, чтобы тесты ошибок не тормозили.
+        chat={
+            "heartbeat_seconds": 1,
+            "stream_ttl_seconds": 60,
+            "model_retry_backoff_seconds": 0.01,
+            **overrides.pop("chat", {}),
+        },
         # Воркер в тестах — та же функция в потоке api (без Celery и брокера).
         worker={"eager": True},
         **overrides,
