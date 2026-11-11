@@ -41,6 +41,9 @@ ldap:
   group_roles: []
   sync_interval_minutes: 60
 
+generation:
+  mode: queue                      # ответы генерирует сервис generator, а не api (ADR-0013)
+
 chat:
   company_name: "ООО «Корпорация»"  # TODO(question): название компании для системного промпта
   timezone: Europe/Moscow

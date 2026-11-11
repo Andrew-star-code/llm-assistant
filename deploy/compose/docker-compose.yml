@@ -85,6 +85,42 @@ services:
       migrate: {condition: service_completed_successfully}
     logging: *default-logging
 
+  generator:
+    # Исполнитель генерации (ADR-0013): разбирает очередь заданий api и ведёт ответы моделей.
+    # Перезапуск api идущие ответы не трогает; сам исполнитель по SIGTERM дорабатывает свои.
+    image: ai-assistant/api:${APP_VERSION:-dev}
+    pull_policy: never
+    restart: unless-stopped
+    command: ["python", "-m", "app.cli", "generator", "run"]
+    # Больше generation.shutdown_grace_seconds (180 с): иначе Docker убьёт процесс раньше,
+    # чем ответы будут доработаны или сохранены как прерванные.
+    stop_grace_period: 200s
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.cli", "generator", "check"]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-assistant}
+      APP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_QDRANT_URL: http://qdrant:6333
+      APP_QDRANT_API_KEY: ${QDRANT_API_KEY}
+      APP_DATA_GATEWAY__URL: http://data-gateway:8090
+      APP_DATA_GATEWAY__SECRET: ${DATA_GATEWAY_SECRET:-dev-data-gateway-secret}
+      HF_HUB_OFFLINE: "1"
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - api-storage:/srv/storage
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      qdrant: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+      api: {condition: service_started}
+    logging: *default-logging
+
   worker:
     # Воркер файлов (§4): разбор вложений и генерация DOCX/PDF/XLSX/PPTX. Тот же код, что у api,
     # плюс LibreOffice, Tesseract и шрифты. Хранилище файлов — общий с api том.

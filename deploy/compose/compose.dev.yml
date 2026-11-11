@@ -33,6 +33,23 @@ services:
       fake-llm: {condition: service_healthy}
       mock-ad: {condition: service_healthy}
 
+  generator:
+    # Перезапуск при изменении кода (как у воркеров): идущие ответы при этом дорабатываются.
+    command: ["watchfiles", "--filter", "python", "python -m app.cli generator run",
+              "/srv/backend/app"]
+    environment:
+      APP_ENV: dev
+    env_file:
+      - path: ./api.local.env
+        required: false
+    volumes:
+      - ../../backend/app:/srv/backend/app:ro
+      - ../../config:/srv/config:ro
+      - api-storage:/srv/storage
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      fake-llm: {condition: service_healthy}
+
   worker:
     # Перезапуск при изменении кода (у Celery нет своего reload). Ждёт готовый embed: при старте
     # воркер заново разбирает зависшие вложения, а без эмбеддингов они остались бы без поиска.

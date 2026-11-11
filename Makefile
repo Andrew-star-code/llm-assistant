@@ -34,7 +34,7 @@ $(ENV_FILE):
 
 # ------------------------------------------------------------------ дев-стенд
 
-dev-up: env ## Поднять дев-стенд с нуля одной командой (postgres, redis, qdrant, mock-ad, mock-mssql, fake-llm, embed, api, worker, scheduler, data-gateway, frontend)
+dev-up: env ## Поднять дев-стенд с нуля одной командой (postgres, redis, qdrant, mock-ad, mock-mssql, fake-llm, embed, api, generator, worker, scheduler, data-gateway, frontend)
 	$(COMPOSE) up -d --build --wait --wait-timeout 2100
 	@echo ""
 	@echo "  Фронтенд:  http://localhost:5173"
