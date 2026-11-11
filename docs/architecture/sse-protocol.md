@@ -57,7 +57,8 @@ data: {"status":"completed","finish_reason":"stop"}
 ```
 
 Коды ошибок (`error.code`): `model_http_<status>`, `model_timeout`, `model_unavailable`,
-`internal_error`, `interrupted`. `retryable: true` — интерфейс показывает «Повторить» (перегенерация).
+`internal_error`, `interrupted`, `message_too_long`, `context_overflow` (вопрос или результаты
+инструментов не помещаются в контекст модели; `retryable: false`). `retryable: true` — интерфейс показывает «Повторить» (перегенерация).
 
 Модель отдаёт размышления полем `reasoning` (vLLM с `--reasoning-parser`) или `reasoning_content`
 (старые версии vLLM) — `modules/llm/stream.py` понимает оба; fake-llm переключается

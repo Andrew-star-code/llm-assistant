@@ -16,6 +16,10 @@
    Цикл инструментов (§8.4): вызовы одной итерации — параллельно (`tools.executor`), события
    `tool.start`/`tool.end`/`file`, результаты — сообщениями `tool`, снова запрос; не больше
    `tools.max_iterations`, иначе честная пометка в ответе и `finish_reason: max_iterations`.
+   Бюджет контекста в цикле держит `context.LoopContext`: перед каждым повторным запросом —
+   старая история → результаты прошлых итераций → обрезка свежих результатов; в трассировке —
+   `context` (`budget`, `peak_tokens`, сколько убрано и обрезано). История содержит и прошлые
+   вызовы инструментов (`prompt.Turn.steps` из `tool_calls`, кроме скрытых и авто-поиска).
 3. Браузер читает `GET /api/messages/{id}/stream` (SSE) с `Last-Event-ID`; протокол —
    [sse-protocol.md](../../../../docs/architecture/sse-protocol.md).
 4. В конце — ответ, токены (из `usage` модели или подсчётом), `ttft_ms`, `latency_ms`, трассировка в
@@ -39,5 +43,7 @@
 **Данные:** пишет `messages`; Redis `gen:<id>` (живёт `chat.stream_ttl_seconds` после конца),
 `gen:alive:<id>`, `gen:cancel:<id>`.
 
-**Тесты:** `backend/tests/unit/test_chat_units.py`, `backend/tests/integration/test_chat.py`
-(стрим, переподключение, стоп, перегенерация, ошибки, thinking, interrupted).
+**Тесты:** `backend/tests/unit/test_chat_units.py` (в том числе бюджет цикла инструментов),
+`backend/tests/integration/test_chat.py` (стрим, переподключение, стоп, перегенерация, ошибки,
+thinking, interrupted), `backend/tests/integration/test_files.py` (история инструментов, обрезка
+результатов под контекст).

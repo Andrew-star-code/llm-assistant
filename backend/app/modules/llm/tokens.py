@@ -19,6 +19,8 @@ log = structlog.stdlib.get_logger("app.llm.tokens")
 
 # Служебные токены роли и разметки шаблона чата на каждое сообщение.
 PER_MESSAGE_OVERHEAD = 6
+# Разметка одного вызова инструмента в сообщении ассистента (имя, скобки JSON).
+PER_TOOL_CALL_OVERHEAD = 8
 # Для оценки без токенизатора: в русском тексте ~3 символа на токен; берём с запасом.
 CHARS_PER_TOKEN = 2.8
 
@@ -52,4 +54,12 @@ class TokenCounter:
         for message in messages:
             content = message.get("content")
             total += PER_MESSAGE_OVERHEAD + self.count(content if isinstance(content, str) else "")
+            # Вызовы инструментов — тоже текст промпта: имя и аргументы (§8.4).
+            for call in message.get("tool_calls") or ():
+                function = call.get("function") or {}
+                total += (
+                    PER_TOOL_CALL_OVERHEAD
+                    + self.count(str(function.get("name") or ""))
+                    + self.count(str(function.get("arguments") or ""))
+                )
         return total

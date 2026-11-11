@@ -363,6 +363,20 @@ class ToolsSettings(_Section):
     result_max_chars: int = Field(
         20_000, gt=0, description="Результат инструмента обрезается до этой длины для модели."
     )
+    context_reserve_share: float = Field(
+        0.15,
+        ge=0,
+        le=0.8,
+        description="Доля бюджета контекста, которую история диалога оставляет под результаты "
+        "инструментов, когда они предложены модели (§8.3).",
+    )
+    history_result_max_chars: int = Field(
+        2000,
+        ge=0,
+        le=4000,
+        description="Сколько символов результата инструмента из прошлых ответов видит модель в "
+        "истории диалога; 0 — прошлые вызовы в историю не попадают.",
+    )
 
 
 class WorkerSettings(_Section):

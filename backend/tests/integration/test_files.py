@@ -31,6 +31,7 @@ from tests.integration.conftest import (
     send,
 )
 
+CONTEXT = 12_000
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
@@ -295,6 +296,82 @@ async def test_parallel_tools_and_iteration_limit(
     assert len([e for e in events if e.event == "tool.end"]) == 2
     assert "превышено число шагов" in text_of(events)
     assert events[-1].data == {"status": "completed", "finish_reason": "max_iterations"}
+
+
+async def test_past_tool_results_stay_in_history(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Уточняющий вопрос: модель видит прошлый вызов инструмента и его результат (§8.1)."""
+    app, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    file = await upload_ready(client, "a.txt", "Строка про отпуск: 28 дней.".encode())
+    chat_id = await new_chat(client)
+    await ask(client, chat_id, "[[scenario:tool:read_document]]", attachment_ids=[file["id"]])
+    events = await ask(client, chat_id, "[[scenario:recall]] «отпуск»")
+    assert text_of(events) == (
+        "В истории вызовы: read_document; результатов: 1. Нашёл: Строка про отпуск: 28 дней."
+    )
+    detail = (await client.get(f"/api/chats/{chat_id}")).json()
+    async with app.state.db_sessions() as db:
+        row = await db.get(Message, detail["messages"][-1]["id"])
+        assert row is not None and row.trace is not None
+        assert row.trace["history_tool_steps"] == 1
+        assert row.trace["context"]["peak_tokens"] <= row.trace["context"]["budget"]
+
+
+async def test_past_tool_results_can_be_switched_off(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    _, client = await _client(
+        make_client, infra, tmp_path, fake_llm_url, tools={"history_result_max_chars": 0}
+    )
+    file = await upload_ready(client, "a.txt", "Строка про отпуск: 28 дней.".encode())
+    chat_id = await new_chat(client)
+    await ask(client, chat_id, "[[scenario:tool:read_document]]", attachment_ids=[file["id"]])
+    events = await ask(client, chat_id, "[[scenario:recall]] «отпуск»")
+    assert text_of(events) == "В истории вызовы: нет; результатов: 0."
+
+
+async def test_tool_results_are_fitted_into_context(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Результаты инструментов больше остатка контекста обрезаются, ответ не падает (§8.4)."""
+    # Каждое чтение 20 страниц упирается в ``tools.result_max_chars`` (≈7 тыс. токенов), а после
+    # промпта в контексте остаётся столько же на оба. Запас в обе стороны — тысячи токенов:
+    # тест не зависит от правок промптов.
+    text = "Кодовое слово: Сириус.\n" + "Обычная строка длинного документа.\n" * 2500
+    app, client = await _client(
+        make_client,
+        infra,
+        tmp_path,
+        fake_llm_url,
+        models={
+            "chat": {
+                "base_url": fake_llm_url,
+                "model": "fake-chat",
+                "supports_tools": True,
+                "context_length": CONTEXT,
+                "max_output_tokens": 1000,
+            }
+        },
+        files={"full_text_budget_share": 0.001, "outline_preview_chars": 200},
+    )
+    file = await upload_ready(client, "big.md", text.encode())
+    chat_id = await new_chat(client)
+    events = await ask(
+        client,
+        chat_id,
+        "[[scenario:tool:read_document+read_document]] стр. 1–20 «Кодовое слово»",
+        attachment_ids=[file["id"]],
+    )
+    assert events[-1].data == {"status": "completed", "finish_reason": "stop"}
+    assert text_of(events) == "Готово. Результат инструмента: Кодовое слово: Сириус."
+    detail = (await client.get(f"/api/chats/{chat_id}")).json()
+    async with app.state.db_sessions() as db:
+        row = await db.get(Message, detail["messages"][-1]["id"])
+        assert row is not None and row.trace is not None
+        context = row.trace["context"]
+        assert context["tool_results_truncated"] == 2
+        assert context["peak_tokens"] <= context["budget"] == CONTEXT - 1000
 
 
 async def test_unknown_tool_call_is_reported_to_model(

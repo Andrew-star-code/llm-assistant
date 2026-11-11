@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import time
 from contextlib import suppress
@@ -31,15 +32,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core import log_capture
 from app.core.config import Settings
 from app.core.db import utcnow
+from app.core.errors import AppError
 from app.core.storage import Storage
 from app.modules.admin import app_settings
 from app.modules.chats.models import Chat, Message
 from app.modules.chats.service import branch
 from app.modules.completions.attachments import build_attachments
+from app.modules.completions.context import LoopContext, schemas_tokens
 from app.modules.completions.prompt import (
     DEFAULT_CONTEXT,
+    DEFAULT_RESERVE,
     PromptRenderer,
     PromptUser,
+    ToolStep,
     Turn,
     build_messages,
     system_prompt,
@@ -93,6 +98,7 @@ UTILITY_ROLE = "utility"
 CANCEL_CHECK_INTERVAL = 0.2
 TITLE_MAX_WORDS = 6
 TITLE_MAX_CHARS = 80
+RESULT_PREVIEW_CHARS = 4000  # сколько символов результата инструмента хранит ``tool_calls``
 
 
 class _GuardBlocked(Exception):  # noqa: N818 — сигнал, а не ошибка
@@ -173,7 +179,39 @@ def _error_payload(exc: Exception) -> dict[str, Any]:
         return {"code": "model_timeout", "message": "Модель не ответила вовремя", "retryable": True}
     if isinstance(exc, openai.APIConnectionError):
         return {"code": "model_unavailable", "message": "Модель недоступна", "retryable": True}
+    if isinstance(exc, AppError):
+        # Ожидаемый отказ (вопрос или результаты не помещаются в контекст) — не сбой кода:
+        # повтор не поможет, инцидент не нужен.
+        return {"code": exc.code, "message": exc.message, "retryable": False}
     return {"code": "internal_error", "message": "Не удалось получить ответ", "retryable": True}
+
+
+HISTORY_CUT_NOTE = "\n[…результат сокращён в истории диалога]"
+
+
+def history_steps(calls: list[ToolCall], limit: int) -> tuple[ToolStep, ...]:
+    """Вызовы инструментов прошлого ответа для истории (§8.1): что спрашивали и что получили.
+
+    Только видимые вызовы цикла: скрытый репорт (§9.6) и шаг авто-поиска (итерация 0, не вызов
+    модели) в историю не идут. Результат — сохранённое начало, не длиннее ``limit``.
+    """
+    steps = []
+    for call in sorted(calls, key=lambda c: (c.iteration, c.created_at, c.call_id)):
+        if call.visibility != "visible" or call.iteration < 1:
+            continue
+        result = call.result_preview or ""
+        # Сохраняется только начало результата (4000 символов) — полный текст мог быть длиннее.
+        cut = len(result) > limit or len(result) >= RESULT_PREVIEW_CHARS
+        steps.append(
+            ToolStep(
+                iteration=call.iteration,
+                call_id=call.call_id,
+                name=call.tool,
+                arguments=json.dumps(call.arguments or {}, ensure_ascii=False),
+                result=result[:limit] + (HISTORY_CUT_NOTE if cut else ""),
+            )
+        )
+    return tuple(steps)
 
 
 class GenerationManager:
@@ -319,6 +357,21 @@ class GenerationManager:
         ).all()
         return message, chat, user, branch(all_messages, message.parent_id)
 
+    async def _history_steps(
+        self, db: AsyncSession, message_ids: list[UUID], limit: int
+    ) -> dict[UUID, tuple[ToolStep, ...]]:
+        if not message_ids:
+            return {}
+        calls: dict[UUID, list[ToolCall]] = {}
+        rows = await db.scalars(select(ToolCall).where(ToolCall.message_id.in_(message_ids)))
+        for call in rows:
+            calls.setdefault(call.message_id, []).append(call)
+        return {
+            message_id: steps
+            for message_id, items in calls.items()
+            if (steps := history_steps(items, limit))
+        }
+
     async def _run(self, message_id: UUID) -> None:
         started = time.monotonic()
         writer = EventWriter(self.redis, message_id, self.settings.chat.stream_ttl_seconds)
@@ -332,11 +385,8 @@ class GenerationManager:
                 message, chat, user, chain = await self._load(db, message_id)
                 result.user_id, result.chat_id = user.id, chat.id
                 question = chain[-1].content if chain else ""
-                history = [
-                    Turn(m.role, m.content)  # type: ignore[arg-type]
-                    for m in chain[:-1]
-                    if m.status in ("completed", "stopped") and m.content
-                ]
+                past = [m for m in chain[:-1] if m.status in ("completed", "stopped") and m.content]
+                history = [Turn(m.role, m.content) for m in past]  # type: ignore[arg-type]
                 is_first_answer = chat.title is None
                 # Сценарий — из БД на каждое сообщение: правка в админке действует сразу (§8.7).
                 scenario = await db.get(Scenario, chat.scenario_id) if chat.scenario_id else None
@@ -429,6 +479,15 @@ class GenerationManager:
                     if plan.endpoint.supports_tools
                     else []
                 )
+                step_chars = self.settings.tools.history_result_max_chars
+                if tools and step_chars:
+                    # Прошлые вызовы инструментов — в историю: на уточняющий вопрос модель
+                    # отвечает по уже полученным данным, а не запрашивает их заново.
+                    steps = await self._history_steps(db, [m.id for m in past], step_chars)
+                    history = [
+                        Turn(t.role, t.content, steps.get(m.id, ()))
+                        for t, m in zip(history, past, strict=True)
+                    ]
                 book = SourceBook()
                 result.book = book
                 context = ToolContext(
@@ -490,13 +549,23 @@ class GenerationManager:
                     counter=counter,
                 )  # fmt: skip
             system = "\n\n".join(x for x in (base_system, knowledge, attachments.text) if x)
+            schemas = [t.schema() for t in tools]
+            budget = (plan.endpoint.context_length or DEFAULT_CONTEXT) - (
+                plan.endpoint.max_output_tokens or DEFAULT_RESERVE
+            )
             prompt = build_messages(
                 system=system,
                 history=history,
                 message=question,
                 endpoint=plan.endpoint,
                 counter=counter,
+                overhead=schemas_tokens(counter, schemas),
+                # Место под результаты инструментов этого ответа (§8.3).
+                history_reserve=int(budget * self.settings.tools.context_reserve_share)
+                if tools
+                else 0,
             )
+            loop_context = LoopContext.start(prompt, counter)
             trace = {
                 "model_role": plan.role,
                 "model": plan.endpoint.model,
@@ -512,17 +581,21 @@ class GenerationManager:
                 },
                 "tools_offered": [t.name for t in tools],
             }
-            await self._loop(
-                message_id,
-                plan.role,
-                prompt.messages,
-                plan.params,
-                writer,
-                result,
-                started,
-                tools=tools,
-                context=context,
-            )
+            try:
+                await self._loop(
+                    message_id,
+                    plan.role,
+                    loop_context,
+                    plan.params,
+                    writer,
+                    result,
+                    started,
+                    schemas=schemas,
+                    allowed={t.name for t in tools},
+                    context=context,
+                )
+            finally:
+                trace["context"] = loop_context.stats.trace()
             if result.usage is None:
                 result.usage = Usage(
                     prompt_tokens=prompt.prompt_tokens,
@@ -569,26 +642,28 @@ class GenerationManager:
         self,
         message_id: UUID,
         role: str,
-        messages: list[dict[str, Any]],
+        loop: LoopContext,
         params: dict[str, Any],
         writer: EventWriter,
         result: GenerationResult,
         started: float,
         *,
-        tools: list[Any],
+        schemas: list[dict[str, Any]],
+        allowed: set[str],
         context: ToolContext,
     ) -> None:
-        """Цикл инструментов (§8.4): запрос → вызовы инструментов → их результаты → снова запрос."""
-        schemas = [t.schema() for t in tools]
-        allowed = {t.name for t in tools}
+        """Цикл инструментов (§8.4): запрос → вызовы инструментов → их результаты → снова запрос.
+
+        Сообщения ведёт ``LoopContext``: перед каждым запросом он возвращает их в бюджет контекста.
+        """
         max_iterations = self.settings.tools.max_iterations
         for iteration in range(1, max_iterations + 1):
             text, calls = await self._stream(
-                message_id, role, messages, params, writer, result, started, schemas=schemas
+                message_id, role, loop.messages, params, writer, result, started, schemas=schemas
             )
             if result.status == "stopped" or not calls:
                 return
-            messages.append(
+            loop.add_calls(
                 {
                     "role": "assistant",
                     "content": text or None,
@@ -609,12 +684,11 @@ class GenerationManager:
                 outcome.iteration = iteration
                 result.tools.append(outcome)
                 result.files.extend(outcome.files)
-                messages.append(
-                    {"role": "tool", "tool_call_id": outcome.call_id, "content": outcome.content}
-                )
+                loop.add_result(outcome.call_id, outcome.content)
             if await self.redis.exists(cancel_key(message_id)):
                 result.status = "stopped"
                 return
+            loop.fit()
         # Модель всё ещё вызывает инструменты — честно сообщаем, что не уложились.
         # TODO(stage-7): инцидент уровня warning (§8.4).
         result.content.append(MAX_ITERATIONS_NOTE)
@@ -940,7 +1014,7 @@ class GenerationManager:
                                     call_id=outcome.call_id,
                                     tool=outcome.tool,
                                     arguments=outcome.arguments,
-                                    result_preview=outcome.content[:4000],
+                                    result_preview=outcome.content[:RESULT_PREVIEW_CHARS],
                                     status=outcome.status,
                                     duration_ms=outcome.duration_ms,
                                     visibility=outcome.visibility,
