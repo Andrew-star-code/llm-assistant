@@ -642,6 +642,31 @@ class DataGatewaySettings(_Section):
     )
 
 
+class GenerationSettings(_Section):
+    """Где и как выполняется генерация ответов (ADR-0013)."""
+
+    mode: Literal["inline", "queue"] = Field(
+        "inline",
+        description="inline — задача в процессе api (тесты, запуск без исполнителя); queue — api "
+        "ставит задание в Redis, выполняет сервис generator.",
+    )
+    queue_ttl_seconds: int = Field(
+        300,
+        ge=30,
+        description="Сколько задание ждёт исполнителя (перезапуск, очередь); дольше — ответ "
+        "помечается прерванным.",
+    )
+    max_concurrent: int = Field(
+        64, gt=0, description="Сколько ответов один исполнитель ведёт одновременно."
+    )
+    shutdown_grace_seconds: int = Field(
+        180,
+        ge=0,
+        description="Сколько исполнитель при остановке дорабатывает идущие ответы; не успевшие "
+        "сохраняются как прерванные. stop_grace_period контейнера должен быть больше.",
+    )
+
+
 class StorageSettings(_Section):
     root: Path = Field(
         Path("/srv/storage"), description="Каталог тома с файлами (фото, загрузки, документы)."
@@ -685,6 +710,7 @@ class Settings(BaseSettings):
     chat: ChatSettings = Field(default_factory=ChatSettings)
     files: FilesSettings = Field(default_factory=FilesSettings)
     tools: ToolsSettings = Field(default_factory=ToolsSettings)
+    generation: GenerationSettings = Field(default_factory=GenerationSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     rag: RagSettings = Field(default_factory=RagSettings)
     kb: KbSettings = Field(default_factory=KbSettings)

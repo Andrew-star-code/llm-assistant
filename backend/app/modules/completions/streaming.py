@@ -6,7 +6,8 @@ SSE-эндпоинт читает их с позиции ``Last-Event-ID``, по
 состояние читается из БД (клиент после ``message.end`` перечитывает сообщение по REST).
 
 Пока идёт генерация, процесс-исполнитель продлевает ключ ``gen:alive:{message_id}``: если ключа нет,
-а сообщение всё ещё ``streaming``, процесс упал — сообщение помечается ``interrupted``.
+а сообщение всё ещё ``streaming``, процесс упал — сообщение помечается ``interrupted``. В режиме
+очереди (ADR-0013) ключ ставит api на время ожидания исполнителя (``generation.queue_ttl_seconds``).
 """
 
 from __future__ import annotations
@@ -39,6 +40,9 @@ EventType = Literal[
 ]
 
 ALIVE_TTL_SECONDS = 30
+# Очередь заданий исполнителю (ADR-0013) и отметки работающих исполнителей.
+QUEUE_KEY = "gen:queue"
+EXECUTOR_TTL_SECONDS = 15
 # Дельты копятся и уходят пачкой не реже, чем раз в FLUSH_INTERVAL: меньше записей в Redis.
 FLUSH_INTERVAL = 0.05
 FLUSH_MAX_CHARS = 2048
@@ -54,6 +58,10 @@ def alive_key(message_id: UUID | str) -> str:
 
 def cancel_key(message_id: UUID | str) -> str:
     return f"gen:cancel:{message_id}"
+
+
+def executor_key(name: str) -> str:
+    return f"gen:executor:{name}"
 
 
 def _s(value: bytes | str) -> str:

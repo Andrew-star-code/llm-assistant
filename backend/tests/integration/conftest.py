@@ -171,6 +171,9 @@ def make_settings(infra: Infra, tmp_path: Path, **overrides: Any) -> Settings:
             "session": {"cookie_secure": False},
         },
         "ldap": {"urls": [], "sync_interval_minutes": 0},
+        # Генерация — задачей в процессе api (как worker.eager): исполнителя в тестах нет;
+        # режим очереди проверяет test_generator.py.
+        "generation": {"mode": "inline"},
     }
     for key, value in overrides.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):

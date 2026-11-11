@@ -23,6 +23,10 @@
   ip list                        — активные блокировки IP
   ip unblock <IP или подсеть>    — снять блокировку (если админка недоступна с этого адреса)
 
+Генерация (ADR-0013):
+  generator run    — исполнитель генерации: разбирает очередь, по SIGTERM дорабатывает ответы
+  generator check  — есть ли свежая отметка исполнителя этого контейнера (healthcheck)
+
 Дальше появятся: ``purge``.
 """
 
@@ -118,6 +122,15 @@ def cmd_worker(_: argparse.Namespace) -> int:
     return 1 if settings is None else cmd_worker_check(settings)
 
 
+def cmd_generator(args: argparse.Namespace) -> int:
+    from app.cli import generator
+
+    settings = _settings_or_exit()
+    if settings is None:
+        return 1
+    return generator.run(settings) if args.generator_command == "run" else generator.check(settings)
+
+
 def cmd_kb(args: argparse.Namespace) -> int:
     from app.cli import kb
 
@@ -180,6 +193,15 @@ def build_parser() -> argparse.ArgumentParser:
     worker_sub = worker.add_subparsers(dest="worker_command", required=True)
     worker_sub.add_parser("check", help="Проверить pandoc, LibreOffice, Tesseract").set_defaults(
         func=cmd_worker
+    )
+
+    generator = sub.add_parser("generator", help="Исполнитель генерации (ADR-0013)")
+    generator_sub = generator.add_subparsers(dest="generator_command", required=True)
+    generator_sub.add_parser("run", help="Разбирать очередь заданий").set_defaults(
+        func=cmd_generator
+    )
+    generator_sub.add_parser("check", help="Жив ли исполнитель (healthcheck)").set_defaults(
+        func=cmd_generator
     )
 
     kb = sub.add_parser("kb", help="Базы знаний")

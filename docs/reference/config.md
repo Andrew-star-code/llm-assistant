@@ -99,6 +99,10 @@
 | `tools.result_max_chars` | int | 20000 | `APP_TOOLS__RESULT_MAX_CHARS` | Результат инструмента обрезается до этой длины для модели. |
 | `tools.context_reserve_share` | float | 0.15 | `APP_TOOLS__CONTEXT_RESERVE_SHARE` | Доля бюджета контекста, которую история диалога оставляет под результаты инструментов, когда они предложены модели (§8.3). |
 | `tools.history_result_max_chars` | int | 2000 | `APP_TOOLS__HISTORY_RESULT_MAX_CHARS` | Сколько символов результата инструмента из прошлых ответов видит модель в истории диалога; 0 — прошлые вызовы в историю не попадают. |
+| `generation.mode` | inline \| queue | `inline` | `APP_GENERATION__MODE` | inline — задача в процессе api (тесты, запуск без исполнителя); queue — api ставит задание в Redis, выполняет сервис generator. |
+| `generation.queue_ttl_seconds` | int | 300 | `APP_GENERATION__QUEUE_TTL_SECONDS` | Сколько задание ждёт исполнителя (перезапуск, очередь); дольше — ответ помечается прерванным. |
+| `generation.max_concurrent` | int | 64 | `APP_GENERATION__MAX_CONCURRENT` | Сколько ответов один исполнитель ведёт одновременно. |
+| `generation.shutdown_grace_seconds` | int | 180 | `APP_GENERATION__SHUTDOWN_GRACE_SECONDS` | Сколько исполнитель при остановке дорабатывает идущие ответы; не успевшие сохраняются как прерванные. stop_grace_period контейнера должен быть больше. |
 | `worker.broker_db` | int | 1 | `APP_WORKER__BROKER_DB` | Номер БД Redis для брокера Celery. |
 | `worker.task_timeout_seconds` | int | 300 | `APP_WORKER__TASK_TIMEOUT_SECONDS` | Сколько api ждёт задачу воркера (генерация файла), с. |
 | `worker.eager` | bool | false | `APP_WORKER__EAGER` | Выполнять задачи в процессе api (только тесты). |

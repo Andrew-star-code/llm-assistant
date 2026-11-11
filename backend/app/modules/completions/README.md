@@ -8,7 +8,11 @@
 **Как проходит сообщение (§2.2):**
 
 1. `POST /api/chats/{id}/messages` сохраняет вопрос и пустой ответ `streaming`, ставит ключ живости
-   `gen:alive:<id>`, запускает `GenerationManager` фоновой задачей и сразу отвечает `202`.
+   `gen:alive:<id>`, передаёт ответ `GenerationManager.start` и сразу отвечает `202`.
+   `generation.mode: queue` (прод и дев-стенд, [ADR-0013](../../../../docs/adr/0013-generation-executor.md)):
+   `start` кладёт задание в список Redis `gen:queue`, его забирает сервис `generator`
+   (`executor.py`, `python -m app.cli generator run`) и запускает задачу у себя. `inline`
+   (тесты): задача в процессе api.
 2. `generation.py`: промпт (`prompt.py`: `config/prompts/system/*` + история активной ветки в бюджете)
    + вложения ветки (`attachments.py`: целиком, если влезают в `files.full_text_budget_share` бюджета,
    иначе оглавление и начало) → `AsyncOpenAI` со `stream=True` и инструментами → дельты в `gen:<id>`
@@ -30,9 +34,17 @@
 итерации цикла инструментов, так что работа прошлых шагов не пропадает; в трассировке —
 `model_retries`. Тайм-аут и ошибки 4xx не повторяются.
 
-**Отмена и сбои:** «Стоп» — флаг `gen:cancel:<id>` (видит любой процесс api), частичный ответ
-сохраняется со статусом `stopped`. Остановка процесса — `interrupted`; «осиротевшие» ответы без живого
-исполнителя помечаются при старте (`mark_orphaned_interrupted`) и SSE-читателем.
+**Отмена и сбои:** «Стоп» — флаг `gen:cancel:<id>` (видит любой процесс), частичный ответ
+сохраняется со статусом `stopped`. «Осиротевшие» ответы без живого исполнителя помечает api при
+старте и раз в 30 с (`mark_orphaned_interrupted`) и SSE-читатель.
+
+**Исполнитель (`executor.py`):** задание берётся из очереди один раз и только пока жив его ключ
+живости (api ставит его на `generation.queue_ttl_seconds`; просроченное уже прервано). Не больше
+`generation.max_concurrent` ответов сразу — остальные ждут в очереди. По SIGTERM исполнитель не
+берёт новые задания и дорабатывает идущие до `generation.shutdown_grace_seconds`, остальные
+сохраняет как `interrupted`. Перезапуск api ответы не трогает. Отметка `gen:executor:<имя>` —
+для healthcheck (`generator check`). Слот лимита одновременных генераций без продления живёт
+`limits.slot_ttl_s`: задание, ждущее в очереди дольше, слот уже не держит.
 
 **Публичный интерфейс:** `POST /api/chats/{id}/messages`, `POST /api/messages/{id}/regenerate`,
 `POST /api/messages/{id}/stop`, `GET /api/messages/{id}/stream`, `GET /api/models/chat`
@@ -45,10 +57,11 @@
 `frontend/src/api/sse.ts` (версия протокола, тесты обеих сторон); промпты — `config/prompts/`.
 Лимиты (этап 8): резерв до запроса в `router.py` (`limits.reserve_generation`, отказ — 429), слот генерации продлевается и освобождается в `generation.py`, фактические токены — `usage_records` и счётчики после ответа, событие `limits` в конце.
 
-**Данные:** пишет `messages`; Redis `gen:<id>` (живёт `chat.stream_ttl_seconds` после конца),
+**Данные:** пишет `messages`; Redis `gen:queue` (задания), `gen:executor:<имя>`, `gen:<id>` (живёт `chat.stream_ttl_seconds` после конца),
 `gen:alive:<id>`, `gen:cancel:<id>`.
 
 **Тесты:** `backend/tests/unit/test_chat_units.py` (в том числе бюджет цикла инструментов),
 `backend/tests/integration/test_chat.py` (стрим, переподключение, стоп, перегенерация, ошибки,
 thinking, interrupted), `backend/tests/integration/test_files.py` (история инструментов, обрезка
-результатов под контекст).
+результатов под контекст), `backend/tests/integration/test_generator.py` (очередь, просроченное
+задание, «Стоп» в очереди, остановка с доработкой, предел параллельности, настоящий процесс).

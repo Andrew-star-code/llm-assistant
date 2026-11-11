@@ -8,6 +8,9 @@
   проверяет его между чанками, закрывает запрос к модели и сохраняет частичный ответ (``stopped``).
 * Остановка процесса: задачи отменяются и сохраняют ответ со статусом ``interrupted``; ответы,
   чьи исполнители умерли, помечает ``mark_orphaned_interrupted`` при старте.
+* Где выполняется задача (ADR-0013): ``generation.mode = queue`` — ``start`` в api только ставит
+  задание в Redis, задачу запускает сервис ``generator`` (``executor.py`` → ``launch``);
+  ``inline`` — задача в процессе api.
 """
 
 from __future__ import annotations
@@ -52,6 +55,7 @@ from app.modules.completions.prompt import (
 from app.modules.completions.streaming import (
     ALIVE_TTL_SECONDS,
     PROTOCOL_VERSION,
+    QUEUE_KEY,
     EventWriter,
     alive_key,
     cancel_key,
@@ -262,15 +266,50 @@ class GenerationManager:
     # ------------------------------------------------------------------ управление
 
     async def start(self, message_id: UUID) -> None:
-        # Ключ живости ставится до запуска задачи: SSE-читатель, пришедший раньше первого
-        # события, будет ждать, а не решит, что генерация умерла.
+        """Запускает генерацию: задачей в этом процессе или заданием исполнителю (ADR-0013)."""
+        # Ключ живости ставится до запуска: SSE-читатель, пришедший раньше первого события,
+        # будет ждать, а не решит, что генерация умерла.
+        if self.settings.generation.mode == "queue":
+            # Пока задание ждёт исполнителя, ответ не осиротевший; не дождалось — ключ истечёт.
+            await self.redis.set(
+                alive_key(message_id), "1", ex=self.settings.generation.queue_ttl_seconds
+            )
+            request_id = structlog.contextvars.get_contextvars().get("request_id")
+            job = {"message_id": str(message_id), "request_id": request_id}
+            await self.redis.rpush(QUEUE_KEY, json.dumps(job))
+            return
         await self.redis.set(alive_key(message_id), "1", ex=ALIVE_TTL_SECONDS)
-        task = asyncio.create_task(self._run(message_id), name=f"generation:{message_id}")
+        self.launch(message_id)
+
+    def launch(self, message_id: UUID, request_id: str | None = None) -> None:
+        """Задача генерации в этом процессе. Ключ живости уже должен стоять.
+
+        ``request_id`` — из задания очереди: строки лога исполнителя сходятся с запросом в api.
+        """
+
+        async def job() -> None:
+            if request_id is not None:
+                structlog.contextvars.bind_contextvars(
+                    request_id=request_id, message_id=str(message_id)
+                )
+                log_capture.start_request()
+            await self._run(message_id)
+
+        task = asyncio.create_task(job(), name=f"generation:{message_id}")
         self.tasks[message_id] = task
         task.add_done_callback(lambda _: self.tasks.pop(message_id, None))
 
     async def request_stop(self, message_id: UUID) -> None:
         await self.redis.set(cancel_key(message_id), "1", ex=ALIVE_TTL_SECONDS * 10)
+
+    async def drain(self, grace_seconds: float) -> None:
+        """Остановка без потерь: идущие ответы дорабатываются до ``grace_seconds``, остальные
+        отменяются и сохраняются как ``interrupted``."""
+        tasks = list(self.tasks.values())
+        if tasks and grace_seconds > 0:
+            log.info("completions.draining", active=len(tasks), grace_s=grace_seconds)
+            await asyncio.wait(tasks, timeout=grace_seconds)
+        await self.shutdown()
 
     async def shutdown(self) -> None:
         for pending in list(self.background):
@@ -674,6 +713,10 @@ class GenerationManager:
         """
         max_iterations = self.settings.tools.max_iterations
         for iteration in range(1, max_iterations + 1):
+            if iteration == 1 and await self.redis.exists(cancel_key(message_id)):
+                # «Стоп» пришёл, пока задание ждало исполнителя: модель не вызываем.
+                result.status, result.finish_reason = "stopped", "stop_requested"
+                return
             text, calls = await self._stream(
                 message_id, role, loop.messages, params, writer, result, started, schemas=schemas
             )
