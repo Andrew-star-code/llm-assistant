@@ -23,6 +23,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make e2e` | Playwright против работающего api (сначала `make dev-up`) |
 | `make eval-rag` | hit@5 и MRR поиска по 4 конфигурациям (`eval/rag`, `--check`) на моделях стенда |
 | `make eval-scenarios` | Эталонные запросы сценариев + LLM-судья, сравнение с `baseline.json` |
+| `make load-test` | Нагрузочный тест чата: 10 одновременных диалогов, цели §18.4 (`eval/load`; сначала `make dev-up`; параметры — `LOAD_ARGS`) |
 | `make test-worker` | Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (`worker check`) |
 | `make test-data-gateway` | Самопроверка образа шлюза данных: ODBC Driver 18, подключение к mock-mssql, `search_employees` |
 | `make test-monitoring` | Конфигурация Prometheus и тесты правил алертов (`deploy/monitoring`, promtool) |
@@ -64,7 +65,7 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ├── deploy/mock-ad/                 # Samba AD DC с тестовыми пользователями
 ├── deploy/mock-mssql/              # SQL Server 2022 Developer с тестовым телефонным справочником
 ├── deploy/monitoring/              # prometheus.yml, alerts.yml (+ тесты правил); compose и Grafana — этап 10
-├── eval/                           # rag/ (hit@5, MRR), scenarios/ (эталоны сценариев, LLM-судья)
+├── eval/                           # rag/ (hit@5, MRR), scenarios/ (эталоны, LLM-судья), load/ (нагрузка)
 └── scripts/docs_check.py
 ```
 
@@ -198,6 +199,14 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
   через `import app.models` (ловит `test_worker_imports.py`). В тестах — `generation.mode: inline`
   (задача в api, как `worker.eager`); очередь, остановку и сам процесс проверяет
   `test_generator.py`. `stop_grace_period` сервиса — больше `generation.shutdown_grace_seconds`.
+- **SSE-поток не держит соединение с БД**: эндпоинт стрима закрывает сессию запроса
+  (`await db.close()`) до начала потока и дальше открывает короткие сессии. Долгий ответ
+  (стрим, long-poll) с `DbDep` до конца держит соединение и транзакцию — пул (20 соединений)
+  кончается на паре десятков одновременных ответов, и встаёт весь api.
+- **Блокирующие вызовы Redis короче тайм-аута чтения**: клиент (`core/redis.py`) рвёт чтение
+  через `chat.heartbeat_seconds` + 5 с; `XREAD BLOCK` и `BLPOP` должны ждать меньше. Каждый
+  открытый SSE держит соединение Redis — размер пула `redis_max_connections`. В тестах
+  heartbeat — 1 с, поэтому такие ошибки видны только под нагрузкой (`make load-test`).
 - **Метки метрик — только из закрытых наборов** (`core/metrics.py`): роль модели, статус, имя
   зарегистрированного инструмента. Логин, id чата или имя инструмента, придуманное моделью, в
   метке — неограниченное число рядов в Prometheus. Метрики генерации пишет `generator`, не `api`.
