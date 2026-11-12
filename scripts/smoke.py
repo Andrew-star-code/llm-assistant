@@ -149,7 +149,7 @@ async def check_attachment(user: User, args: argparse.Namespace) -> str:
         file = (await user.http.get(f"/api/files/{file['id']}")).json()
     expect(file["parse_status"] == "ready", f"файл не разобран: {file['parse_status']} — воркер")
     prompt = (
-        "[[scenario:find]] «Кодовое слово»"
+        "[[scenario:find]] «Кодовое слово проверки»"
         if args.fake
         else "Какое кодовое слово проверки указано в приложенном файле? Назови его точно."
     )
