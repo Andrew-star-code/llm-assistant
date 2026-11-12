@@ -1,0 +1,15 @@
+# Оверлей прода (APP_ENV=prod) — только отличия от models.yaml (docs/runbooks/first-deploy.md).
+# Эмбеддинги и реранкер на сервере отдаёт text-embeddings-inference (сервисы embed и rerank в
+# deploy/compose/compose.prod.yml), а не vLLM: другой порт и формат API реранкера.
+models:
+  embed:
+    base_url: http://embed:80/v1
+  rerank:
+    base_url: http://rerank:80/v1
+    api: tei
+  # Первый запуск — без моделей разработчиков и guard (этап 10б): монитор здоровья их не
+  # проверяет. Когда сервисы llm-coder и llm-guard подняты — убрать эти строки.
+  coder:
+    deployed: false
+  guard:
+    deployed: false

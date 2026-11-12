@@ -97,3 +97,27 @@ async def test_logs_note_explains_missing_container(monkeypatch: pytest.MonkeyPa
     result = await monitor._logs(settings, endpoint)
     assert result["container_logs"] is None
     assert result["logs_note"] == "Контейнер «llm-x» не найден (models.<роль>.container)"
+
+
+async def test_undeployed_model_is_not_checked() -> None:
+    """Модель с ``deployed: false`` (coder и guard на первом запуске) монитор не трогает."""
+    from app.core.config import ModelEndpoint
+    from app.modules.llm.health import check_all
+
+    dead = "http://127.0.0.1:9/v1"
+    models = {
+        "chat": ModelEndpoint(base_url=dead, model="m"),
+        "coder": ModelEndpoint(base_url=dead, model="m", deployed=False),
+    }
+    results = await check_all(models, limit_s=1.0)
+    assert [(h.role, h.ok) for h in results] == [("chat", False)]
+
+
+def test_prod_overlay_skips_models_of_the_second_stage(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.config import load_settings
+
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("APP_AUTH__PROVIDERS", '["ldap"]')
+    models = load_settings().models
+    assert {role for role, m in models.items() if not m.deployed} == {"coder", "guard"}
+    assert models["rerank"].api == "tei" and models["embed"].base_url == "http://embed:80/v1"

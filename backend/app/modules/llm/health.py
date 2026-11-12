@@ -54,6 +54,10 @@ async def check(role: str, endpoint: ModelEndpoint, *, limit_s: float = 3.0) -> 
 
 
 async def check_all(models: dict[str, ModelEndpoint], *, limit_s: float = 3.0) -> list[Health]:
+    # Неразвёрнутые модели (``deployed: false``) не проверяются: иначе монитор заводил бы
+    # инцидент о модели, которой на сервере ещё нет.
     return list(
-        await asyncio.gather(*(check(role, ep, limit_s=limit_s) for role, ep in models.items()))
+        await asyncio.gather(
+            *(check(role, ep, limit_s=limit_s) for role, ep in models.items() if ep.deployed)
+        )
     )

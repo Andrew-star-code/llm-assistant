@@ -277,6 +277,11 @@ class ModelEndpoint(_Section):
     container: str | None = Field(
         None, description="Имя контейнера модели — для логов в инциденте model_health."
     )
+    deployed: bool = Field(
+        True,
+        description="false — модель описана, но ещё не развёрнута (например, coder и guard на "
+        "первом запуске): проверка здоровья её пропускает и инцидент model_health не заводит.",
+    )
 
 
 REQUIRED_MODEL_ROLES = ("chat", "utility", "embed", "rerank")
