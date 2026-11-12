@@ -21,6 +21,7 @@ import argparse
 import asyncio
 import json
 import math
+import ssl
 import sys
 import time
 from dataclasses import asdict, dataclass, field
@@ -118,9 +119,13 @@ def build_report(
 class User:
     """Сессия одного пользователя: cookie и CSRF, как у браузера."""
 
-    def __init__(self, base_url: str, login: str, timeout: float) -> None:
+    def __init__(
+        self, base_url: str, login: str, timeout: float, ca_file: Path | None = None
+    ) -> None:
         self.login = login
-        self.http = httpx.AsyncClient(base_url=base_url, timeout=timeout)
+        # Корпоративный CA портала: системное хранилище рабочей станции его может не знать.
+        verify = ssl.create_default_context(cafile=str(ca_file)) if ca_file else True
+        self.http = httpx.AsyncClient(base_url=base_url, timeout=timeout, verify=verify)
         self.csrf = ""
         self.id = ""
 
@@ -202,7 +207,7 @@ def _code(response: httpx.Response) -> str:
 
 async def raise_limits(args: argparse.Namespace, users: list[User]) -> None:
     """Временные персональные политики тестовым пользователям — от имени администратора."""
-    admin = User(args.base_url, args.admin, args.timeout)
+    admin = User(args.base_url, args.admin, args.timeout, args.ca_file)
     try:
         await admin.sign_in(args.provider, args.password)
         expires = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
@@ -224,7 +229,8 @@ async def raise_limits(args: argparse.Namespace, users: list[User]) -> None:
 async def run(args: argparse.Namespace) -> Report:
     logins = [x.strip() for x in args.logins.split(",") if x.strip()]
     users = [
-        User(args.base_url, logins[i % len(logins)], args.timeout) for i in range(args.concurrency)
+        User(args.base_url, logins[i % len(logins)], args.timeout, args.ca_file)
+        for i in range(args.concurrency)
     ]
     try:
         # Входы — по очереди: десятки одновременных входов с одного адреса — это перебор паролей.
@@ -302,6 +308,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--provider", default="dev", help="Провайдер входа: dev или ldap")
     parser.add_argument("--password", default="", help="Пароль тестовых пользователей (ldap)")
     parser.add_argument("--admin", help="Логин администратора: временно поднять лимиты")
+    parser.add_argument("--ca-file", type=Path, help="Сертификат CA портала (https)")
     parser.add_argument("--timeout", type=float, default=600, help="Тайм-аут запроса, с")
     parser.add_argument("--json", type=Path, help="Сохранить отчёт в файл")
     parser.add_argument("--check", action="store_true", help="Код 1, если цели §18.4 не достигнуты")

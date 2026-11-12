@@ -1,5 +1,5 @@
 # Базовый compose: хранилища и api. Разработка — вместе с compose.dev.yml (make dev-up).
-# Прод разбивается на отдельные проекты app/data/models/monitoring на этапе 10 (§16.2).
+# Прод первого запуска — вместе с compose.prod.yml (docs/runbooks/first-deploy.md).
 # Образы сторонних сервисов закреплены по digest (§4).
 name: ai-assistant
 

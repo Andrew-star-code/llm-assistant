@@ -17,7 +17,7 @@ EVAL_USER   := --user "$$(id -u):$$(id -g)" -e HOME=/tmp
 .PHONY: help install env dev-up dev-models-up dev-down dev-reset dev-logs dev-ps migrate \
         lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios load-test gen-api docs-config docs-db \
         docs-check \
-        images test-worker test-data-gateway test-monitoring check deploy
+        images test-worker test-data-gateway test-monitoring test-nginx test-backup check deploy
 
 help: ## Список команд
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -140,7 +140,13 @@ test-monitoring: ## Проверка конфигурации Prometheus и те
 	$(PROMTOOL) check config /m/prometheus.yml
 	$(PROMTOOL) test rules /m/alerts.test.yml
 
-check: lint typecheck test docs-check test-monitoring images test-worker test-data-gateway ## Всё перед пушем: линт → типы → тесты → документация → образы
+test-nginx: ## Проверка шаблона nginx прода: nginx -t в образе из compose.prod.yml (нужен openssl)
+	deploy/nginx/test.sh
+
+test-backup: ## Проверка скрипта бэкапа: бэкап и восстановление на контейнерах PostgreSQL и Qdrant
+	deploy/backup/test.sh
+
+check: lint typecheck test docs-check test-monitoring test-nginx test-backup images test-worker test-data-gateway ## Всё перед пушем: линт → типы → тесты → документация → образы
 	@echo "make check: OK"
 
 deploy: ## Выкатка на сервер — этап 10 (§16.2)

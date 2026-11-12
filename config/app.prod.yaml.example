@@ -1,0 +1,30 @@
+# Образец оверлея прода: скопируйте в config/app.prod.yaml и заполните <…>
+# (docs/runbooks/first-deploy.md, раздел 5.3). Секретов здесь нет — файл можно коммитить.
+logging:
+  level: INFO
+  format: json
+
+auth:
+  providers: [ldap]
+  bootstrap_admins: [<логин1>, <логин2>]
+
+ldap:
+  urls: ["ldaps://<dc1-fqdn>:636", "ldaps://<dc2-fqdn>:636"]
+  bind_dn: "<DN сервисной учётки>"
+  base_dn: "<base DN>"
+  upn_suffix: "<corp.local>"
+  netbios_domain: "<CORP>"
+  access_group: ""                       # или DN группы доступа
+
+chat:
+  company_name: "<Название компании>"
+  timezone: Europe/Moscow
+
+# nginx стоит в сети Docker: верить X-Forwarded-For только от неё (runbook, проблема Д7).
+trusted_proxies: ["10.250.0.0/16"]
+
+moderation:
+  guard_enabled: false                   # guard-модель — на доводке
+
+data_gateway:
+  url: ""                                # шлюз данных — когда будет справочник

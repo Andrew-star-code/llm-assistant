@@ -1,0 +1,187 @@
+# Прод первого запуска (этап 10а, docs/runbooks/first-deploy.md) — поверх docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f compose.prod.yml up -d
+#
+# Здесь: конфиг и секреты приложения, фронтенд, nginx с TLS (единственные порты наружу) и модели
+# первого запуска — llm-chat, llm-utility, embed, rerank. На доводке (этап 10б): llm-coder,
+# dev-gateway, llm-guard, мониторинг.
+#
+# Что нужно в .env помимо паролей (образец — .env.example, раздел «Прод»):
+#   VLLM_IMAGE, TEI_IMAGE — образы по digest (версию vLLM выбирают под модель на сервере);
+#   PORTAL_HOST           — имя портала в сертификате;
+#   GPU_*                 — номера или UUID видеокарт (nvidia-smi -L), если не 0–3 по порядку.
+
+x-logging: &default-logging
+  driver: json-file
+  options: {max-size: "20m", max-file: "5"}
+
+x-vllm: &vllm
+  image: ${VLLM_IMAGE:?задайте VLLM_IMAGE в .env — образ vllm/vllm-openai по digest}
+  restart: unless-stopped
+  ipc: host                                # общая память для TP = 2 (runbook, проблема В3)
+  environment:
+    HF_HUB_OFFLINE: "1"
+    VLLM_NO_USAGE_STATS: "1"
+    DO_NOT_TRACK: "1"
+  volumes:
+    - ${MODELS_DIR:-/srv/models}:/models:ro
+  logging: *default-logging
+
+x-tei: &tei
+  # text-embeddings-inference, сборка для Ampere 80 (A100) — тот же сервер, что на дев-стенде.
+  image: ${TEI_IMAGE:?задайте TEI_IMAGE в .env — образ text-embeddings-inference по digest}
+  restart: unless-stopped
+  environment:
+    HF_HUB_OFFLINE: "1"
+  volumes:
+    - ${MODELS_DIR:-/srv/models}:/models:ro
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/health || exit 1"]
+    interval: 10s
+    timeout: 5s
+    start_period: 5m
+    retries: 5
+  deploy:
+    resources:
+      reservations:
+        devices: [{driver: nvidia, device_ids: ["${GPU_AUX:-3}"], capabilities: [gpu]}]
+  logging: *default-logging
+
+services:
+  # ------------------------------------------------------------------------- приложение
+  api:
+    environment:
+      APP_ENV: prod
+      APP_DATA_GATEWAY__URL: ""            # шлюз данных выключен, пока нет справочника
+    volumes:
+      - ../../config:/srv/config:ro        # конфиг без пересборки образа
+    secrets: [ldap_bind_password, corp_ca.pem]
+    depends_on:
+      llm-chat: {condition: service_healthy}
+
+  generator:                               # к модели ходит он (ADR-0013)
+    environment:
+      APP_ENV: prod
+      APP_DATA_GATEWAY__URL: ""
+    volumes:
+      - ../../config:/srv/config:ro
+    depends_on:
+      llm-chat: {condition: service_healthy}
+
+  worker:
+    environment:
+      APP_ENV: prod
+    volumes:
+      - ../../config:/srv/config:ro
+    secrets: [ldap_bind_password, corp_ca.pem]
+
+  worker-kb:
+    environment:
+      APP_ENV: prod
+    volumes:
+      - ../../config:/srv/config:ro
+
+  scheduler:
+    environment:
+      APP_ENV: prod
+    volumes:
+      - ../../config:/srv/config:ro
+
+  migrate:
+    environment:
+      APP_ENV: prod
+    volumes:
+      - ../../config:/srv/config:ro
+
+  data-gateway:
+    profiles: [data]                       # не стартует без явного --profile data
+
+  qdrant:
+    volumes:
+      # Снапшоты — сразу на диск бэкапов (deploy/backup/backup.sh).
+      - ${BACKUP_DIR:-/backup/ai-assistant}/qdrant-snapshots:/qdrant/snapshots
+
+  frontend:                                # в базовом файле его нет: на дев-стенде — Vite
+    build:
+      context: ../../frontend
+      target: runtime
+    image: ai-assistant/frontend:${APP_VERSION:-dev}
+    restart: unless-stopped
+    logging: *default-logging
+
+  nginx:
+    # Единственный сервис с портами наружу: TLS, /api → api (SSE без буферизации), остальное →
+    # frontend. Образ тот же, что у frontend, — на сервере без интернета он уже есть.
+    image: nginx:1.28.3-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+    restart: unless-stopped
+    ports: ["443:443", "80:80"]
+    environment:
+      PORTAL_HOST: ${PORTAL_HOST:?задайте PORTAL_HOST в .env — имя портала, например ai.corp.local}
+    volumes:
+      - ../nginx/templates:/etc/nginx/templates:ro
+    secrets: [tls_fullchain.pem, tls_privkey.pem]
+    depends_on:
+      api: {condition: service_healthy}
+      frontend: {condition: service_started}
+    logging: *default-logging
+
+  # ----------------------------------------------------------------------------- модели
+  # Порядок запуска — сначала крупная модель, затем мелкие (§3.2 SPEC): runbook, раздел 7.2.
+  # Флаги — стартовые из §3.2; финальные — по рецепту vLLM для выбранной версии.
+  llm-chat:
+    <<: *vllm
+    command: >
+      --model /models/Qwen3.8-27B --served-model-name Qwen/Qwen3.8-27B
+      --tensor-parallel-size 2 --gpu-memory-utilization 0.90 --max-model-len 131072
+      --enable-prefix-caching
+      --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_CHAT_A:-0}", "${GPU_CHAT_B:-1}"]
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20m                    # первая загрузка весов и компиляция — долго
+      retries: 5
+
+  llm-utility:
+    <<: *vllm
+    command: >
+      --model /models/Qwen3.5-4B --served-model-name Qwen/Qwen3.5-4B
+      --gpu-memory-utilization 0.12 --max-model-len 32768
+      --reasoning-parser qwen3
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, device_ids: ["${GPU_AUX:-3}"], capabilities: [gpu]}]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10m
+      retries: 5
+    depends_on:
+      embed: {condition: service_healthy}
+
+  embed:
+    <<: *tei
+    command: ["--model-id", "/models/bge-m3", "--port", "80", "--max-client-batch-size", "64"]
+
+  rerank:
+    <<: *tei
+    command: ["--model-id", "/models/bge-reranker-v2-m3", "--port", "80"]
+
+secrets:
+  ldap_bind_password:
+    file: ${SECRETS_DIR:-/srv/ai-assistant-secrets}/ldap_bind_password
+  corp_ca.pem:
+    file: ${SECRETS_DIR:-/srv/ai-assistant-secrets}/corp_ca.pem
+  tls_fullchain.pem:
+    file: ${SECRETS_DIR:-/srv/ai-assistant-secrets}/tls_fullchain.pem
+  tls_privkey.pem:
+    file: ${SECRETS_DIR:-/srv/ai-assistant-secrets}/tls_privkey.pem

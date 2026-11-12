@@ -1,0 +1,16 @@
+# Только для `make test-backup`: вместо api — заглушка на базовом образе Python (образ api в
+# тесте не нужен и не собирается), снапшоты Qdrant — во временный каталог, как в compose.prod.yml.
+services:
+  api:
+    image: python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
+    build: !reset null
+    pull_policy: missing
+    command: ["sleep", "infinity"]
+    healthcheck:
+      disable: true
+    depends_on: !override
+      qdrant: {condition: service_healthy}
+
+  qdrant:
+    volumes:
+      - ${BACKUP_DIR:?}/qdrant-snapshots:/qdrant/snapshots
