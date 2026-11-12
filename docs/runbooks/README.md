@@ -3,5 +3,8 @@
 - [first-deploy.md](first-deploy.md) — первый запуск на GPU-сервере: пошагово, с типовыми проблемами
   и их решением.
 
-Появятся к этапу 10 (§16, §19): `models.md` (смена и проверка моделей), `backup-restore.md`,
-`incidents.md`, `rotate-secrets.md`.
+- [backup-restore.md](backup-restore.md) — восстановление из ночного бэкапа: PostgreSQL, Qdrant,
+  файлы, конфиг; частичные случаи.
+
+Появятся на этапе 10б (§16, §19): `models.md` (смена и проверка моделей), `incidents.md`,
+`rotate-secrets.md`.

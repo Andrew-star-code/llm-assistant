@@ -24,6 +24,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make eval-rag` | hit@5 и MRR поиска по 4 конфигурациям (`eval/rag`, `--check`) на моделях стенда |
 | `make eval-scenarios` | Эталонные запросы сценариев + LLM-судья, сравнение с `baseline.json` |
 | `make load-test` | Нагрузочный тест чата: 10 одновременных диалогов, цели §18.4 (`eval/load`; сначала `make dev-up`; параметры — `LOAD_ARGS`) |
+| `make smoke` | Smoke-проверка работающего стенда: вход, стрим, вложение, документ Word, переподключение, админка (`scripts/smoke.py`; сервер — `SMOKE_ARGS`) |
 | `make test-worker` | Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (`worker check`) |
 | `make test-data-gateway` | Самопроверка образа шлюза данных: ODBC Driver 18, подключение к mock-mssql, `search_employees` |
 | `make test-monitoring` | Конфигурация Prometheus и тесты правил алертов (`deploy/monitoring`, promtool) |
@@ -70,7 +71,7 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ├── deploy/mock-mssql/              # SQL Server 2022 Developer с тестовым телефонным справочником
 ├── deploy/monitoring/              # prometheus.yml, alerts.yml (+ тесты правил); compose и Grafana — этап 10
 ├── eval/                           # rag/ (hit@5, MRR), scenarios/ (эталоны, LLM-судья), load/ (нагрузка)
-└── scripts/docs_check.py
+└── scripts/                        # docs_check.py, smoke.py (проверка стенда после запуска)
 ```
 
 Появятся по этапам: `services/sandbox-runner/` ★,
