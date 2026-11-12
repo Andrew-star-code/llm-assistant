@@ -26,6 +26,7 @@ from app.core.config import REPO_ROOT
 from app.modules.chats.models import Message
 from app.modules.completions.executor import Executor, Job, alive, parse_job, queue_stats
 from app.modules.completions.generation import GenerationManager
+from app.modules.completions.health import check_executor
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.streaming import QUEUE_KEY, alive_key, executor_key, stream_key
 from tests.integration.conftest import (
@@ -292,3 +293,56 @@ async def test_generator_process_runs_jobs_and_exits_on_sigterm(
         if process.returncode is None:
             process.kill()
             await process.wait()
+
+
+async def test_missing_executor_is_reported_and_shown_on_dashboard(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Нет исполнителя — инцидент ``generator_health`` из планировщика и цифры на дашборде."""
+    app, _ = await _client(make_client, infra, tmp_path, fake_llm_url)
+    admin = ApiClient(
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+            base_url="http://test",
+        )
+    )
+    await admin.login("ivanov")
+    settings, sessions, redis = app.state.settings, app.state.db_sessions, app.state.redis
+    try:
+        queues = (await admin.get("/api/admin/dashboard")).json()["queues"]
+        assert queues["generation_queued"] == 0 and queues["generation_executors"] == 0
+
+        assert not await check_executor(settings, sessions, redis)
+        page = (await admin.get("/api/admin/incidents", params={"type": "generator_health"})).json()
+        assert page["items"] == []  # одна проверка — ещё не инцидент
+        for _ in range(3):
+            assert not await check_executor(settings, sessions, redis)
+        page = (await admin.get("/api/admin/incidents", params={"type": "generator_health"})).json()
+        [item] = page["items"]
+        assert item["severity"] == "critical" and item["occurrences"] == 1
+
+        # Исполнитель вернулся — комментарий в том же инциденте, цифра на дашборде.
+        async with running(_executor(app)):
+            await _wait(lambda: _executors(redis))
+            assert await check_executor(settings, sessions, redis)
+            queues = (await admin.get("/api/admin/dashboard")).json()["queues"]
+            assert queues["generation_executors"] == 1
+        card = (await admin.get(f"/api/admin/incidents/{item['id']}")).json()
+        [comment] = card["comments"]
+        assert comment["author"] is None and comment["text"].startswith("Исполнитель генерации")
+    finally:
+        await admin.http.aclose()
+
+
+async def _executors(redis: Any) -> bool:
+    return (await queue_stats(redis))[1] > 0
+
+
+async def test_executor_check_is_skipped_in_inline_mode(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    app, client = await make_client(chat_settings(infra, tmp_path, fake_llm_url))
+    await client.login("ivanov")
+    assert await check_executor(app.state.settings, app.state.db_sessions, app.state.redis)
+    queues = (await client.get("/api/admin/dashboard")).json()["queues"]
+    assert queues["generation_queued"] is None and queues["generation_executors"] is None

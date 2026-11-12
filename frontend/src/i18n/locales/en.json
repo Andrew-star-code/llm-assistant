@@ -332,6 +332,7 @@
         "guard": "Guard model",
         "security": "Security",
         "model_health": "Model health",
+        "generator_health": "Generation executor",
         "rag_degraded": "Search degraded",
         "kb_index": "KB indexing",
         "worker_failed": "Worker failure"
@@ -411,6 +412,8 @@
       "kbErrors": "Documents with errors",
       "imports": "Folder imports running",
       "attachments": "Attachments being parsed",
+      "generationQueued": "Answers waiting for an executor",
+      "generationExecutors": "Generation executors",
       "incidents": "Open incidents",
       "incidentsHigh": "high: {{count}}",
       "gpu": "GPU",

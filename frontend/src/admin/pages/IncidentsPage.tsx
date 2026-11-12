@@ -16,6 +16,7 @@ const TYPES = [
   "guard",
   "security",
   "model_health",
+  "generator_health",
   "rag_degraded",
   "kb_index",
   "worker_failed",

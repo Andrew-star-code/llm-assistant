@@ -332,6 +332,7 @@
         "guard": "Guard-модель",
         "security": "Безопасность",
         "model_health": "Здоровье модели",
+        "generator_health": "Исполнитель генерации",
         "rag_degraded": "Деградация поиска",
         "kb_index": "Индексация базы",
         "worker_failed": "Сбой воркера"
@@ -411,6 +412,8 @@
       "kbErrors": "Документы с ошибкой",
       "imports": "Импорт из папки идёт",
       "attachments": "Вложения в разборе",
+      "generationQueued": "Ответы в очереди генерации",
+      "generationExecutors": "Исполнителей генерации",
       "incidents": "Открытые инциденты",
       "incidentsHigh": "высокого уровня: {{count}}",
       "gpu": "GPU",

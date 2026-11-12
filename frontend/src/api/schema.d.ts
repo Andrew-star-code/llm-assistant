@@ -3797,6 +3797,10 @@ export interface components {
       imports_running: number;
       /** Attachments Pending */
       attachments_pending: number;
+      /** Generation Queued */
+      generation_queued?: number | null;
+      /** Generation Executors */
+      generation_executors?: number | null;
     };
     /** QuotaOut */
     QuotaOut: {

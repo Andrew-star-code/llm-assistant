@@ -101,6 +101,25 @@ export function DashboardPage() {
                 <dd className="tabular-nums">{d.queues.imports_running}</dd>
                 <dt>{t("admin.dashboard.attachments")}</dt>
                 <dd className="tabular-nums">{d.queues.attachments_pending}</dd>
+                {typeof d.queues.generation_queued === "number" && (
+                  <>
+                    <dt>{t("admin.dashboard.generationQueued")}</dt>
+                    <dd className="tabular-nums" data-testid="generation-queued">
+                      {d.queues.generation_queued}
+                    </dd>
+                    <dt>{t("admin.dashboard.generationExecutors")}</dt>
+                    <dd
+                      className={
+                        d.queues.generation_executors === 0
+                          ? "font-medium tabular-nums text-destructive"
+                          : "tabular-nums"
+                      }
+                      data-testid="generation-executors"
+                    >
+                      {d.queues.generation_executors}
+                    </dd>
+                  </>
+                )}
               </dl>
             </Card>
             <Card title={t("admin.dashboard.incidents")}>

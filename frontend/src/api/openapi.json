@@ -12065,6 +12065,28 @@
           "attachments_pending": {
             "type": "integer",
             "title": "Attachments Pending"
+          },
+          "generation_queued": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Queued"
+          },
+          "generation_executors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Executors"
           }
         },
         "type": "object",

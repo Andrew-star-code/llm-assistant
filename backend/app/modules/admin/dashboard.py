@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import structlog
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import Date, and_, case, cast, distinct, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +26,7 @@ from app.core.deps import DbDep, SettingsDep
 from app.modules.admin.system_router import ModelHealthOut
 from app.modules.auth.deps import CurrentUser, require
 from app.modules.chats.models import Chat, Message
+from app.modules.completions.executor import queue_stats
 from app.modules.feedback.models import Feedback
 from app.modules.files.models import File
 from app.modules.incidents import service as incidents
@@ -82,6 +83,9 @@ class Queues(BaseModel):
     kb_errors: int
     imports_running: int
     attachments_pending: int
+    # Очередь генерации (ADR-0013); None — режим inline, исполнителя и очереди нет.
+    generation_queued: int | None = None
+    generation_executors: int | None = None
 
 
 class Incidents(BaseModel):
@@ -314,6 +318,7 @@ async def gpus(settings: Settings) -> tuple[list[Gpu] | None, str | None]:
 
 @router.get("/dashboard", response_model=Dashboard, operation_id="adminDashboard")
 async def dashboard(
+    request: Request,
     db: DbDep,
     settings: SettingsDep,
     _: Viewer,
@@ -325,6 +330,11 @@ async def dashboard(
     health, (gpu_list, gpu_note) = await asyncio.gather(
         check_all(settings.models, limit_s=2.0), gpus(settings)
     )
+    queues = await _queues(db)
+    if settings.generation.mode == "queue":
+        queues.generation_queued, queues.generation_executors = await queue_stats(
+            request.app.state.redis
+        )
     return Dashboard(
         days=days,
         active_users=ActiveUsers(
@@ -335,7 +345,7 @@ async def dashboard(
         series=await _series(db, since, days, tz),
         scenarios=await _scenarios(db, since),
         quality=await _quality(db, since),
-        queues=await _queues(db),
+        queues=queues,
         incidents=await _incidents(db),
         models=[ModelHealthOut(**vars(h)) for h in health],
         gpus=gpu_list,

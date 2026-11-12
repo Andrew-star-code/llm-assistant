@@ -210,15 +210,18 @@ async def retention_job(settings: Settings) -> int:
 
 
 async def models_health_job(settings: Settings) -> int:
-    """Проверка моделей; возвращает число недоступных."""
+    """Проверка моделей и исполнителя генерации; возвращает число недоступных моделей."""
     from redis.asyncio import Redis
 
+    from app.modules.completions.health import check_executor
     from app.modules.llm.monitor import check_models
 
     redis = Redis.from_url(settings.redis_url.get_secret_value())
     try:
         async with worker_context(settings) as ctx:
             results = await check_models(settings, ctx.sessions, redis)
+            # Без исполнителя ответы не начинаются вовсе (ADR-0013) — та же минутная проверка.
+            await check_executor(settings, ctx.sessions, redis)
     finally:
         await redis.aclose()
     return sum(1 for h in results if not h.ok)
