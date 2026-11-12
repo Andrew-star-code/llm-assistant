@@ -111,7 +111,7 @@ export function DashboardPage() {
                     <dd
                       className={
                         d.queues.generation_executors === 0
-                          ? "font-medium tabular-nums text-destructive"
+                          ? "font-medium tabular-nums text-red-600 dark:text-red-400"
                           : "tabular-nums"
                       }
                       data-testid="generation-executors"
