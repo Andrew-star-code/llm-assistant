@@ -23,7 +23,7 @@ DC=(docker compose -p "$PROJECT" --env-file "$WORK/.env" "${FILE_ARGS[@]}")
 PG_IMAGE=$("${DC[@]}" config --images | grep -m1 '^postgres:')
 
 cleanup() {
-  docker rm -f backup-test-restore >/dev/null 2>&1 || true
+  docker rm -f backup-test-restore backup-test-qdrant >/dev/null 2>&1 || true
   "${DC[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
   docker run --rm -v "$WORK":/w --entrypoint sh "$PG_IMAGE" -c 'rm -rf /w/backup' || true
   rm -rf "$WORK"
@@ -73,4 +73,20 @@ docker exec -i backup-test-restore pg_restore -U postgres -d postgres --create -
 NOTE=$(docker exec backup-test-restore psql -U postgres -d assistant -Atc \
   'select note from backup_probe where id = 1')
 [ "$NOTE" = "проверка" ] || fail "после восстановления данных нет: «$NOTE»"
-echo "test-backup: бэкап снят, PostgreSQL восстановлен, снапшот Qdrant и архивы на месте"
+
+# Qdrant: новый пустой экземпляр, запущенный с полным снапшотом (runbooks/backup-restore.md).
+QDRANT_IMAGE=$("${DC[@]}" config --images | grep -m1 '^qdrant/')
+SNAPSHOT=$(cat "$DEST/qdrant-snapshot.txt")
+docker run -d --name backup-test-qdrant -v "$BACKUP_DIR/qdrant-snapshots":/snapshots:ro \
+  "$QDRANT_IMAGE" ./qdrant --storage-snapshot "/snapshots/$SNAPSHOT" >/dev/null
+POINTS=""
+for _ in $(seq 30); do
+  POINTS=$(docker exec backup-test-qdrant bash -c \
+    'exec 3<>/dev/tcp/127.0.0.1/6333 && printf "GET /collections/probe HTTP/1.0\r\n\r\n" >&3 && cat <&3' \
+    2>/dev/null | grep -o '"points_count":[0-9]*' || true)
+  [ -n "$POINTS" ] && break
+  sleep 1
+done
+[ "$POINTS" = '"points_count":1' ] || fail "Qdrant после восстановления: «$POINTS» вместо одной точки"
+
+echo "test-backup: бэкап снят; PostgreSQL и Qdrant восстановлены, архивы файлов и конфига на месте"
