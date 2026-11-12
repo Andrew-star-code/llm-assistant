@@ -15,7 +15,7 @@ PY_SOURCES  := backend services scripts eval
 EVAL_USER   := --user "$$(id -u):$$(id -g)" -e HOME=/tmp
 
 .PHONY: help install env dev-up dev-models-up dev-down dev-reset dev-logs dev-ps migrate \
-        lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios load-test gen-api docs-config docs-db \
+        lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios load-test smoke gen-api docs-config docs-db \
         docs-check \
         images test-worker test-data-gateway test-monitoring test-nginx test-backup check deploy
 
@@ -139,6 +139,10 @@ PROMTOOL = docker run --rm -v $(CURDIR)/deploy/monitoring:/m:ro --entrypoint pro
 test-monitoring: ## Проверка конфигурации Prometheus и тесты правил алертов (promtool)
 	$(PROMTOOL) check config /m/prometheus.yml
 	$(PROMTOOL) test rules /m/alerts.test.yml
+
+# Против сервера: make smoke SMOKE_ARGS="--base-url https://ai.corp.local --provider ldap --login u1 --admin a1 --ask-password"
+smoke: ## Smoke-проверка стенда (runbook, 11.2): вход, стрим, файл, документ, переподключение, админка
+	$(UV) python scripts/smoke.py $(or $(SMOKE_ARGS),--fake --admin ivanov)
 
 test-nginx: ## Проверка шаблона nginx прода: nginx -t в образе из compose.prod.yml (нужен openssl)
 	deploy/nginx/test.sh
