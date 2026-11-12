@@ -43,6 +43,12 @@
   (`chat.model_retries`, `chat.model_retry_backoff_seconds`); в трассировке — `model_retries`;
   fake-llm: сценарий `flaky`.
 
+### Changed
+
+- `completions/generation.py` (1232 строки) разнесён по шагам без изменения поведения:
+  `state.py`, `preparation.py`, `retrieval.py`, `toolloop.py`, `finish.py`; в `generation.py`
+  остались жизненный цикл задач и порядок шагов.
+
 ### Fixed
 
 - Открытый SSE-поток держал соединение с PostgreSQL в открытой транзакции до конца ответа: сверх
