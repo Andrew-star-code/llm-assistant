@@ -13,7 +13,7 @@
    `start` кладёт задание в список Redis `gen:queue`, его забирает сервис `generator`
    (`executor.py`, `python -m app.cli generator run`) и запускает задачу у себя. `inline`
    (тесты): задача в процессе api.
-2. `generation.py`: промпт (`prompt.py`: `config/prompts/system/*` + история активной ветки в бюджете)
+2. Задача `GenerationManager._run` (`generation.py`) проходит шаги: промпт (`prompt.py`: `config/prompts/system/*` + история активной ветки в бюджете)
    + вложения ветки (`attachments.py`: целиком, если влезают в `files.full_text_budget_share` бюджета,
    иначе оглавление и начало) → `AsyncOpenAI` со `stream=True` и инструментами → дельты в `gen:<id>`
    пачками раз в 50 мс (`streaming.EventWriter`).
@@ -28,6 +28,20 @@
    [sse-protocol.md](../../../../docs/architecture/sse-protocol.md).
 4. В конце — ответ, токены (из `usage` модели или подсчётом), `ttft_ms`, `latency_ms`, трассировка в
    `messages`; заголовок чата служебной моделью; события `usage`, `title`, `message.end`.
+
+**Модули:**
+
+| Файл | Что в нём |
+| --- | --- |
+| `generation.py` | `GenerationManager`: запуск и остановка задач, осиротевшие ответы, `_run` — порядок шагов и обработка исходов |
+| `state.py` | `Deps` (зависимости шагов), `GenerationResult`, коды ошибок |
+| `preparation.py` | `prepare` → `Prepared`: одна сессия БД — ветка, сценарий, модель, системный промпт, вложения, область поиска, инструменты, история с прошлыми вызовами |
+| `retrieval.py` | авто-поиск по базам знаний (`auto_rag`), карточки источников |
+| `prompt.py`, `context.py`, `attachments.py` | сборка промпта, бюджет контекста в цикле, вложения в промпте |
+| `toolloop.py` | запрос к модели со стримингом, автоповтор, цикл инструментов |
+| `finish.py` | сохранение ответа, учёт токенов и лимиты, заголовок, метрики, `message.end` |
+| `streaming.py`, `executor.py`, `health.py` | протокол событий; исполнитель очереди; проверка исполнителя |
+| `router.py` | HTTP: отправка, перегенерация, «Стоп», SSE |
 
 **Автоповтор:** краткий сбой модели (соединение, 429, 5xx, обрыв стрима) до первой дельты запроса
 повторяется `chat.model_retries` раз с паузой `chat.model_retry_backoff_seconds` × 2ⁿ — в любой

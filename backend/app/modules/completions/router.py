@@ -27,7 +27,8 @@ from app.modules.chats.schemas import (
     SendMessageIn,
     SendMessageOut,
 )
-from app.modules.completions.generation import CHAT_ROLE, GenerationManager
+from app.modules.completions.generation import GenerationManager
+from app.modules.completions.state import CHAT_ROLE
 from app.modules.completions.streaming import sse_events
 from app.modules.files import service as files_service
 from app.modules.files.models import File

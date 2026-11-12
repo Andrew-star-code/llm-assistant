@@ -12,16 +12,8 @@ from prometheus_client import REGISTRY
 from app.core.config import REPO_ROOT, ModelEndpoint, load_settings
 from app.core.errors import AppError
 from app.modules.completions.context import DROPPED_NOTE, TRUNCATED_NOTE, LoopContext
-from app.modules.completions.generation import (
-    HISTORY_CUT_NOTE,
-    GenerationResult,
-    _error_payload,
-    clean_title,
-    fallback_title,
-    history_steps,
-    observe,
-    transient,
-)
+from app.modules.completions.finish import clean_title, fallback_title, observe
+from app.modules.completions.preparation import HISTORY_CUT_NOTE, history_steps
 from app.modules.completions.prompt import (
     PromptRenderer,
     PromptUser,
@@ -30,7 +22,9 @@ from app.modules.completions.prompt import (
     build_messages,
     system_prompt,
 )
+from app.modules.completions.state import GenerationResult, error_payload
 from app.modules.completions.streaming import format_sse
+from app.modules.completions.toolloop import transient
 from app.modules.llm.registry import ModelRegistry
 from app.modules.llm.stream import Delta, Finish, Usage, parse_stream
 from app.modules.llm.tokens import TokenCounter
@@ -403,9 +397,9 @@ def test_history_steps_skip_hidden_and_auto_search() -> None:
 
 
 def test_expected_errors_are_not_internal() -> None:
-    payload = _error_payload(AppError("Не помещается", code="context_overflow", status_code=413))
+    payload = error_payload(AppError("Не помещается", code="context_overflow", status_code=413))
     assert payload == {"code": "context_overflow", "message": "Не помещается", "retryable": False}
-    assert _error_payload(RuntimeError("x"))["code"] == "internal_error"
+    assert error_payload(RuntimeError("x"))["code"] == "internal_error"
 
 
 def test_transient_model_failures() -> None:
