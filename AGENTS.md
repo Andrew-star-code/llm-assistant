@@ -15,7 +15,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make install` | Зависимости (uv, pnpm) и pre-commit-хуки |
 | `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, mock-mssql, fake-llm, embed, api, generator, worker, worker-kb, scheduler, data-gateway, frontend |
 | `make dev-down` / `make dev-reset` | Остановить стенд / остановить и удалить данные |
-| `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → правила алертов → сборка образов |
+| `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → правила алертов, nginx, бэкап → сборка образов |
 | `make test` | Unit- и интеграционные тесты (pytest, Vitest; нужен Docker: testcontainers и mock-AD) |
 | `make test-unit` | Быстрые тесты без Docker |
 | `make lint` / `make fmt` | Линтеры (ruff, eslint, prettier) / автоформат |
@@ -27,6 +27,8 @@ RAG по базам знаний трёх уровней, инструмента
 | `make test-worker` | Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (`worker check`) |
 | `make test-data-gateway` | Самопроверка образа шлюза данных: ODBC Driver 18, подключение к mock-mssql, `search_employees` |
 | `make test-monitoring` | Конфигурация Prometheus и тесты правил алертов (`deploy/monitoring`, promtool) |
+| `make test-nginx` | Шаблон nginx прода: `nginx -t` в образе из `compose.prod.yml` (`deploy/nginx`) |
+| `make test-backup` | Скрипт бэкапа: бэкап и восстановление на контейнерах PostgreSQL и Qdrant (`deploy/backup`) |
 | `make gen-api` | OpenAPI → `frontend/src/api/` + `docs/reference/api.md` (после любого изменения API) |
 | `make migrate` | Миграции Alembic |
 | `make docs-config` | `docs/reference/config.md` из Pydantic-настроек (после изменения конфига) |
@@ -61,7 +63,9 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ├── services/fake-llm/              # OpenAI-совместимый mock для разработки и тестов
 ├── services/data-gateway/          # семантический слой SQL: catalog/*.yaml, проверка SQL, RLS (§9.5)
 ├── config/                         # app.yaml, models.yaml (+ оверлеи <env>), prompts/, templates/, scenarios/
-├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, .env.example
+├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, compose.prod.yml, .env.example
+├── deploy/nginx/                   # шаблон конфигурации nginx прода (TLS, /api, SSE)
+├── deploy/backup/                  # backup.sh — ночной бэкап; проверка — make test-backup
 ├── deploy/mock-ad/                 # Samba AD DC с тестовыми пользователями
 ├── deploy/mock-mssql/              # SQL Server 2022 Developer с тестовым телефонным справочником
 ├── deploy/monitoring/              # prometheus.yml, alerts.yml (+ тесты правил); compose и Grafana — этап 10
@@ -70,7 +74,7 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ```
 
 Появятся по этапам: `services/sandbox-runner/` ★,
-`deploy/nginx/`, `deploy/models/`, `deploy/offline/` и др. (§5).
+`deploy/models/`, `deploy/offline/` и др. (§5).
 
 ### Карта изменений
 

@@ -26,6 +26,12 @@
   `generator_health`, когда нет исполнителя; очередь генерации и число исполнителей на дашборде
   админки; `deploy/monitoring/` — цели сбора и правила алертов Prometheus с тестами
   (`make test-monitoring`, входит в `make check`).
+- Файлы первого запуска на сервере (этап 10а): `deploy/compose/compose.prod.yml` (приложение с
+  `generator`, фронтенд, nginx с TLS, модели `llm-chat`, `llm-utility`, `embed`, `rerank`),
+  шаблон `deploy/nginx/`, `deploy/backup/backup.sh`, `config/models.prod.yaml`,
+  `config/app.prod.yaml.example`; проверки без сервера — `make test-nginx`, `make test-backup`
+  (входят в `make check`). `models.<роль>.deployed: false` — монитор здоровья не проверяет ещё
+  не развёрнутую модель. Нагрузочный тест: `--ca-file` для портала с корпоративным CA.
 - Нагрузочный тест чата `eval/load/run.py` и `make load-test` (§18.4): N одновременных диалогов
   тем же путём, что браузер, отчёт по приёму сообщения, времени до первого токена и скорости;
   fake-llm: сценарий `stream:<слов>:<пауза, мс>`.

@@ -1244,8 +1244,11 @@ make dev-up
 1. Нагрузочный тест чата `eval/load/run.py` тем же путём, что браузер; ровный поток в fake-llm.
 2. Прогон на стенде из процессов (api, generator, fake-llm; PostgreSQL, Redis, Qdrant в
    контейнерах), разбор узких мест приложения.
-3. Остальная подготовка этапа 10 (файлы, помеченные 🔜 в `runbooks/first-deploy.md`:
-   `compose.prod.yml`, nginx, модели, бэкапы) — **не начата**, следующая задача.
+3. Файлы первого запуска (этап 10а), помеченные 🔜 в `runbooks/first-deploy.md`:
+   `deploy/compose/compose.prod.yml` (приложение, модели, nginx), `deploy/nginx/`,
+   `deploy/backup/backup.sh`, образцы `config/*.prod.yaml`; проверка всего, что проверяется без
+   сервера: синтаксис compose, `nginx -t` и стрим через nginx, бэкап и восстановление на
+   контейнерах данных.
 
 ### Сделано
 
@@ -1261,6 +1264,26 @@ make dev-up
     1 с, поэтому дефект не был виден. Заодно пул Redis — 100 соединений по умолчанию, по одному
     на открытый поток. Исправление — `core/redis.py` (тайм-аут = heartbeat + 5 с,
     `redis_max_connections` = 1000); тест `test_quiet_stream_outlives_default_redis_timeout`.
+
+- [x] п. 3 — `deploy/compose/compose.prod.yml`, `deploy/nginx/templates/default.conf.template`,
+  `deploy/backup/backup.sh`, `config/models.prod.yaml`, `config/app.prod.yaml.example`, раздел
+  «Прод» в `.env.example`; `make test-nginx`, `make test-backup`; руководство
+  `runbooks/first-deploy.md` ссылается на файлы вместо образцов. Что проверено без сервера:
+  - `docker compose -f docker-compose.yml -f compose.prod.yml config` — без ошибок; без
+    `VLLM_IMAGE`, `TEI_IMAGE`, `PORTAL_HOST` — понятный отказ;
+  - `nginx -t` на шаблоне в образе из compose (`make test-nginx`); стенд за этим nginx с
+    самоподписанным TLS: редирект с http, `/metrics` — 404, `/api` и статика проксируются,
+    нагрузочный тест (10 диалогов, 30 сообщений) — все цели §18.4, TTFT p50 0,37 с при ответе
+    9,5 с, то есть стрим не буферизуется;
+  - `backup.sh` на настоящих PostgreSQL и Qdrant (`make test-backup`): дамп восстановлен во
+    временный PostgreSQL, снапшот Qdrant, архивы файлов и конфига, удаление старых бэкапов;
+    `shellcheck` — без замечаний;
+  - `APP_ENV=prod` с `models.prod.yaml`: `config check` проходит (тест
+    `test_prod_overlay_skips_models_of_the_second_stage`).
+  **Не проверено (только на сервере):** запуск моделей (флаги vLLM и TEI, образы, GPU), сборка
+  образов приложения и `frontend`, nginx в составе compose с настоящим сертификатом, AD,
+  `backup.sh` в прод-раскладке каталогов и cron. В песочнице `make test-backup` прошёл с образом
+  `python:3.12-slim` вместо закреплённого по digest: Docker Hub ограничил число запросов.
 
 ### Цифры
 
@@ -1291,8 +1314,23 @@ make dev-up
 100. `--admin` в нагрузочном тесте поднимает лимиты тестовым пользователям персональными
      политиками на 2 часа через админ-API (запись в аудите), а не обходом лимитов.
 
+101. Первый запуск — один проект compose (`docker-compose.yml` + `compose.prod.yml`), как в
+     руководстве, а не раздельные проекты `app`/`data`/`models` из §16.2 SPEC: `up -d` не
+     перезапускает неизменённые сервисы моделей. Разделение — при необходимости на этапе 10б.
+102. Образы моделей не закреплены в репозитории: `VLLM_IMAGE` и `TEI_IMAGE` задаются в `.env` по
+     digest — версию vLLM выбирают под модель на сервере. nginx — тот же закреплённый образ, что
+     у `frontend`.
+103. `models.<роль>.deployed: false` (в `models.prod.yaml` — `coder` и `guard`): иначе монитор
+     здоровья с первого дня заводил бы инциденты по моделям, которых на сервере ещё нет.
+104. `backup.sh` берёт служебный образ для архива из уже имеющихся (redis на alpine) и проверяет
+     результат (непустой дамп, файл снапшота) — после отключения интернета новые образы взять
+     неоткуда, а молчаливо пустой бэкап хуже ошибки.
+
+Осталось от этапа 10а: скрипт smoke-проверки (`make smoke`), runbook полного восстановления
+`backup-restore.md`. Этап 10б — по разделу 12 руководства.
+
 Проверено в песочнице агента: `make lint`, `make typecheck`, `make test`, `make docs-check`,
-`make test-monitoring`; нагрузочные прогоны — на стенде из процессов, не через `make dev-up`
+`make test-monitoring`, `make test-nginx`, `make test-backup`; нагрузочные прогоны — на стенде из процессов, не через `make dev-up`
 (образы в песочнице не собираются). **На рабочей станции:** `make check`, `make dev-up`,
 `make load-test`.
 

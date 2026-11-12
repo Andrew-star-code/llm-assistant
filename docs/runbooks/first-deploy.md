@@ -6,13 +6,16 @@
 (раздел 12).
 
 **Что уже есть и чего ещё нет.** Приложение, его образы, конфиг и CLI готовы (этапы 0–9). Файлы
-прод-развёртывания — `deploy/compose/compose.prod.yml`, конфиг nginx, скрипты бэкапа и smoke-теста —
-появятся на этапе 10а; ниже их содержимое дано образцами, чтобы шаги можно было выполнить и вручную.
+прод-развёртывания есть в репозитории: `deploy/compose/compose.prod.yml`, `deploy/nginx/`,
+`deploy/backup/backup.sh`, `config/models.prod.yaml`, образец `config/app.prod.yaml.example`. Без
+сервера проверено то, что можно: синтаксис compose, конфигурация nginx и стрим через него, бэкап
+и восстановление на контейнерах данных. **На сервере впервые** запускаются модели (флаги vLLM и
+TEI, GPU), настоящий TLS и AD. Скрипта smoke-теста пока нет.
 
 | Пометка | Значение |
 | --- | --- |
 | ✅ | Есть в репозитории, команда работает уже сейчас |
-| 🔜 | Появится на этапе 10а; до этого — по образцу из этого документа |
+| 🔜 | Ещё нет в репозитории; делается вручную по этому документу |
 
 ## Содержание
 
@@ -305,8 +308,17 @@ sudo install -m 600 /dev/null .env
   echo "QDRANT_API_KEY=$(openssl rand -hex 24)"
   echo "DATA_GATEWAY_SECRET=$(openssl rand -hex 24)"
   echo "KB_IMPORT_DIR=/srv/import"
+  echo "PORTAL_HOST=ai.corp.local"
+  echo "VLLM_IMAGE=vllm/vllm-openai:<версия>@sha256:<digest>"
+  echo "TEI_IMAGE=ghcr.io/huggingface/text-embeddings-inference:<версия для Ampere 80>@sha256:<digest>"
 } | sudo tee .env >/dev/null
 ```
+
+`PORTAL_HOST` — имя портала, как в сертификате. Образы моделей задаются по digest
+(`docker buildx imagetools inspect <образ>:<тег>`): версию vLLM выбирают под модель, TEI — сборка
+для Ampere 80 (A100). Без этих трёх переменных `compose.prod.yml` не стартует и говорит, какой
+не хватает. Каталоги и номера GPU, если они не как в руководстве, — см. раздел «Прод» в
+`deploy/compose/.env.example`.
 
 Пароли используют только hex-символы: спецсимволы в пароле PostgreSQL ломают DSN (проблема Г3).
 
@@ -339,47 +351,18 @@ sudo install -m 600 privkey.pem /srv/ai-assistant-secrets/tls_privkey.pem
 Поведение — в `config/app.prod.yaml` и `config/models.prod.yaml` поверх базовых (§16.4). Секретов
 в них нет, их можно коммитить.
 
-```yaml
-# config/app.prod.yaml
-logging:
-  level: INFO
-  format: json
+- `config/models.prod.yaml` (✅) — отличия реестра моделей: эмбеддинги и реранкер на TEI,
+  `coder` и `guard` помечены `deployed: false` — монитор здоровья не заводит по ним инциденты,
+  пока модели не развёрнуты (доводка, раздел 12).
+- `config/app.prod.yaml` — из образца (✅ `config/app.prod.yaml.example`): заполните `<…>`.
 
-auth:
-  providers: [ldap]
-  bootstrap_admins: [<логин1>, <логин2>]
-
-ldap:
-  urls: ["ldaps://<dc1-fqdn>:636", "ldaps://<dc2-fqdn>:636"]
-  bind_dn: "<DN сервисной учётки>"
-  base_dn: "<base DN>"
-  upn_suffix: "<corp.local>"
-  netbios_domain: "<CORP>"
-  access_group: ""                       # или DN группы доступа
-
-chat:
-  company_name: "<Название компании>"
-  timezone: Europe/Moscow
-
-# nginx стоит в сети Docker: верить X-Forwarded-For только от неё (проблема Д7).
-trusted_proxies: ["10.250.0.0/16"]
-
-moderation:
-  guard_enabled: false                   # guard-модель — на доводке
-
-data_gateway:
-  url: ""                                # шлюз данных — когда будет справочник
+```bash
+cp config/app.prod.yaml.example config/app.prod.yaml
 ```
 
-```yaml
-# config/models.prod.yaml — только отличия от config/models.yaml
-models:
-  embed:
-    base_url: http://embed:80/v1
-  rerank:
-    base_url: http://rerank:80/v1
-    api: tei
-```
+Что в нём: вход только через `ldap`, первые админы, контроллеры и сервисная учётка AD, название
+компании, `trusted_proxies` (сеть Docker из 4.3 — проблема Д7), выключенные guard-модель и шлюз
+данных.
 
 Имя `model` в `models.yaml` должно совпадать с `--served-model-name` у vLLM (проблема В6).
 
@@ -423,90 +406,22 @@ cd /srv/models && find . -type f -name '*.safetensors' -exec sha256sum {} + | su
 Модели поднимаются **до** приложения: им нужно несколько минут на загрузку, и порядок важен —
 сначала крупная модель, потом мелкие (§3.2).
 
-### 7.1 Образец сервисов моделей (🔜 `compose.prod.yml`)
+### 7.1 Сервисы моделей (✅ `deploy/compose/compose.prod.yml`)
 
-Финальные флаги — по рецепту vLLM для выбранной версии; образ — по digest.
+В файле — `llm-chat` (GPU 0–1, TP = 2), `llm-utility`, `embed`, `rerank` (GPU 3). Перед запуском
+сверьте с сервером:
 
-```yaml
-x-vllm: &vllm
-  image: vllm/vllm-openai:<версия>@sha256:<digest>
-  restart: unless-stopped
-  ipc: host                                # общая память для TP = 2 (проблема В3)
-  environment:
-    HF_HUB_OFFLINE: "1"
-    VLLM_NO_USAGE_STATS: "1"
-    DO_NOT_TRACK: "1"
-  volumes:
-    - /srv/models:/models:ro
-  logging: {driver: json-file, options: {max-size: "20m", max-file: "5"}}
+- **Флаги vLLM** — стартовые из §3.2 SPEC; финальные — по рецепту vLLM для выбранной версии
+  (парсеры размышлений и инструментов, `--max-model-len`).
+- **Пути весов** — `/srv/models/Qwen3.8-27B`, `Qwen3.5-4B`, `bge-m3`, `bge-reranker-v2-m3`
+  (шаг 3); `--served-model-name` совпадает с `model` в `config/models.yaml` (проблема В6).
+- **Образы** — `VLLM_IMAGE` и `TEI_IMAGE` в `.env`, по digest.
+- `ipc: host` — общая память для TP = 2 (проблема В3); `start_period` у `llm-chat` — 20 минут:
+  первая загрузка весов и компиляция долгие.
 
-services:
-  llm-chat:
-    <<: *vllm
-    command: >
-      --model /models/Qwen3.8-27B --served-model-name Qwen/Qwen3.8-27B
-      --tensor-parallel-size 2 --gpu-memory-utilization 0.90 --max-model-len 131072
-      --enable-prefix-caching
-      --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder
-    deploy:
-      resources:
-        reservations:
-          devices: [{driver: nvidia, device_ids: ["0", "1"], capabilities: [gpu]}]
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
-      interval: 15s
-      timeout: 5s
-      start_period: 20m                    # первая загрузка весов и компиляция — долго
-      retries: 5
-
-  llm-utility:
-    <<: *vllm
-    command: >
-      --model /models/Qwen3.5-4B --served-model-name Qwen/Qwen3.5-4B
-      --gpu-memory-utilization 0.12 --max-model-len 32768
-      --reasoning-parser qwen3
-    deploy:
-      resources:
-        reservations:
-          devices: [{driver: nvidia, device_ids: ["3"], capabilities: [gpu]}]
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
-      interval: 15s
-      start_period: 10m
-    depends_on:
-      embed: {condition: service_healthy}
-
-  embed:
-    # Тот же сервер, что на дев-стенде (TEI), — образ для Ampere (A100).
-    image: ghcr.io/huggingface/text-embeddings-inference:<версия для Ampere 80>@sha256:<digest>
-    restart: unless-stopped
-    command: ["--model-id", "/models/bge-m3", "--port", "80", "--max-client-batch-size", "64"]
-    environment: {HF_HUB_OFFLINE: "1"}
-    volumes: ["/srv/models:/models:ro"]
-    healthcheck: &tei-health
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/health || exit 1"]
-      interval: 10s
-      start_period: 5m
-    deploy:
-      resources:
-        reservations:
-          devices: [{driver: nvidia, device_ids: ["3"], capabilities: [gpu]}]
-
-  rerank:
-    image: ghcr.io/huggingface/text-embeddings-inference:<версия для Ampere 80>@sha256:<digest>
-    restart: unless-stopped
-    command: ["--model-id", "/models/bge-reranker-v2-m3", "--port", "80"]
-    environment: {HF_HUB_OFFLINE: "1"}
-    volumes: ["/srv/models:/models:ro"]
-    healthcheck: *tei-health
-    deploy:
-      resources:
-        reservations:
-          devices: [{driver: nvidia, device_ids: ["3"], capabilities: [gpu]}]
-```
-
-Номера GPU надёжнее задавать UUID из `nvidia-smi -L`: порядковые номера могут поменяться после
-замены карты или обновления прошивки (проблема А6).
+Номера GPU надёжнее задавать UUID из `nvidia-smi -L` (`GPU_CHAT_A`, `GPU_CHAT_B`, `GPU_AUX` в
+`.env`): порядковые номера могут поменяться после замены карты или обновления прошивки
+(проблема А6).
 
 ### 7.2 Запуск и проверка
 
@@ -586,55 +501,18 @@ docker save ai-assistant/api:<версия> ai-assistant/worker:<версия> a
 zstd -dc images.tar.zst | docker load
 ```
 
-### 8.2 Образец сервисов приложения (🔜 `compose.prod.yml`)
+### 8.2 Сервисы приложения (✅ `deploy/compose/compose.prod.yml`)
 
-Отличия прода от базового `docker-compose.yml`:
+Отличия прода от базового `docker-compose.yml`, уже записанные в файле:
 
-```yaml
-services:
-  api:
-    environment:
-      APP_ENV: prod
-      APP_DATA_GATEWAY__URL: ""           # шлюз данных выключен до справочника
-    volumes:
-      - ../../config:/srv/config:ro       # конфиг без пересборки образа
-    secrets: [ldap_bind_password, corp_ca.pem]
-    depends_on:
-      llm-chat: {condition: service_healthy}
-  generator:                              # исполнитель генерации (ADR-0013) — к модели ходит он
-    environment:
-      APP_ENV: prod
-      APP_DATA_GATEWAY__URL: ""
-    volumes: ["../../config:/srv/config:ro"]
-    depends_on:
-      llm-chat: {condition: service_healthy}
-  worker:
-    environment: {APP_ENV: prod}
-    volumes: ["../../config:/srv/config:ro"]
-    secrets: [ldap_bind_password, corp_ca.pem]
-  worker-kb:
-    environment: {APP_ENV: prod}
-    volumes: ["../../config:/srv/config:ro"]
-  scheduler:
-    environment: {APP_ENV: prod}
-    volumes: ["../../config:/srv/config:ro"]
-  migrate:
-    environment: {APP_ENV: prod}
-    volumes: ["../../config:/srv/config:ro"]
-  data-gateway:
-    profiles: [data]                      # не стартует без явного --profile data
-  qdrant:
-    volumes:
-      - /backup/ai-assistant/qdrant-snapshots:/qdrant/snapshots   # снапшоты — сразу на диск бэкапов
-  frontend:                               # в базовом файле его нет: на дев-стенде — Vite
-    build: {context: ../../frontend, target: runtime}
-    image: ai-assistant/frontend:${APP_VERSION}
-    restart: unless-stopped
-
-secrets:
-  ldap_bind_password: {file: /srv/ai-assistant-secrets/ldap_bind_password}
-  corp_ca.pem: {file: /srv/ai-assistant-secrets/corp_ca.pem}
-```
+- `APP_ENV: prod` и каталог `config/` томом только для чтения у `api`, `generator`, `worker`,
+  `worker-kb`, `scheduler`, `migrate` — конфиг меняется без пересборки образа;
+- секреты `ldap_bind_password` и `corp_ca.pem` у `api` и `worker` (из `/srv/ai-assistant-secrets`);
+- `api` и `generator` ждут готовности `llm-chat`; `generator` — исполнитель генерации
+  (ADR-0013), без него ответы не начинаются (проблема Г10);
+- `data-gateway` — только с `--profile data`; шлюз данных у `api` и `generator` выключен;
+- снапшоты Qdrant — сразу в `/backup/ai-assistant/qdrant-snapshots`;
+- `frontend` (статика SPA) и `nginx` (раздел 9).
 
 Ни один сервис приложения и моделей не публикует порты наружу: снаружи доступен только nginx
 (проблема Б4).
@@ -674,63 +552,20 @@ docker compose -f docker-compose.yml -f compose.prod.yml exec api python -m app.
 
 ## 9. Шаг 6. nginx и TLS
 
-### 9.1 Образец (🔜 `deploy/nginx/`)
+### 9.1 Конфигурация (✅ `deploy/nginx/`, сервис `nginx` в `compose.prod.yml`)
 
-nginx — единственный сервис с портами наружу. Статику отдаёт контейнер frontend, `/api` — api.
+nginx — единственный сервис с портами наружу (80 → редирект, 443). Статику отдаёт контейнер
+`frontend`, `/api` — `api`. Конфигурация — шаблон `deploy/nginx/templates/default.conf.template`:
+при старте контейнера в него подставляется `PORTAL_HOST` из `.env`. Что в нём важно:
 
-```nginx
-server {
-    listen 80;
-    server_name ai.corp.local;
-    return 301 https://$host$request_uri;
-}
+- `/api/` — без буферизации и с чтением до часа: иначе ответ приходит одним куском в конце
+  (проблема Е1) или обрывается через минуту (Е2);
+- `client_max_body_size 60m` — лимит загрузки 50 МБ с запасом (проблема Е3);
+- `/metrics` наружу закрыт (§16.6);
+- сертификат и ключ — секреты `tls_fullchain.pem` и `tls_privkey.pem` (раздел 5.2).
 
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name ai.corp.local;
-    server_tokens off;
-
-    ssl_certificate     /run/secrets/tls_fullchain.pem;
-    ssl_certificate_key /run/secrets/tls_privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    add_header Strict-Transport-Security "max-age=31536000" always;
-
-    client_max_body_size 60m;            # files.max_file_mb (50) + запас (проблема Е3)
-
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_http_version 1.1;
-
-    location /api/ {
-        proxy_pass http://api:8000;
-        # SSE: без буферизации и с долгим чтением, иначе ответ приходит одним куском в конце
-        # (проблема Е1) или обрывается через минуту (Е2).
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 3600s;
-        proxy_send_timeout 3600s;
-        gzip off;
-    }
-
-    location /metrics { return 404; }     # метрики наружу не публикуются (§16.6)
-
-    location / {
-        proxy_pass http://frontend:8080;
-    }
-}
-```
-
-```yaml
-  nginx:
-    image: nginx:<версия>@sha256:<digest>
-    restart: unless-stopped
-    ports: ["443:443", "80:80"]
-    volumes: ["../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro"]
-    secrets: [tls_fullchain.pem, tls_privkey.pem]
-    depends_on: [api, frontend]
-```
+Шаблон проверяется без сервера: `make test-nginx` (`nginx -t` в том же образе). Стрим через
+nginx с TLS проверен нагрузочным тестом на стенде — время до первого токена не выросло.
 
 ### 9.2 Проверка
 
@@ -752,40 +587,25 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://ai.corp.local/
 Минимум с первого дня: данные пользователей появляются с первого часа. Полная схема с WAL-архивом —
 §16.7 SPEC, на доводке.
 
-### 10.1 Скрипт ночного бэкапа (🔜 `deploy/backup/backup.sh`)
+### 10.1 Скрипт ночного бэкапа (✅ `deploy/backup/backup.sh`)
+
+Скрипт пишет в `/backup/ai-assistant/<дата>/`:
+
+- `postgres.dump` — логический дамп PostgreSQL (формат custom);
+- `qdrant-snapshot.txt` — имя полного снапшота Qdrant; сам файл — в
+  `/backup/ai-assistant/qdrant-snapshots/` (том из `compose.prod.yml`);
+- `storage.tar` — файлы пользователей и баз знаний;
+- `config.tar` — конфиг без секретов.
+
+Хранит 30 дней (`KEEP_DAYS`). При пустом дампе или отсутствии снапшота завершается с ошибкой —
+следите за журналом. Первый запуск вручную:
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-cd /srv/ai-assistant/deploy/compose
-set -a; . ./.env; set +a
-DC="docker compose -f docker-compose.yml -f compose.prod.yml"
-DAY=$(date +%F)
-DEST=/backup/ai-assistant/$DAY
-mkdir -p "$DEST"
-
-# PostgreSQL — логический дамп в формате custom.
-$DC exec -T postgres pg_dump -U "${POSTGRES_USER:-assistant}" -Fc "${POSTGRES_DB:-assistant}" > "$DEST/postgres.dump"
-
-# Qdrant — полный снапшот; файл появляется в /backup/ai-assistant/qdrant-snapshots.
-$DC exec -T api python -c "
-import os, urllib.request
-req = urllib.request.Request('http://qdrant:6333/snapshots', method='POST',
-                             headers={'api-key': os.environ['APP_QDRANT_API_KEY']})
-print(urllib.request.urlopen(req, timeout=3600).read().decode())"
-
-# Файлы пользователей и баз знаний — копия тома.
-docker run --rm -v ai-assistant_api-storage:/src:ro -v "$DEST":/dst alpine \
-  sh -c 'tar -C /src -cf /dst/storage.tar .'
-
-# Конфиг (без секретов) — чтобы восстановить ту же версию поведения.
-tar -C /srv/ai-assistant -cf "$DEST/config.tar" config
-
-# Хранить 30 дней.
-find /backup/ai-assistant -mindepth 1 -maxdepth 1 -type d -name '20*' -mtime +30 -exec rm -rf {} +
-find /backup/ai-assistant/qdrant-snapshots -type f -mtime +30 -delete
-echo "backup ok: $DEST"
+sudo /srv/ai-assistant/deploy/backup/backup.sh
 ```
+
+Скрипт проверен без сервера (`make test-backup`): бэкап и восстановление PostgreSQL на
+контейнерах, снапшот Qdrant, архивы, удаление старых бэкапов.
 
 Секреты (`/srv/ai-assistant-secrets`, `deploy/compose/.env`) бэкапятся **отдельно**, в защищённое
 хранилище: без пароля PostgreSQL дамп всё равно восстановится, но без `.env` придётся перевыпускать
