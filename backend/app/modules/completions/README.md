@@ -57,6 +57,12 @@
 `frontend/src/api/sse.ts` (версия протокола, тесты обеих сторон); промпты — `config/prompts/`.
 Лимиты (этап 8): резерв до запроса в `router.py` (`limits.reserve_generation`, отказ — 429), слот генерации продлевается и освобождается в `generation.py`, фактические токены — `usage_records` и счётчики после ответа, событие `limits` в конце.
 
+**Метрики и здоровье:** `core/metrics.py` — ответы, TTFT, токены, инструменты, ожидание в очереди
+(пишет процесс, который ведёт ответ: `generator`, порт `generation.metrics_port`); api отдаёт длину
+очереди, число исполнителей и открытые SSE. `health.py` — проверка «есть ли исполнитель» раз в
+минуту из `scheduler`: инцидент `generator_health` и комментарий о восстановлении. Перечень метрик
+и алерты — [deploy/monitoring](../../../../deploy/monitoring/README.md).
+
 **Данные:** пишет `messages`; Redis `gen:queue` (задания), `gen:executor:<имя>`, `gen:<id>` (живёт `chat.stream_ttl_seconds` после конца),
 `gen:alive:<id>`, `gen:cancel:<id>`.
 

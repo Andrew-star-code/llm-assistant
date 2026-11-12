@@ -1103,6 +1103,7 @@ api стартует после здорового `llm-chat`. Инцидент�
 
 **Г10. Сообщение отправлено, ответ не начинается, через несколько минут — «Генерация прервана».**
 Не работает `generator`: api только ставит задания в очередь Redis (`generation.mode: queue`).
+В админке — инцидент «Исполнитель генерации» и ноль исполнителей на дашборде.
 `ps` — сервис должен быть `healthy`; логи `generator`; `docker compose … exec generator python -m
 app.cli generator check`. Длина очереди: `redis-cli LLEN gen:queue` — растёт, значит задания никто
 не забирает. Если `stop_grace_period` у `generator` меньше `generation.shutdown_grace_seconds`,

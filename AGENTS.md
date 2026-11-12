@@ -15,7 +15,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make install` | Зависимости (uv, pnpm) и pre-commit-хуки |
 | `make dev-up` | Поднять дев-стенд с нуля: postgres, redis, qdrant, mock-ad, mock-mssql, fake-llm, embed, api, generator, worker, worker-kb, scheduler, data-gateway, frontend |
 | `make dev-down` / `make dev-reset` | Остановить стенд / остановить и удалить данные |
-| `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → сборка образов |
+| `make check` | **Всё перед пушем:** линт → типы → тесты → docs-check → правила алертов → сборка образов |
 | `make test` | Unit- и интеграционные тесты (pytest, Vitest; нужен Docker: testcontainers и mock-AD) |
 | `make test-unit` | Быстрые тесты без Docker |
 | `make lint` / `make fmt` | Линтеры (ruff, eslint, prettier) / автоформат |
@@ -25,6 +25,7 @@ RAG по базам знаний трёх уровней, инструмента
 | `make eval-scenarios` | Эталонные запросы сценариев + LLM-судья, сравнение с `baseline.json` |
 | `make test-worker` | Самопроверка образа воркера: pandoc, LibreOffice, Tesseract (`worker check`) |
 | `make test-data-gateway` | Самопроверка образа шлюза данных: ODBC Driver 18, подключение к mock-mssql, `search_employees` |
+| `make test-monitoring` | Конфигурация Prometheus и тесты правил алертов (`deploy/monitoring`, promtool) |
 | `make gen-api` | OpenAPI → `frontend/src/api/` + `docs/reference/api.md` (после любого изменения API) |
 | `make migrate` | Миграции Alembic |
 | `make docs-config` | `docs/reference/config.md` из Pydantic-настроек (после изменения конфига) |
@@ -62,12 +63,13 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, .env.example
 ├── deploy/mock-ad/                 # Samba AD DC с тестовыми пользователями
 ├── deploy/mock-mssql/              # SQL Server 2022 Developer с тестовым телефонным справочником
+├── deploy/monitoring/              # prometheus.yml, alerts.yml (+ тесты правил); compose и Grafana — этап 10
 ├── eval/                           # rag/ (hit@5, MRR), scenarios/ (эталоны сценариев, LLM-судья)
 └── scripts/docs_check.py
 ```
 
 Появятся по этапам: `services/sandbox-runner/` ★,
-`deploy/nginx/`, `deploy/models/`, `deploy/monitoring/`, `deploy/offline/` и др. (§5).
+`deploy/nginx/`, `deploy/models/`, `deploy/offline/` и др. (§5).
 
 ### Карта изменений
 
@@ -83,6 +85,7 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 | Добавить поле профиля из AD | маппинг атрибутов в конфиге + `modules/users/` + миграция + `features/profile/` | `docs/guides/ad-setup.md` |
 | Добавить страницу админки | `frontend/src/admin/pages/` + `backend/app/modules/admin/` | новое право в `docs/reference/permissions.md` |
 | Добавить метрику лимитов | `core/config.py::LimitMetric` + `modules/limits/` + место проверки | `docs/guides/add-limit-metric.md`, админка «Лимиты», i18n, `make docs-config` |
+| Добавить метрику Prometheus | `backend/app/core/metrics.py` + место записи | таблица в `deploy/monitoring/README.md`; правило в `alerts.yml` — с тестом в `alerts.test.yml` (`make test-monitoring`) |
 | Добавить тип инцидента | `backend/app/modules/incidents/` | фильтры в админке |
 | Добавить набор данных или функцию SQL | `services/data-gateway/catalog/` | описания полей и примеры запросов, `docs/guides/add-dataset.md`, проверка в админке «Источники данных» |
 | Изменить формат стрима | `docs/architecture/sse-protocol.md` → `modules/completions/streaming.py` → `frontend/src/api/sse.ts` | версия протокола, тесты обеих сторон |
@@ -195,6 +198,9 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
   через `import app.models` (ловит `test_worker_imports.py`). В тестах — `generation.mode: inline`
   (задача в api, как `worker.eager`); очередь, остановку и сам процесс проверяет
   `test_generator.py`. `stop_grace_period` сервиса — больше `generation.shutdown_grace_seconds`.
+- **Метки метрик — только из закрытых наборов** (`core/metrics.py`): роль модели, статус, имя
+  зарегистрированного инструмента. Логин, id чата или имя инструмента, придуманное моделью, в
+  метке — неограниченное число рядов в Prometheus. Метрики генерации пишет `generator`, не `api`.
 - **Сообщения цикла инструментов — только через `LoopContext`** (`completions/context.py`):
   `add_calls`/`add_result` считают токены, `fit()` перед запросом возвращает промпт в бюджет.
   Прямой `messages.append` в цикле обходит бюджет — модель ответит ошибкой на длинном чате.

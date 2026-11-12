@@ -21,6 +21,11 @@
   `generation.max_concurrent`; CLI `generator run|check`; режим `generation.mode: inline` для
   тестов. **При обновлении:** в compose появился сервис `generator` — без него в режиме `queue`
   ответы не начинаются.
+- Наблюдаемость (§16.6): метрики генерации, очереди исполнителя, инструментов и SSE
+  (`core/metrics.py`); порт метрик у `generator` (`generation.metrics_port`); инцидент
+  `generator_health`, когда нет исполнителя; очередь генерации и число исполнителей на дашборде
+  админки; `deploy/monitoring/` — цели сбора и правила алертов Prometheus с тестами
+  (`make test-monitoring`, входит в `make check`).
 - Живучесть генерации: автоповтор запроса к модели при кратком сбое до первого слова ответа
   (`chat.model_retries`, `chat.model_retry_backoff_seconds`); в трассировке — `model_retries`;
   fake-llm: сценарий `flaky`.
