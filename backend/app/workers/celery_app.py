@@ -47,7 +47,8 @@ def make_celery(settings: Settings) -> Celery:
         # По часам, а не интервалом от старта: пересоздание scheduler не сдвигает и не отменяет
         # запуск (файл расписания beat живёт в /tmp контейнера).
         timezone=settings.chat.timezone,
-        beat_schedule={
+        beat_schedule=ad_sync_entry(settings)
+        | {
             "exports-cleanup": {"task": "exports.cleanup", "schedule": crontab(minute=7)},
             "models-health": {"task": "models.health", "schedule": crontab()},
             "usage-partitions": {
@@ -61,6 +62,25 @@ def make_celery(settings: Settings) -> Celery:
         },
     )
     return app
+
+
+def ad_sync_crontab(minutes: int) -> crontab:
+    """Период синхронизации с AD по часам: каждые N минут, если N делит час, иначе — раз в
+    целое число часов (округление), но не реже раза в сутки."""
+    if minutes < 60 and 60 % minutes == 0:
+        return crontab(minute=f"*/{minutes}")
+    hours = max(1, round(minutes / 60))
+    if hours >= 24:
+        return crontab(minute=47, hour=4)
+    return crontab(minute=47, hour=f"*/{hours}" if hours > 1 else "*")
+
+
+def ad_sync_entry(settings: Settings) -> dict[str, Any]:
+    """Задача синхронизации с AD — только при входе через AD и ненулевом периоде (§6.4)."""
+    minutes = settings.ldap.sync_interval_minutes
+    if "ldap" not in settings.auth.providers or minutes <= 0:
+        return {}
+    return {"ad-sync": {"task": "users.ad_sync", "schedule": ad_sync_crontab(minutes)}}
 
 
 celery_app = make_celery(get_settings())
@@ -98,6 +118,11 @@ def cleanup_exports_task() -> int:
 @celery_app.task(name="models.health")  # type: ignore[untyped-decorator]
 def models_health_task() -> int:
     return asyncio.run(export_jobs.models_health_job(get_settings()))
+
+
+@celery_app.task(name="users.ad_sync")  # type: ignore[untyped-decorator]
+def ad_sync_task() -> int:
+    return asyncio.run(export_jobs.ad_sync_job(get_settings()))
 
 
 @celery_app.task(name="limits.partitions")  # type: ignore[untyped-decorator]

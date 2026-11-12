@@ -6,7 +6,6 @@ import asyncio
 import getpass
 import json
 import sys
-from pathlib import Path
 
 from sqlalchemy import select
 
@@ -15,7 +14,7 @@ from app.core import redis as core_redis
 from app.core.config import Settings
 from app.core.storage import LocalStorage
 from app.modules.auth.diagnostics import DiagnosticsReport, run_diagnostics
-from app.modules.auth.providers.ldap import LdapDirectory
+from app.modules.auth.providers.ldap import make_directory
 from app.modules.auth.service import normalize_login
 from app.modules.auth.sessions import SessionStore
 from app.modules.rbac import service as rbac
@@ -24,14 +23,6 @@ from app.modules.rbac.permissions import SUPERADMIN
 from app.modules.users.models import User
 from app.modules.users.service import upsert_from_directory
 from app.modules.users.sync import sync_all
-
-
-def make_directory(settings: Settings) -> LdapDirectory:
-    def read_password() -> str:
-        path: Path | None = settings.ldap.bind_password_file
-        return path.read_text(encoding="utf-8").strip() if path else ""
-
-    return LdapDirectory(settings.ldap, read_password=read_password)
 
 
 def _mark(ok: bool) -> str:

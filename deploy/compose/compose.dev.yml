@@ -66,7 +66,11 @@ services:
     volumes:
       - ../../backend/app:/srv/backend/app:ro
       - ../../config:/srv/config:ro
+      - mock-ad-export:/run/mock-ad:ro     # CA mock-AD: синхронизация с AD идёт в воркере
       - api-storage:/srv/storage
+    secrets:
+      - source: ldap_bind_password
+        target: ldap_bind_password
     extra_hosts: ["host.docker.internal:host-gateway"]
 
   worker-kb:

@@ -25,7 +25,7 @@ from ldap3 import BASE, NONE, SIMPLE, SUBTREE, Connection, Server, Tls
 from ldap3.core.exceptions import LDAPException
 from ldap3.utils.conv import escape_filter_chars
 
-from app.core.config import LdapSettings
+from app.core.config import LdapSettings, Settings
 from app.modules.auth.providers.base import AuthFailure, DirectoryUser, FailureReason
 
 log = structlog.stdlib.get_logger("app.auth.ldap")
@@ -289,3 +289,13 @@ class LdapProvider:
 
     async def authenticate(self, login: str, password: str) -> DirectoryUser:
         return await asyncio.to_thread(self._authenticate_sync, login, password)
+
+
+def make_directory(settings: Settings) -> LdapDirectory:
+    """Каталог AD вне api (CLI, задачи воркера): пароль сервисной учётки — из файла секрета."""
+
+    def read_password() -> str:
+        path = settings.ldap.bind_password_file
+        return path.read_text(encoding="utf-8").strip() if path else ""
+
+    return LdapDirectory(settings.ldap, read_password=read_password)

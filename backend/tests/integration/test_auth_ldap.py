@@ -8,11 +8,13 @@ from typing import Any
 import pytest
 from sqlalchemy import select
 
-from app.cli.ad import format_report, make_directory
+from app.cli.ad import format_report
 from app.modules.auth.diagnostics import run_diagnostics_sync
+from app.modules.auth.providers.ldap import make_directory
 from app.modules.security.models import LoginEvent
 from app.modules.users.models import User
 from app.modules.users.sync import sync_all
+from app.workers.export_jobs import ad_sync_job
 from tests.integration.conftest import (
     USER_PASSWORD,
     ApiClient,
@@ -223,6 +225,22 @@ async def test_sync_blocks_and_logs_out_user_disabled_in_ad(
         storage=app.state.storage,
         sessions=app.state.sessions,
     )
+    assert (await client.login("smirnova", USER_PASSWORD, provider="ldap")).status_code == 200
+
+
+async def test_scheduled_sync_job_runs_outside_api(
+    make_client: Any, infra: Infra, mock_ad: MockAd, tmp_path: Path
+) -> None:
+    """Задача планировщика ``users.ad_sync``: свои соединения и каталог AD, без ``app.state``."""
+    app, client = await _ldap_client(make_client, infra, mock_ad, tmp_path)
+    assert (await client.login("smirnova", USER_PASSWORD, provider="ldap")).status_code == 200
+    mock_ad.exec("samba-tool", "user", "disable", "smirnova")
+    try:
+        assert await ad_sync_job(app.state.settings) == 1
+        assert (await client.get("/api/auth/me")).status_code == 401
+    finally:
+        mock_ad.exec("samba-tool", "user", "enable", "smirnova")
+    assert await ad_sync_job(app.state.settings) == 0
     assert (await client.login("smirnova", USER_PASSWORD, provider="ldap")).status_code == 200
 
 

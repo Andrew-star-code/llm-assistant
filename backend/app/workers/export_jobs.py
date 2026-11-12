@@ -237,3 +237,34 @@ async def usage_partitions_job(settings: Settings) -> int:
     if created:
         log.info("limits.partitions_created", partitions=created)
     return len(created)
+
+
+async def ad_sync_job(settings: Settings) -> int:
+    """Синхронизация пользователей с AD (§6.4); возвращает число отключённых за этот проход."""
+    from app.core.redis import create_redis
+    from app.modules.auth.providers.ldap import make_directory
+    from app.modules.auth.sessions import SessionStore
+    from app.modules.users.sync import sync_all
+
+    if "ldap" not in settings.auth.providers:
+        return 0
+    redis = create_redis(settings)
+    try:
+        async with worker_context(settings) as ctx:
+            stats = await sync_all(
+                ctx.sessions,
+                make_directory(settings),
+                settings=settings,
+                storage=ctx.storage,
+                sessions=SessionStore(redis, settings.auth.session),
+            )
+    finally:
+        await redis.aclose()
+    log.info(
+        "users.sync.done",
+        checked=stats.checked,
+        updated=stats.updated,
+        disabled=stats.disabled,
+        errors=stats.errors,
+    )
+    return stats.disabled

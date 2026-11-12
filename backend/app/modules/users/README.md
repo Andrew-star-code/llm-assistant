@@ -21,8 +21,9 @@
 умолчанию, `users.default_address_form`), «Имя», «Фамилия Имя Отчество», «на вы» без имени.
 Без отчества — по имени.
 
-**Синхронизация:** фоновой задачей api каждые `ldap.sync_interval_minutes` под Redis-блокировкой
-(`lock:ad-sync`) и командой `python -m app.cli ad sync`. TODO(stage-3): перенести в Celery beat.
+**Синхронизация:** задачей `users.ad_sync` по расписанию `scheduler` (выполняет `worker`; период —
+`ldap.sync_interval_minutes`, по часам: каждые N минут, если N делит час, иначе раз в целое число
+часов) и командой `python -m app.cli ad sync`. Воркеру нужны сеть до контроллеров и секреты AD.
 
 **Зависит от:** `auth` (провайдеры, сессии), `rbac`; `core/storage` для фото.
 

@@ -3,8 +3,8 @@
 Обновляет атрибуты, фото и роли; пользователей, отключённых или удалённых в AD, помечает
 ``ad_disabled`` и разлогинивает. Пользователи провайдера dev не синхронизируются.
 
-Пока нет Celery beat (этап 3), синхронизация идёт фоновой задачей api под Redis-блокировкой,
-чтобы при нескольких процессах её выполнял один. TODO(stage-3): перенести в scheduler.
+Запуск — по расписанию из ``scheduler`` (задача ``users.ad_sync`` в воркере, период
+``ldap.sync_interval_minutes``) и вручную: ``python -m app.cli ad sync``.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ import asyncio
 from dataclasses import dataclass
 
 import structlog
-from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -29,8 +28,6 @@ from app.modules.users.models import User
 from app.modules.users.service import upsert_from_directory
 
 log = structlog.stdlib.get_logger("app.users.sync")
-
-LOCK_KEY = "lock:ad-sync"
 
 
 @dataclass
@@ -99,24 +96,3 @@ async def sync_all(
             stats.updated += int(not disabled)
     log.info("users.sync.done", **stats.__dict__)
     return stats
-
-
-async def run_periodic_sync(
-    redis: Redis,
-    factory: async_sessionmaker[AsyncSession],
-    directory: LdapDirectory,
-    *,
-    settings: Settings,
-    storage: Storage,
-    sessions: SessionStore,
-) -> None:
-    interval = settings.ldap.sync_interval_minutes * 60
-    while True:
-        await asyncio.sleep(interval)
-        try:
-            if await redis.set(LOCK_KEY, "1", nx=True, ex=max(interval - 10, 60)):
-                await sync_all(
-                    factory, directory, settings=settings, storage=storage, sessions=sessions
-                )
-        except Exception:
-            log.exception("users.sync.loop_failed")
