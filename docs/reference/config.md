@@ -16,6 +16,7 @@
 | `config_dir` | Path | `config` | `APP_CONFIG_DIR` | Каталог с YAML-конфигами. |
 | `database_url` | secret | — | `APP_DATABASE_URL` | DSN PostgreSQL (секрет: из окружения или /run/secrets/app_database_url). |
 | `redis_url` | secret | — | `APP_REDIS_URL` | DSN Redis. |
+| `redis_max_connections` | int | 1000 | `APP_REDIS_MAX_CONNECTIONS` | Размер пула соединений Redis на процесс: каждый открытый SSE-поток ответа держит одно соединение. Не больше maxclients сервера Redis (по умолчанию 10000). |
 | `qdrant_url` | str | `http://localhost:6333` | `APP_QDRANT_URL` | HTTP-адрес Qdrant. |
 | `qdrant_api_key` | secret \| null | — | `APP_QDRANT_API_KEY` | API-ключ Qdrant (секрет). |
 | `readiness_timeout_s` | float | 2.0 | `APP_READINESS_TIMEOUT_S` | Тайм-аут каждой проверки /ready, с. |

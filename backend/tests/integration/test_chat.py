@@ -4,16 +4,22 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
+import pytest
 from sqlalchemy import select
 
+from app.core.redis import create_redis
 from app.modules.chats.models import Chat, Message
+from app.modules.completions import router as completions_router
+from app.modules.completions.streaming import format_sse
 from tests.integration.conftest import (
     ApiClient,
     Infra,
     chat_settings,
+    make_settings,
     new_chat,
     read_stream,
     send,
@@ -448,3 +454,48 @@ async def test_idor_other_users_chat_is_invisible(
     assert (await other.get("/api/chats/search", params={"q": "секрет"})).json() == []
     assert (await other.get("/api/folders")).json() == []
     assert (await owner.get(f"/api/chats/{chat_id}")).json()["title"] is not None
+
+
+async def test_open_stream_does_not_hold_db_connection(
+    make_client: Any,
+    infra: Infra,
+    tmp_path: Path,
+    fake_llm_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SSE-поток живёт минуты: соединение с БД он возвращает в пул до начала стрима.
+
+    Найдено нагрузочным тестом (eval/load): поток держал сессию запроса в открытой транзакции,
+    и пул кончался на паре десятков одновременных ответов.
+    """
+    app, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    chat_id = await new_chat(client)
+    sent = await send(client, chat_id, "Обычный вопрос")
+    message_id = sent["assistant_message"]["id"]
+    await read_stream(client, message_id)  # ответ завершён: генерация БД уже не занимает
+    held: list[int] = []
+
+    async def events(*_: Any, **__: Any) -> AsyncIterator[str]:
+        held.append(app.state.db_engine.pool.checkedout())
+        yield format_sse(1, "message.end", {"status": "completed", "finish_reason": "stop"})
+
+    monkeypatch.setattr(completions_router, "sse_events", events)
+    await read_stream(client, message_id)
+    assert held == [0]
+
+
+async def test_quiet_stream_outlives_default_redis_timeout(infra: Infra, tmp_path: Path) -> None:
+    """Пауза в ответе дольше 5 с (тайм-аут клиента Redis по умолчанию) не обрывает читателя SSE.
+
+    Найдено нагрузочным тестом: ``XREAD BLOCK`` на ``chat.heartbeat_seconds`` падал с
+    TimeoutError через 5 с — при очереди, долгом инструменте или раздумьях модели.
+    """
+    settings = make_settings(infra, tmp_path, chat={"heartbeat_seconds": 6})
+    redis = create_redis(settings)
+    try:
+        kwargs = redis.connection_pool.connection_kwargs
+        assert kwargs["socket_timeout"] == 11
+        assert redis.connection_pool.max_connections == settings.redis_max_connections == 1000
+        assert await redis.xread({"gen:quiet": "0-0"}, block=6000) == []
+    finally:
+        await redis.aclose()

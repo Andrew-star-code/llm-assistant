@@ -316,6 +316,10 @@ async def stream(
     if after is None and last_event_id and last_event_id.isdigit():
         start = int(last_event_id)
     factory = request.app.state.db_sessions
+    # Поток живёт минуты, а сессия запроса нужна только для проверки владельца: соединение
+    # возвращается в пул сейчас, иначе каждый открытый SSE держит его (и транзакцию) до конца
+    # ответа, и пул кончается на паре десятков одновременных ответов.
+    await db.close()
 
     async def status() -> str | None:
         async with factory() as session:

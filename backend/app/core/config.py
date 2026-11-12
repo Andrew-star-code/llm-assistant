@@ -699,6 +699,12 @@ class Settings(BaseSettings):
         description="DSN PostgreSQL (секрет: из окружения или /run/secrets/app_database_url).",
     )
     redis_url: SecretStr = Field(SecretStr("redis://localhost:6379/0"), description="DSN Redis.")
+    redis_max_connections: int = Field(
+        1000,
+        ge=20,
+        description="Размер пула соединений Redis на процесс: каждый открытый SSE-поток ответа "
+        "держит одно соединение. Не больше maxclients сервера Redis (по умолчанию 10000).",
+    )
     qdrant_url: str = Field("http://localhost:6333", description="HTTP-адрес Qdrant.")
     qdrant_api_key: SecretStr | None = Field(None, description="API-ключ Qdrant (секрет).")
     readiness_timeout_s: float = Field(2.0, gt=0, description="Тайм-аут каждой проверки /ready, с.")
