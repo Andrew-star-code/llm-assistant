@@ -1,0 +1,81 @@
+# Тесты правил группы app: `make test-monitoring` (promtool test rules).
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: нет исполнителя генерации
+    interval: 1m
+    input_series:
+      - series: app_generation_executors
+        values: "1 1 0 0 0 0 0"
+      - series: app_generation_queue_length
+        values: "0 0 1 2 3 4 5 6 7 8 9"
+      - series: app_generation_jobs_expired_total
+        values: "0 0 0 0 0 0 0 0 1 2 3"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: GeneratorDown
+        exp_alerts: []                    # ещё не прошло 2 минут
+      - eval_time: 5m
+        alertname: GeneratorDown
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: Нет исполнителя генерации — ответы не начинаются
+              runbook: docs/runbooks/first-deploy.md, проблема Г10
+      - eval_time: 5m
+        alertname: GenerationQueueGrowing
+        exp_alerts: []                    # очередь непуста меньше 5 минут
+      - eval_time: 9m
+        alertname: GenerationQueueGrowing
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: Очередь генерации не разбирается дольше 5 минут
+      - eval_time: 9m
+        alertname: GenerationJobsExpired
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: Задания генерации не дождались исполнителя — пользователи видят «Генерация прервана»
+
+  - name: доля ошибок ответов
+    interval: 1m
+    input_series:
+      - series: app_generations_total{role="chat", status="completed"}
+        values: "0+10x30"
+      - series: app_generations_total{role="chat", status="error"}
+        values: "0+2x30"
+      - series: app_generations_total{role="utility", status="completed"}
+        values: "0+1x30"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: GenerationErrorsHigh
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: Больше 5% ответов завершаются ошибкой
+
+  - name: редкие ошибки и малый поток не шумят
+    interval: 1m
+    input_series:
+      - series: app_generations_total{role="chat", status="completed"}
+        values: "0+10x30"
+      - series: app_generations_total{role="chat", status="error"}
+        values: "0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      - series: app_generation_executors
+        values: "1x30"
+      - series: app_generation_queue_length
+        values: "0 3 0 0 2 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: GenerationErrorsHigh
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: GeneratorDown
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: GenerationQueueGrowing
+        exp_alerts: []

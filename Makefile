@@ -17,7 +17,7 @@ EVAL_USER   := --user "$$(id -u):$$(id -g)" -e HOME=/tmp
 .PHONY: help install env dev-up dev-models-up dev-down dev-reset dev-logs dev-ps migrate \
         lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios gen-api docs-config docs-db \
         docs-check \
-        images test-worker test-data-gateway check deploy
+        images test-worker test-data-gateway test-monitoring check deploy
 
 help: ## Список команд
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -128,7 +128,15 @@ test-data-gateway: env ## Самопроверка образа шлюза: ODBC
 	$(COMPOSE) up -d --build --wait mock-mssql
 	$(COMPOSE) run --rm --build --no-deps data-gateway python -m data_gateway check
 
-check: lint typecheck test docs-check images test-worker test-data-gateway ## Всё перед пушем: линт → типы → тесты → документация → образы
+# promtool — из образа Prometheus (по digest, v3.5.0): отдельно его ставить не нужно.
+PROMTOOL = docker run --rm -v $(CURDIR)/deploy/monitoring:/m:ro --entrypoint promtool \
+	prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
+
+test-monitoring: ## Проверка конфигурации Prometheus и тесты правил алертов (promtool)
+	$(PROMTOOL) check config /m/prometheus.yml
+	$(PROMTOOL) test rules /m/alerts.test.yml
+
+check: lint typecheck test docs-check test-monitoring images test-worker test-data-gateway ## Всё перед пушем: линт → типы → тесты → документация → образы
 	@echo "make check: OK"
 
 deploy: ## Выкатка на сервер — этап 10 (§16.2)

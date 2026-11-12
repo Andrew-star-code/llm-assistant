@@ -1,0 +1,97 @@
+# Алерты §16.6. Группа app — по метрикам приложения (backend/app/core/metrics.py), проверена
+# тестами promtool (alerts.test.yml). Группа platform — по метрикам vLLM, DCGM и node-exporter:
+# имена метрик vLLM зависят от версии — сверить на сервере (этап 10).
+groups:
+  - name: app
+    rules:
+      - alert: GeneratorDown
+        # Исполнителей нет: api ставит задания, но их никто не забирает (ADR-0013).
+        expr: app_generation_executors == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Нет исполнителя генерации — ответы не начинаются
+          runbook: docs/runbooks/first-deploy.md, проблема Г10
+
+      - alert: GenerationQueueGrowing
+        # Очередь не пустеет 5 минут: исполнитель упёрся в max_concurrent или модель не успевает.
+        expr: min_over_time(app_generation_queue_length[5m]) > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: Очередь генерации не разбирается дольше 5 минут
+
+      - alert: GenerationJobsExpired
+        expr: increase(app_generation_jobs_expired_total[10m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: Задания генерации не дождались исполнителя — пользователи видят «Генерация прервана»
+
+      - alert: GenerationErrorsHigh
+        # Ошибок больше 5% ответов за 10 минут (при заметном потоке).
+        expr: |
+          sum(rate(app_generations_total{status="error"}[10m]))
+            / sum(rate(app_generations_total[10m])) > 0.05
+          and sum(increase(app_generations_total[10m])) >= 20
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: Больше 5% ответов завершаются ошибкой
+
+      - alert: ApiErrorsHigh
+        expr: |
+          sum(rate(app_http_requests_total{status=~"5.."}[10m]))
+            / sum(rate(app_http_requests_total[10m])) > 0.05
+          and sum(increase(app_http_requests_total[10m])) >= 100
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: Больше 5% запросов к api завершаются ошибкой 5xx
+
+      - alert: TimeToFirstTokenHigh
+        # Цель §18.4: p95 ≤ 4 с (чат с RAG). Порог с запасом — 8 с.
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(app_generation_ttft_seconds_bucket{role="chat"}[10m]))) > 8
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: Время до первого токена (p95) выше 8 секунд
+
+      - alert: ModelRetriesHigh
+        expr: sum(increase(app_model_retries_total[10m])) > 20
+        labels: {severity: warning}
+        annotations:
+          summary: Частые автоповторы запросов к модели — модель нестабильна
+
+  - name: platform
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Не отвечает {{ $labels.job }} ({{ $labels.instance }})"
+
+      - alert: ModelQueueGrowing
+        expr: min_over_time(vllm:num_requests_waiting[5m]) > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: "Очередь запросов модели {{ $labels.role }} растёт дольше 5 минут"
+
+      - alert: KvCacheFull
+        expr: vllm:gpu_cache_usage_perc > 0.95
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "KV-кэш модели {{ $labels.role }} заполнен больше чем на 95%"
+
+      - alert: DiskFull
+        expr: |
+          1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} > 0.85
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Диск {{ $labels.mountpoint }} заполнен больше чем на 85%"
