@@ -12,8 +12,8 @@ interface ThemeState {
   setMode: (mode: ThemeMode) => void;
 }
 
-// Выбор хранится в localStorage, чтобы тема не мигала при загрузке (§7.10).
-// TODO(stage-1): синхронизировать с настройками пользователя на сервере.
+// Выбор хранится в localStorage, чтобы тема не мигала при загрузке (§7.10); с настройками
+// пользователя на сервере его сверяет ThemeServerSync.
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({

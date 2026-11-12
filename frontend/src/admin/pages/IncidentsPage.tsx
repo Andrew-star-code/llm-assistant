@@ -18,6 +18,7 @@ const TYPES = [
   "model_health",
   "generator_health",
   "rag_degraded",
+  "tool_loop_limit",
   "kb_index",
   "worker_failed",
 ];

@@ -378,6 +378,9 @@ class ToolsSettings(_Section):
     result_max_chars: int = Field(
         20_000, gt=0, description="Результат инструмента обрезается до этой длины для модели."
     )
+    incident_throttle_s: int = Field(
+        600, ge=0, description="Инцидент о превышении числа шагов инструментов — не чаще, с."
+    )
     context_reserve_share: float = Field(
         0.15,
         ge=0,

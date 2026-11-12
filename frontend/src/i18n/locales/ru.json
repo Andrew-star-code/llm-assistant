@@ -334,6 +334,7 @@
         "model_health": "Здоровье модели",
         "generator_health": "Исполнитель генерации",
         "rag_degraded": "Деградация поиска",
+        "tool_loop_limit": "Лимит шагов инструментов",
         "kb_index": "Индексация базы",
         "worker_failed": "Сбой воркера"
       },

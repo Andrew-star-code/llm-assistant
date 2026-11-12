@@ -275,7 +275,7 @@ async def test_large_document_outline_and_read_tool(
 async def test_parallel_tools_and_iteration_limit(
     make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
 ) -> None:
-    _, client = await _client(
+    app, client = await _client(
         make_client, infra, tmp_path, fake_llm_url, tools={"max_iterations": 2}
     )
     file = await upload_ready(client, "a.txt", "Строка про отпуск.".encode())
@@ -296,6 +296,17 @@ async def test_parallel_tools_and_iteration_limit(
     assert len([e for e in events if e.event == "tool.end"]) == 2
     assert "превышено число шагов" in text_of(events)
     assert events[-1].data == {"status": "completed", "finish_reason": "max_iterations"}
+    # Админ узнаёт об этом инцидентом уровня warning (§8.4) — без текста пользователя.
+    async with app.state.db_sessions() as db:
+        [incident] = (
+            await db.scalars(select(Incident).where(Incident.type == "tool_loop_limit"))
+        ).all()
+        assert incident.severity == "warning" and incident.message_id is not None
+        assert incident.payload == {
+            "max_iterations": 2,
+            "model_role": "chat",
+            "tools": ["list_attachments"],
+        }
 
 
 async def test_past_tool_results_stay_in_history(

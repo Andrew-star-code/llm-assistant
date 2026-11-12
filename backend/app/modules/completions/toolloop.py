@@ -28,6 +28,7 @@ from app.modules.completions.streaming import (
     EventWriter,
     cancel_key,
 )
+from app.modules.incidents import service as incidents
 from app.modules.llm.stream import Delta, Finish, ToolCallDelta, Usage, parse_stream
 from app.modules.tools.base import ToolContext
 from app.modules.tools.executor import ToolOutcome, execute, preview_label_params
@@ -118,8 +119,21 @@ async def run_loop(
             result.status = "stopped"
             return
         loop.fit()
-    # Модель всё ещё вызывает инструменты — честно сообщаем, что не уложились.
-    # TODO(stage-7): инцидент уровня warning (§8.4).
+    # Модель всё ещё вызывает инструменты — честно сообщаем, что не уложились, и даём знать
+    # админу (§8.4): частые срабатывания — повод поднять лимит или поправить промпт сценария.
+    await incidents.report(
+        deps.sessions, type="tool_loop_limit", severity="warning",
+        title=f"Цикл инструментов: превышено число шагов ({max_iterations})",
+        fingerprint="tool_loop_limit",
+        payload={
+            "max_iterations": max_iterations,
+            "model_role": role,
+            # Только имена: аргументы и результаты могут содержать текст пользователя.
+            "tools": sorted({o.tool for o in result.tools if o.visibility == "visible"}),
+        },
+        user_id=context.user_id, chat_id=context.chat_id, message_id=message_id,
+        redis=deps.redis, throttle_s=deps.settings.tools.incident_throttle_s,
+    )  # fmt: skip
     result.content.append(MAX_ITERATIONS_NOTE)
     await writer.delta("content", MAX_ITERATIONS_NOTE)
     result.finish_reason = "max_iterations"

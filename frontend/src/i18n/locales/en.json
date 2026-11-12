@@ -334,6 +334,7 @@
         "model_health": "Model health",
         "generator_health": "Generation executor",
         "rag_degraded": "Search degraded",
+        "tool_loop_limit": "Tool loop limit",
         "kb_index": "KB indexing",
         "worker_failed": "Worker failure"
       },
