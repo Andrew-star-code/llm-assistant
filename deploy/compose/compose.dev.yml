@@ -35,8 +35,17 @@ services:
 
   generator:
     # Перезапуск при изменении кода (как у воркеров): идущие ответы при этом дорабатываются.
-    command: ["watchfiles", "--filter", "python", "python -m app.cli generator run",
-              "/srv/backend/app"]
+    # watchfiles после SIGINT ждёт процесс 5 с и убивает его; при остановке контейнера
+    # (finally в run_process) флаг --sigint-timeout не действует. Поэтому срок поднят до 190 с
+    # и для остановки: больше generation.shutdown_grace_seconds (180), меньше stop_grace_period.
+    command:
+      - python
+      - -c
+      - |
+        import watchfiles.cli, watchfiles.run as r
+        r.CombinedProcess.stop.__defaults__ = (190, 1)
+        watchfiles.cli.cli("--filter", "python", "--sigint-timeout", "190",
+                           "python -m app.cli generator run", "/srv/backend/app")
     environment:
       APP_ENV: dev
     env_file:
