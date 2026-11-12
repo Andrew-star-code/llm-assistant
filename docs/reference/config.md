@@ -98,6 +98,7 @@
 | `tools.enabled` | list[str] \| null | null | `APP_TOOLS__ENABLED` | Включённые инструменты; null — все зарегистрированные (§13.2 — этап 6). |
 | `tools.max_iterations` | int | 8 | `APP_TOOLS__MAX_ITERATIONS` | Максимум итераций цикла инструментов. |
 | `tools.result_max_chars` | int | 20000 | `APP_TOOLS__RESULT_MAX_CHARS` | Результат инструмента обрезается до этой длины для модели. |
+| `tools.incident_throttle_s` | int | 600 | `APP_TOOLS__INCIDENT_THROTTLE_S` | Инцидент о превышении числа шагов инструментов — не чаще, с. |
 | `tools.context_reserve_share` | float | 0.15 | `APP_TOOLS__CONTEXT_RESERVE_SHARE` | Доля бюджета контекста, которую история диалога оставляет под результаты инструментов, когда они предложены модели (§8.3). |
 | `tools.history_result_max_chars` | int | 2000 | `APP_TOOLS__HISTORY_RESULT_MAX_CHARS` | Сколько символов результата инструмента из прошлых ответов видит модель в истории диалога; 0 — прошлые вызовы в историю не попадают. |
 | `generation.mode` | inline \| queue | `inline` | `APP_GENERATION__MODE` | inline — задача в процессе api (тесты, запуск без исполнителя); queue — api ставит задание в Redis, выполняет сервис generator. |
