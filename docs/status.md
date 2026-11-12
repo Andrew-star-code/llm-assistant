@@ -22,7 +22,12 @@
 
 ## Ждут проверки на рабочей станции
 
-Сейчас — ничего. Задачи прошлых проверок — `docs/reports/tasks/`, отчёты — `docs/reports/`.
+- Доработки архитектуры (ветка `ccr-024c8c3b-cnj7hg`): задание —
+  [`docs/reports/tasks/workstation-check-improvements.md`](reports/tasks/workstation-check-improvements.md).
+  Станция изолирована, настоящего AD нет — всё, что про AD, проверяется на mock-AD; вход через
+  настоящий AD, TLS и модели на GPU остаются на сервер.
+
+Задачи прошлых проверок — `docs/reports/tasks/`, отчёты — `docs/reports/`.
 
 ## Кто чем занят
 
