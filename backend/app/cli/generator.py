@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 import signal
 
+from prometheus_client import start_http_server
+
 from app.core.config import Settings
 from app.core.logging import configure_logging
 from app.modules.completions.executor import Executor, alive, serve
@@ -23,6 +25,9 @@ def run(settings: Settings) -> int:
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(sig, executor.stop)
 
+    if settings.generation.metrics_port:
+        # Метрики генерации пишет этот процесс, а не api: Prometheus забирает их отсюда.
+        start_http_server(settings.generation.metrics_port)
     asyncio.run(serve(settings, install_signals=install))
     return 0
 

@@ -41,6 +41,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.auth.service import LoginService
 from app.modules.auth.sessions import SessionStore
 from app.modules.chats.router import router as chats_router
+from app.modules.completions.executor import watch_queue
 from app.modules.completions.generation import GenerationManager
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.router import router as completions_router
@@ -163,6 +164,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Ответы упавших или остановленных процессов не должны висеть в «streaming» (§8.5).
     sweep_task = asyncio.create_task(app.state.generations.sweep_orphans())
+    background = [sweep_task]
+    if settings.generation.mode == "queue":
+        # Длина очереди и число исполнителей — в /metrics (§16.6, ADR-0013).
+        background.append(asyncio.create_task(watch_queue(redis_client)))
     sync_task = None
     if app.state.ldap_directory is not None and settings.ldap.sync_interval_minutes > 0:
         sync_task = asyncio.create_task(
@@ -180,9 +185,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
-        sweep_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await sweep_task
+        for task in background:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
         if sync_task is not None:
             sync_task.cancel()
             with suppress(asyncio.CancelledError):

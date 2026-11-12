@@ -7,16 +7,19 @@ import httpx
 import openai
 import pytest
 from openai.types.chat import ChatCompletionChunk
+from prometheus_client import REGISTRY
 
 from app.core.config import REPO_ROOT, ModelEndpoint, load_settings
 from app.core.errors import AppError
 from app.modules.completions.context import DROPPED_NOTE, TRUNCATED_NOTE, LoopContext
 from app.modules.completions.generation import (
     HISTORY_CUT_NOTE,
+    GenerationResult,
     _error_payload,
     clean_title,
     fallback_title,
     history_steps,
+    observe,
     transient,
 )
 from app.modules.completions.prompt import (
@@ -31,6 +34,7 @@ from app.modules.completions.streaming import format_sse
 from app.modules.llm.registry import ModelRegistry
 from app.modules.llm.stream import Delta, Finish, Usage, parse_stream
 from app.modules.llm.tokens import TokenCounter
+from app.modules.tools.executor import ToolOutcome
 from app.modules.tools.models import ToolCall
 
 RENDERER = PromptRenderer(REPO_ROOT / "config" / "prompts")
@@ -418,3 +422,43 @@ def test_transient_model_failures() -> None:
     assert not transient(openai.APITimeoutError(request=request))
     assert not transient(status(400))
     assert not transient(RuntimeError("bug"))
+
+
+def test_generation_metrics() -> None:
+    def value(name: str, **labels: str) -> float:
+        return REGISTRY.get_sample_value(name, labels) or 0.0
+
+    def outcome(tool: str, label: str) -> ToolOutcome:
+        return ToolOutcome("c", tool, {}, "ок", "ok", 250, "visible", label)
+
+    before = {
+        "done": value("app_generations_total", role="chat", status="completed"),
+        "prompt": value("app_generation_tokens_total", role="chat", kind="prompt"),
+        "retries": value("app_model_retries_total", role="chat"),
+        "tool": value("app_tool_calls_total", tool="read_document", status="ok"),
+        "unknown": value("app_tool_calls_total", tool="unknown", status="ok"),
+        "trims": value("app_context_trims_total", kind="tool_results_truncated"),
+        "ttft": value("app_generation_ttft_seconds_count", role="chat"),
+    }
+    result = GenerationResult(
+        model_role="chat",
+        usage=Usage(prompt_tokens=100, completion_tokens=20, reasoning_tokens=None),
+        ttft_ms=800,
+        model_retries=2,
+        tools=[
+            outcome("read_document", "tools.read_document"),
+            # Имя, придуманное моделью, не становится меткой.
+            outcome("drop_all_tables", "tools.unknown"),
+        ],
+    )
+    observe(result, 4200, {"budget": 1000, "tool_results_truncated": 2})
+    assert value("app_generations_total", role="chat", status="completed") == before["done"] + 1
+    assert value("app_generation_tokens_total", role="chat", kind="prompt") == (
+        before["prompt"] + 100
+    )
+    assert value("app_model_retries_total", role="chat") == before["retries"] + 2
+    assert value("app_tool_calls_total", tool="read_document", status="ok") == before["tool"] + 1
+    assert value("app_tool_calls_total", tool="unknown", status="ok") == before["unknown"] + 1
+    assert value("app_tool_calls_total", tool="drop_all_tables", status="ok") == 0
+    assert value("app_context_trims_total", kind="tool_results_truncated") == before["trims"] + 1
+    assert value("app_generation_ttft_seconds_count", role="chat") == before["ttft"] + 1

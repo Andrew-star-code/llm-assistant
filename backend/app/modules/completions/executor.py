@@ -18,15 +18,17 @@ from __future__ import annotations
 import asyncio
 import json
 import socket
+import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
+from dataclasses import dataclass
 from uuid import UUID
 
 import structlog
 from redis.asyncio import Redis
 
 import app.models  # noqa: F401 — регистрирует все таблицы: в этом процессе нет роутеров api
-from app.core import db
+from app.core import db, metrics
 from app.core import redis as redis_core
 from app.core.config import Settings
 from app.core.storage import LocalStorage
@@ -48,14 +50,46 @@ log = structlog.stdlib.get_logger("app.generator")
 POLL_SECONDS = 1
 
 
-def parse_job(raw: str | bytes) -> tuple[UUID, str | None] | None:
-    """Задание очереди: ``{"message_id": …, "request_id": …}``; мусор — ``None``."""
+@dataclass(frozen=True)
+class Job:
+    message_id: UUID
+    request_id: str | None = None
+    enqueued_at: float | None = None  # time.time() постановки — для метрики ожидания
+
+
+def parse_job(raw: str | bytes) -> Job | None:
+    """Задание очереди: JSON с ``message_id``, ``request_id``, ``enqueued_at``; мусор — ``None``."""
     try:
         job = json.loads(raw)
-        request_id = job.get("request_id")
-        return UUID(job["message_id"]), request_id if isinstance(request_id, str) else None
+        request_id, enqueued_at = job.get("request_id"), job.get("enqueued_at")
+        return Job(
+            UUID(job["message_id"]),
+            request_id if isinstance(request_id, str) else None,
+            float(enqueued_at) if isinstance(enqueued_at, int | float) else None,
+        )
     except (ValueError, KeyError, TypeError, AttributeError):
         return None
+
+
+async def queue_stats(redis: Redis) -> tuple[int, int]:
+    """Длина очереди заданий и число исполнителей со свежей отметкой."""
+    length = int(await redis.llen(QUEUE_KEY))
+    executors = 0
+    async for _ in redis.scan_iter(match=executor_key("*"), count=100):
+        executors += 1
+    return length, executors
+
+
+async def watch_queue(redis: Redis, interval: float = 5.0) -> None:
+    """Фоновая задача api: длина очереди и число исполнителей — в метрики Prometheus."""
+    while True:
+        try:
+            length, executors = await queue_stats(redis)
+            metrics.QUEUE_LENGTH.set(length)
+            metrics.EXECUTORS.set(executors)
+        except Exception:
+            log.warning("generator.queue_stats_failed")
+        await asyncio.sleep(interval)
 
 
 class Executor:
@@ -110,12 +144,15 @@ class Executor:
         if job is None:
             log.warning("generator.bad_job")
             return
-        message_id, request_id = job
+        message_id = job.message_id
         # Берём, только если задание ещё ждёт: истёкший ключ значит, что ответ уже прерван.
         if not await self.redis.set(alive_key(message_id), "1", ex=ALIVE_TTL_SECONDS, xx=True):
+            metrics.JOBS_EXPIRED.inc()
             log.warning("generator.job_expired", message_id=str(message_id))
             return
-        self.manager.launch(message_id, request_id or "")
+        if job.enqueued_at is not None:
+            metrics.QUEUE_WAIT.observe(max(0.0, time.time() - job.enqueued_at))
+        self.manager.launch(message_id, job.request_id or "")
 
     async def _heartbeat(self) -> None:
         """Отметка «исполнитель жив» для healthcheck (``generator check``) и мониторинга."""

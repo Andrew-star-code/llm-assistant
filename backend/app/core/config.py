@@ -665,6 +665,12 @@ class GenerationSettings(_Section):
         description="Сколько исполнитель при остановке дорабатывает идущие ответы; не успевшие "
         "сохраняются как прерванные. stop_grace_period контейнера должен быть больше.",
     )
+    metrics_port: int = Field(
+        9100,
+        ge=0,
+        le=65535,
+        description="Порт метрик Prometheus исполнителя (GET /metrics); 0 — не открывать.",
+    )
 
 
 class StorageSettings(_Section):

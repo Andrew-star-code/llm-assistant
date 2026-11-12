@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 import signal
+import socket
 import sys
 import uuid
 from collections.abc import AsyncIterator
@@ -17,11 +18,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+import httpx
 from fastapi import FastAPI
+from prometheus_client import REGISTRY
 
 from app.core.config import REPO_ROOT
 from app.modules.chats.models import Message
-from app.modules.completions.executor import Executor, alive, parse_job
+from app.modules.completions.executor import Executor, Job, alive, parse_job, queue_stats
 from app.modules.completions.generation import GenerationManager
 from app.modules.completions.prompt import PromptRenderer
 from app.modules.completions.streaming import QUEUE_KEY, alive_key, executor_key, stream_key
@@ -83,13 +86,15 @@ async def _wait(condition: Any) -> None:
             await asyncio.sleep(0.02)
 
 
+def _metric(name: str, **labels: str) -> float:
+    return REGISTRY.get_sample_value(name, labels) or 0.0
+
+
 def test_parse_job() -> None:
     message_id = uuid.uuid4()
-    assert parse_job(json.dumps({"message_id": str(message_id), "request_id": "r1"})) == (
-        message_id,
-        "r1",
-    )
-    assert parse_job(json.dumps({"message_id": str(message_id)})) == (message_id, None)
+    raw = {"message_id": str(message_id), "request_id": "r1", "enqueued_at": 1700000000.5}
+    assert parse_job(json.dumps(raw)) == Job(message_id, "r1", 1700000000.5)
+    assert parse_job(json.dumps({"message_id": str(message_id)})) == Job(message_id)
     for bad in ("", "не json", "[]", '{"message_id": "x"}', "{}"):
         assert parse_job(bad) is None
 
@@ -112,10 +117,22 @@ async def test_api_only_enqueues_and_job_waits_for_executor(
     assert await app.state.generations.mark_orphaned_interrupted() == 0
     assert await _status(app, message_id) == "streaming"
 
+    done = _metric("app_generations_total", role="chat", status="completed")
+    waited = _metric("app_generation_queue_wait_seconds_count")
+    assert await queue_stats(app.state.redis) == (1, 0)
     executor = _executor(app)
     async with running(executor):
         events = await read_stream(client, message_id)
         assert await alive(app.state.settings, "test")
+        assert await queue_stats(app.state.redis) == (0, 1)
+    # Метрики исполнителя (§16.6): ответ посчитан, ожидание в очереди измерено.
+    assert _metric("app_generations_total", role="chat", status="completed") == done + 1
+    assert _metric("app_generation_queue_wait_seconds_count") == waited + 1
+    assert _metric("app_sse_connections") == 0
+    exposed = (await client.http.get("/metrics/")).text
+    assert (
+        "app_generation_ttft_seconds_bucket" in exposed and "app_generation_queue_length" in exposed
+    )
     text = "".join(e.data["text"] for e in events if e.event == "content.delta")
     assert text.endswith("ответ fake-llm на запрос: «Вопрос через очередь».")
     assert events[-1].data == {"status": "completed", "finish_reason": "stop"}
@@ -135,9 +152,11 @@ async def test_expired_job_is_not_executed(
     await app.state.redis.delete(alive_key(message_id))
     assert await app.state.generations.mark_orphaned_interrupted() == 1
 
+    expired = _metric("app_generation_jobs_expired_total")
     executor = _executor(app)
     async with running(executor):
         await _wait(lambda: _is_zero(app.state.redis.llen(QUEUE_KEY)))
+    assert _metric("app_generation_jobs_expired_total") == expired + 1
     assert not executor.manager.tasks
     assert await _status(app, message_id) == "interrupted"
     assert not await app.state.redis.exists(stream_key(message_id))
@@ -230,6 +249,9 @@ async def test_generator_process_runs_jobs_and_exits_on_sigterm(
 ) -> None:
     """Настоящая точка входа сервиса: ``python -m app.cli generator run`` отдельным процессом."""
     _, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = int(probe.getsockname()[1])
     env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "APP_ENV": "test",
@@ -237,6 +259,7 @@ async def test_generator_process_runs_jobs_and_exits_on_sigterm(
         "APP_REDIS_URL": infra.redis_url,
         "APP_STORAGE__ROOT": str(tmp_path / "storage"),
         "APP_GENERATION__MODE": "queue",
+        "APP_GENERATION__METRICS_PORT": str(port),
         **{
             f"APP_MODELS__{role.upper()}__{key}": value
             for role in ("chat", "utility", "guard", "rerank", "embed")
@@ -258,6 +281,10 @@ async def test_generator_process_runs_jobs_and_exits_on_sigterm(
         sent = await send(client, await new_chat(client), "Вопрос отдельному процессу")
         events = await read_stream(client, sent["assistant_message"]["id"])
         assert events[-1].data == {"status": "completed", "finish_reason": "stop"}
+        # Метрики генерации отдаёт сам исполнитель (у api этих счётчиков в режиме очереди нет).
+        async with httpx.AsyncClient() as http:
+            exposed = (await http.get(f"http://127.0.0.1:{port}/metrics")).text
+        assert 'app_generations_total{role="chat",status="completed"} 1.0' in exposed
         process.send_signal(signal.SIGTERM)
         _, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
         assert process.returncode == 0, stderr.decode()[-2000:]

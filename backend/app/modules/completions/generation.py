@@ -32,7 +32,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core import log_capture
+from app.core import log_capture, metrics
 from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.errors import AppError
@@ -204,6 +204,34 @@ def transient(exc: Exception) -> bool:
     return isinstance(exc, openai.APIConnectionError)
 
 
+def observe(result: GenerationResult, latency_ms: int, context: dict[str, Any]) -> None:
+    """Метрики завершённого ответа (§16.6). Метки — только из закрытых наборов."""
+    role = result.model_role or "unknown"
+    metrics.GENERATIONS.labels(role, result.status).inc()
+    metrics.GENERATION_DURATION.labels(role).observe(latency_ms / 1000)
+    if result.ttft_ms is not None:
+        metrics.GENERATION_TTFT.labels(role).observe(result.ttft_ms / 1000)
+    if result.usage is not None:
+        tokens = metrics.GENERATION_TOKENS
+        tokens.labels(role, "prompt").inc(result.usage.prompt_tokens)
+        tokens.labels(role, "completion").inc(result.usage.completion_tokens)
+        tokens.labels(role, "reasoning").inc(result.usage.reasoning_tokens or 0)
+    if result.model_retries:
+        metrics.MODEL_RETRIES.labels(role).inc(result.model_retries)
+    for outcome in result.tools:
+        # Имя, которое выдумала модель, в метку не идёт — иначе число рядов не ограничено.
+        tool = metrics.UNKNOWN_TOOL if outcome.label == "tools.unknown" else outcome.tool
+        metrics.TOOL_CALLS.labels(tool, outcome.status).inc()
+        metrics.TOOL_DURATION.labels(tool).observe(outcome.duration_ms / 1000)
+    for key, kind in (
+        ("history_dropped", "history"),
+        ("tool_results_dropped", "tool_results_dropped"),
+        ("tool_results_truncated", "tool_results_truncated"),
+    ):
+        if context.get(key):
+            metrics.CONTEXT_TRIMS.labels(kind).inc()
+
+
 HISTORY_CUT_NOTE = "\n[…результат сокращён в истории диалога]"
 
 
@@ -275,7 +303,11 @@ class GenerationManager:
                 alive_key(message_id), "1", ex=self.settings.generation.queue_ttl_seconds
             )
             request_id = structlog.contextvars.get_contextvars().get("request_id")
-            job = {"message_id": str(message_id), "request_id": request_id}
+            job = {
+                "message_id": str(message_id),
+                "request_id": request_id,
+                "enqueued_at": time.time(),  # для метрики ожидания в очереди
+            }
             await self.redis.rpush(QUEUE_KEY, json.dumps(job))
             return
         await self.redis.set(alive_key(message_id), "1", ex=ALIVE_TTL_SECONDS)
@@ -295,9 +327,14 @@ class GenerationManager:
                 log_capture.start_request()
             await self._run(message_id)
 
+        def done(_: asyncio.Task[None]) -> None:
+            self.tasks.pop(message_id, None)
+            metrics.GENERATIONS_ACTIVE.set(len(self.tasks))
+
         task = asyncio.create_task(job(), name=f"generation:{message_id}")
         self.tasks[message_id] = task
-        task.add_done_callback(lambda _: self.tasks.pop(message_id, None))
+        metrics.GENERATIONS_ACTIVE.set(len(self.tasks))
+        task.add_done_callback(done)
 
     async def request_stop(self, message_id: UUID) -> None:
         await self.redis.set(cancel_key(message_id), "1", ex=ALIVE_TTL_SECONDS * 10)
@@ -1076,6 +1113,7 @@ class GenerationManager:
     ) -> None:
         """Сохраняет ответ в БД и закрывает поток событий. Вызывается ровно один раз."""
         latency_ms = int((time.monotonic() - started) * 1000)
+        observe(result, latency_ms, trace.get("context") or {})
         usage = result.usage
         title = await self._generate_title(title_for, result) if title_for else title_now
         chat_id: UUID | None = None

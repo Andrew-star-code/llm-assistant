@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import timedelta
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -10,6 +11,7 @@ from fastapi import APIRouter, Header, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import exists, select
 
+from app.core import metrics
 from app.core.config import Settings
 from app.core.db import utcnow
 from app.core.deps import DbDep
@@ -336,8 +338,17 @@ async def stream(
         message_status=status,
         mark_interrupted=mark_interrupted,
     )
+
+    async def counted() -> AsyncIterator[str]:
+        metrics.SSE_CONNECTIONS.inc()
+        try:
+            async for line in events:
+                yield line
+        finally:
+            metrics.SSE_CONNECTIONS.dec()
+
     return StreamingResponse(
-        events,
+        counted(),
         media_type="text/event-stream",
         # Без буферизации на прокси — иначе стрим придёт одним куском (AGENTS.md, §16.2).
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
