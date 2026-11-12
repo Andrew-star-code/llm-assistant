@@ -428,6 +428,15 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
         return tool_scenario(name, name.removeprefix("tool:").split("+"), messages, clean)
     if name == "tool_loop":
         return tool_scenario(name, ["list_attachments"], messages, clean, loop=True)
+    if name.startswith("stream:"):
+        # Ровный поток для нагрузочного теста: stream:<слов>:<пауза, мс> — как модель с
+        # заданной скоростью генерации (1000 / пауза слов в секунду).
+        try:
+            words, pause_ms = (int(part) for part in name.split(":")[1:3])
+        except ValueError:
+            return Scenario("unknown", [Step("content", f"fake-llm: неверный сценарий {name!r}.")])
+        text = " ".join(f"слово{i}" for i in range(1, min(words, 5000) + 1)) + "."
+        return Scenario("stream", [Step("content", text)], delay_s=min(pause_ms, 1000) / 1000)
     if name == "flaky":
         # Сами сбои (503, затем обрыв до первого слова) устраивает приложение: у него есть память
         # о прошлых запросах. Здесь — ответ третьей, удачной попытки.
@@ -471,6 +480,7 @@ SCENARIO_NAMES = (
     "tool:<имя>[+<имя>…]",
     "tool_loop",
     "recall",
+    "stream:<слов>:<пауза, мс>",
     "flaky",
     "error_500",
     "disconnect",

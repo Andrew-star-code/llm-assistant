@@ -15,7 +15,7 @@ PY_SOURCES  := backend services scripts eval
 EVAL_USER   := --user "$$(id -u):$$(id -g)" -e HOME=/tmp
 
 .PHONY: help install env dev-up dev-models-up dev-down dev-reset dev-logs dev-ps migrate \
-        lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios gen-api docs-config docs-db \
+        lint fmt typecheck test test-unit test-backend test-frontend e2e eval-rag eval-scenarios load-test gen-api docs-config docs-db \
         docs-check \
         images test-worker test-data-gateway test-monitoring check deploy
 
@@ -102,6 +102,10 @@ eval-rag: env ## Оценка поиска (§10.6): hit@5 и MRR по 4 кон�
 eval-scenarios: env ## Эталонные запросы сценариев (§18): ответы + LLM-судья, сравнение с прошлым прогоном
 	$(COMPOSE) run --rm --no-deps $(EVAL_USER) -v $(CURDIR)/eval:/srv/eval api python /srv/eval/scenarios/run.py \
 		--report /srv/eval/scenarios/report.json --baseline /srv/eval/scenarios/baseline.json
+
+# Против настоящего сервера: make load-test LOAD_ARGS="--base-url https://assistant.corp.local --provider ldap --logins u1,u2 --password … --prompt 'Расскажи о компании'"
+load-test: ## Нагрузочный тест чата (§18.4): 10 одновременных диалогов против стенда (сначала make dev-up)
+	$(UV) python eval/load/run.py --check --json eval/load/report.json $(LOAD_ARGS)
 
 gen-api: ## Перегенерировать OpenAPI, клиентские типы фронтенда и docs/reference/api.md
 	APP_ENV=dev $(UV) python -m app.cli openapi -o frontend/src/api/openapi.json

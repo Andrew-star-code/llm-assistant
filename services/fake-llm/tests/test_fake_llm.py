@@ -421,3 +421,12 @@ async def test_flaky_fails_twice_then_answers(client: AsyncOpenAI) -> None:
         await _collect(client, text)
     result = await _collect(client, text)
     assert result["content"] == "Ответ fake-llm после сбоев: «один и тот же вопрос»."
+
+
+def test_stream_scenario_has_requested_size_and_pace() -> None:
+    from fake_llm.scenarios import resolve
+
+    scenario = resolve({"messages": _msg("[[scenario:stream:5:20]] нагрузка")}, 0)
+    assert scenario.steps[0].text == "слово1 слово2 слово3 слово4 слово5."
+    assert scenario.delay_s == 0.02
+    assert resolve({"messages": _msg("[[scenario:stream:x:1]]")}, 0).name == "unknown"
