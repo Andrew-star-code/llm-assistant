@@ -4,8 +4,9 @@
    (`backend/app/modules/rbac/permissions.py`), строку — в [reference/permissions.md](../reference/permissions.md).
    Решите, входит ли право в системную роль `admin` (у существующих установок набор прав роли
    меняется в админке или миграцией данных — при старте он не перезаписывается).
-2. **API.** Эндпоинт в `backend/app/modules/admin/router.py` (или отдельный роутер с префиксом
-   `/admin` — `chats_router.py`, `settings_router.py`; новый роутер подключите в `main.py` и
+2. **API.** Эндпоинт в роутере своего раздела в `backend/app/modules/admin/` (`router.py` —
+   пользователи, `journals_router.py` — журналы, `chats_router.py`, `settings_router.py` и
+   другие) или в новом роутере с префиксом `/admin` (новый роутер подключите в `main.py` и
    добавьте в `_admin_routes` теста прав) с зависимостью `Depends(require(Perm.…))`. Любое действие
    над чужими данными или настройками — `audit.record(...)` в той же транзакции; показ переписки
    целиком — тоже запись в аудит. Списки — с курсорной пагинацией (`core/pagination.py`). Настройка,

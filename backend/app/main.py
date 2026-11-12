@@ -27,6 +27,7 @@ from app.core.storage import LocalStorage
 from app.modules.admin.chats_router import router as admin_chats_router
 from app.modules.admin.dashboard import router as admin_dashboard_router
 from app.modules.admin.feedback_router import router as admin_feedback_router
+from app.modules.admin.journals_router import router as admin_journals_router
 from app.modules.admin.roles_router import router as admin_roles_router
 from app.modules.admin.router import router as admin_router
 from app.modules.admin.security_router import router as admin_security_router
@@ -63,7 +64,6 @@ from app.modules.scenarios.service import seed as seed_scenarios
 from app.modules.security.bruteforce import BruteforceGuard
 from app.modules.security.ipblocks import Blocklist
 from app.modules.users.router import router as profile_router
-from app.modules.users.sync import run_periodic_sync
 from app.workers.dispatch import Dispatcher
 
 log = structlog.stdlib.get_logger("app")
@@ -168,19 +168,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if settings.generation.mode == "queue":
         # Длина очереди и число исполнителей — в /metrics (§16.6, ADR-0013).
         background.append(asyncio.create_task(watch_queue(redis_client)))
-    sync_task = None
-    if app.state.ldap_directory is not None and settings.ldap.sync_interval_minutes > 0:
-        sync_task = asyncio.create_task(
-            run_periodic_sync(
-                redis_client,
-                app.state.db_sessions,
-                app.state.ldap_directory,
-                settings=settings,
-                storage=app.state.storage,
-                sessions=app.state.sessions,
-            )
-        )
-
     log.info("app.started", env=settings.env.value, version=__version__)
     try:
         yield
@@ -189,10 +176,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
-        if sync_task is not None:
-            sync_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await sync_task
         await close_services(app)
         log.info("app.stopped")
 
@@ -244,6 +227,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(branding_router)
     api.include_router(exports_router)
     api.include_router(admin_router)
+    api.include_router(admin_journals_router)
     app.include_router(api)
 
     # Метрики для Prometheus; наружу не публикуются — nginx не проксирует /metrics (§16.6).
