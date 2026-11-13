@@ -430,3 +430,12 @@ def test_stream_scenario_has_requested_size_and_pace() -> None:
     assert scenario.steps[0].text == "слово1 слово2 слово3 слово4 слово5."
     assert scenario.delay_s == 0.02
     assert resolve({"messages": _msg("[[scenario:stream:x:1]]")}, 0).name == "unknown"
+
+
+def test_length_scenarios_stop_at_the_output_limit() -> None:
+    from fake_llm.scenarios import resolve
+
+    cut = resolve({"messages": _msg("[[scenario:length]]")}, 0)
+    assert cut.finish_reason == "length" and cut.steps[0].kind == "content"
+    empty = resolve({"messages": _msg("[[scenario:length_empty]]")}, 0)
+    assert empty.finish_reason == "length" and [s.kind for s in empty.steps] == ["reasoning"]

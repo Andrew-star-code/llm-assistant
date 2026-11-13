@@ -437,6 +437,14 @@ def resolve(body: dict[str, Any], slow_delay_s: float) -> Scenario:
             return Scenario("unknown", [Step("content", f"fake-llm: неверный сценарий {name!r}.")])
         text = " ".join(f"слово{i}" for i in range(1, min(words, 5000) + 1)) + "."
         return Scenario("stream", [Step("content", text)], delay_s=min(pause_ms, 1000) / 1000)
+    if name in ("length", "length_empty"):
+        # Модель упёрлась в предел длины ответа: оборванный текст или одни размышления.
+        step = (
+            Step("content", "Начало ответа, который модель не успела")
+            if name == "length"
+            else Step("reasoning", "Размышляю так долго, что на ответ не осталось токенов")
+        )
+        return Scenario(name, [step], finish_reason="length")
     if name == "flaky":
         # Сами сбои (503, затем обрыв до первого слова) устраивает приложение: у него есть память
         # о прошлых запросах. Здесь — ответ третьей, удачной попытки.
@@ -481,6 +489,8 @@ SCENARIO_NAMES = (
     "tool_loop",
     "recall",
     "stream:<слов>:<пауза, мс>",
+    "length",
+    "length_empty",
     "flaky",
     "error_500",
     "disconnect",
