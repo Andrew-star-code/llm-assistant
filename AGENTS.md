@@ -64,7 +64,8 @@ CLI бэкенда: `uv run python -m app.cli --help` — `config check|docs`, `
 ├── services/fake-llm/              # OpenAI-совместимый mock для разработки и тестов
 ├── services/data-gateway/          # семантический слой SQL: catalog/*.yaml, проверка SQL, RLS (§9.5)
 ├── config/                         # app.yaml, models.yaml (+ оверлеи <env>), prompts/, templates/, scenarios/
-├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, compose.prod.yml, .env.example
+├── deploy/compose/                 # docker-compose.yml, compose.dev.yml, compose.prod.yml, .env.example;
+│                                   # compose.check.yml — временный стенд на сервере с настоящими моделями
 ├── deploy/nginx/                   # шаблон конфигурации nginx прода (TLS, /api, SSE)
 ├── deploy/backup/                  # backup.sh — ночной бэкап; проверка — make test-backup
 ├── deploy/mock-ad/                 # Samba AD DC с тестовыми пользователями

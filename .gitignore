@@ -47,3 +47,8 @@ eval/rag/report.json
 eval/load/report.json
 # вопросы по реальным документам — не в git
 eval/rag/local/
+
+# Проверочный стенд на сервере (compose.check.yml)
+deploy/compose/.env.check
+deploy/compose/check.models.env
+config/tokenizers/

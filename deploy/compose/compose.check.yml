@@ -1,0 +1,60 @@
+# Проверочный стенд приложения на сервере с настоящими моделями — НЕ прод.
+#
+# Зачем: до первого запуска (docs/runbooks/first-deploy.md) проверить приложение на боевых
+# моделях — вызов инструментов, предел контекста, цели §18.4 — не трогая будущий прод.
+# Задание — docs/reports/tasks/server-check-live-models.md.
+#
+#   docker compose -p ai-check --env-file .env.check -f docker-compose.yml -f compose.check.yml up -d
+#
+# Чем отличается от прода:
+#   * отдельный проект (-p ai-check): свои тома и сеть, тома прода (ai-assistant_*) не создаются;
+#   * вход — провайдер dev без пароля, поэтому api слушает ТОЛЬКО 127.0.0.1 сервера; AD не нужен;
+#   * nginx, TLS, фронтенда и шлюза данных нет; модели не запускаются — стенд ходит к уже
+#     работающим через сеть ai-check-models (её подключают к контейнерам моделей без перезапуска);
+#   * адреса и имена моделей — в check.models.env (образец — check.models.env.example).
+# После проверки стенд удаляется целиком: down -v.
+
+x-check: &check
+  environment:
+    APP_ENV: dev                         # оверлей dev нужен только ради seed-пользователей
+    APP_AUTH__PROVIDERS: '["dev"]'       # без AD: ни входа, ни синхронизации
+    APP_LDAP__SYNC_INTERVAL_MINUTES: "0"
+    APP_LOGGING__LEVEL: INFO
+    APP_LOGGING__FORMAT: json
+    APP_DATA_GATEWAY__URL: ""
+    APP_MODERATION__GUARD_ENABLED: "false"   # guard-модели на сервере пока нет
+    APP_TRUSTED_PROXIES: "[]"
+  env_file:
+    - path: ./check.models.env
+      required: true
+  volumes:
+    - ../../config:/srv/config:ro        # как в проде; сюда же кладут tokenizer.json модели
+  networks: [default, models]
+
+services:
+  api:
+    <<: *check
+    ports: ["127.0.0.1:${CHECK_API_PORT:-18000}:8000"]
+
+  generator:
+    <<: *check
+
+  worker:
+    <<: *check
+
+  worker-kb:
+    <<: *check
+
+  scheduler:
+    <<: *check
+
+  migrate:
+    <<: *check
+
+  data-gateway:
+    profiles: [data]
+
+networks:
+  models:
+    external: true
+    name: ${CHECK_MODELS_NETWORK:-ai-check-models}

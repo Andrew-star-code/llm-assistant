@@ -32,6 +32,10 @@
   `config/app.prod.yaml.example`; проверки без сервера — `make test-nginx`, `make test-backup`
   (входят в `make check`). `models.<роль>.deployed: false` — монитор здоровья не проверяет ещё
   не развёрнутую модель. Нагрузочный тест: `--ca-file` для портала с корпоративным CA.
+- Проверочный стенд приложения на сервере с настоящими моделями
+  (`deploy/compose/compose.check.yml`, образец `check.models.env.example`): отдельный проект,
+  вход только с localhost, без AD, nginx и запуска моделей; задание на проверку —
+  `docs/reports/tasks/server-check-live-models.md`.
 - Smoke-проверка стенда `scripts/smoke.py` (`make smoke`): вход и профиль, ответ потоком и
   заголовок, вопрос по файлу, документ Word, переподключение к потоку, модели и исполнитель в
   админке. Руководство `docs/runbooks/backup-restore.md`; `make test-backup` проверяет и
