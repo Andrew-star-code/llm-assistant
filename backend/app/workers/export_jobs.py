@@ -260,11 +260,4 @@ async def ad_sync_job(settings: Settings) -> int:
             )
     finally:
         await redis.aclose()
-    log.info(
-        "users.sync.done",
-        checked=stats.checked,
-        updated=stats.updated,
-        disabled=stats.disabled,
-        errors=stats.errors,
-    )
-    return stats.disabled
+    return stats.disabled  # итог прохода пишет в лог сама sync_all (users.sync.done)

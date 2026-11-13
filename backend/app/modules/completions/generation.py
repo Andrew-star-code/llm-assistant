@@ -38,7 +38,7 @@ from app.core import log_capture, metrics
 from app.core.config import Settings
 from app.core.storage import Storage
 from app.modules.chats.models import Chat, Message
-from app.modules.completions.context import LoopContext, schemas_tokens
+from app.modules.completions.context import LoopContext
 from app.modules.completions.finish import fallback_title, finish
 from app.modules.completions.preparation import Prepared, prepare
 from app.modules.completions.prompt import (
@@ -73,6 +73,11 @@ from app.modules.tools.base import Services
 from app.workers.dispatch import Dispatcher
 
 log = structlog.stdlib.get_logger("app.completions")
+
+LENGTH_NOTE = (
+    "\n\n[Ответ оборван: модель достигла предела длины ответа. "
+    "Попросите продолжить или уточните вопрос.]"
+)
 
 
 class GenerationManager:
@@ -350,13 +355,12 @@ class GenerationManager:
         """Авто-поиск по базам знаний (§8.3): фрагменты для промпта и трассировка поиска."""
         if p.rag_mode != "auto" or p.scope.empty:
             return None, None
+        if p.rag_budget <= 0:
+            # Фрагментам нет места (малый контекст, большие вложения): модель ищет инструментом.
+            return None, {"skipped": "no_room"}
         return await auto_rag(
             self.deps, p.context, writer, result, question=p.question, history=p.history,
-            budget=int(
-                (p.plan.endpoint.context_length or DEFAULT_CONTEXT)
-                * self.settings.rag.context_share
-            ),
-            counter=p.counter,
+            budget=p.rag_budget, counter=p.counter,
         )  # fmt: skip
 
     async def _answer(
@@ -384,7 +388,7 @@ class GenerationManager:
             message=p.question,
             endpoint=plan.endpoint,
             counter=counter,
-            overhead=schemas_tokens(counter, schemas),
+            overhead=p.overhead,
             # Место под результаты инструментов этого ответа (§8.3).
             history_reserve=int(budget * self.settings.tools.context_reserve_share) if tools else 0,
         )
@@ -402,6 +406,7 @@ class GenerationManager:
                     "mode": p.attachments.mode,
                     "files": len(p.attachments.files),
                     "tokens": p.attachments.tokens,
+                    **({"shrunk": True} if p.attachments.shrunk else {}),
                 },
                 "tools_offered": [t.name for t in tools],
             }
@@ -424,6 +429,12 @@ class GenerationManager:
             trace["context"] = loop_context.stats.trace()
             if result.model_retries:
                 trace["model_retries"] = result.model_retries
+        if result.status == "completed" and result.finish_reason == "length":
+            # Модель упёрлась в предел длины ответа (нередко — потратив его на размышления):
+            # без пометки пользователь видит оборванный или пустой ответ со статусом «завершён».
+            note = LENGTH_NOTE if result.content else LENGTH_NOTE.lstrip()
+            result.content.append(note)
+            await writer.delta("content", note)
         if result.usage is None:
             result.usage = Usage(
                 prompt_tokens=prompt.prompt_tokens,

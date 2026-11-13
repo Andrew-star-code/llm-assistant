@@ -184,9 +184,16 @@ def build_messages(
     head_cost, tail_cost = counter.count_messages(head), counter.count_messages(tail)
     used = overhead + head_cost + tail_cost
     if used > budget:
+        if tail_cost > budget // 2:
+            raise AppError(
+                "Сообщение слишком длинное для контекста модели",
+                code="message_too_long",
+                status_code=413,
+            )
+        # Сам вопрос короткий: не помещаются инструкции, вложения и описания инструментов.
         raise AppError(
-            "Сообщение слишком длинное для контекста модели",
-            code="message_too_long",
+            "Инструкции, документы и инструменты не помещаются в контекст модели",
+            code="context_overflow",
             status_code=413,
         )
 

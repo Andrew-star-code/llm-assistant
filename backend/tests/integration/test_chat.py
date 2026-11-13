@@ -499,3 +499,20 @@ async def test_quiet_stream_outlives_default_redis_timeout(infra: Infra, tmp_pat
         assert await redis.xread({"gen:quiet": "0-0"}, block=6000) == []
     finally:
         await redis.aclose()
+
+
+async def test_answer_cut_by_output_limit_is_marked(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Ответ, оборванный по пределу длины, получает пометку — в том числе совсем пустой."""
+    _, client = await _client(make_client, infra, tmp_path, fake_llm_url)
+    note = "[Ответ оборван: модель достигла предела длины ответа."
+    for prompt, start in (
+        ("[[scenario:length]] длинно", "Начало ответа, который модель не успела\n\n" + note),
+        ("[[scenario:length_empty]] думай", note),
+    ):
+        sent = await send(client, await new_chat(client), prompt)
+        events = await read_stream(client, sent["assistant_message"]["id"])
+        text = "".join(e.data["text"] for e in events if e.event == "content.delta")
+        assert text.startswith(start), text
+        assert events[-1].data == {"status": "completed", "finish_reason": "length"}

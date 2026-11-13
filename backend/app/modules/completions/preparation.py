@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from uuid import UUID
 
 from sqlalchemy import select
@@ -19,8 +19,11 @@ from app.core.db import utcnow
 from app.modules.admin import app_settings
 from app.modules.chats.models import Chat, Message
 from app.modules.chats.service import branch
-from app.modules.completions.attachments import AttachmentsBlock, build_attachments
+from app.modules.completions.attachments import AttachmentsBlock, build_attachments, fit_attachments
+from app.modules.completions.context import schemas_tokens
 from app.modules.completions.prompt import (
+    DEFAULT_CONTEXT,
+    DEFAULT_RESERVE,
     PromptUser,
     ToolStep,
     Turn,
@@ -52,6 +55,9 @@ from app.modules.tools.registry import available_tools
 from app.modules.users.models import User
 from app.modules.users.service import address_of
 
+# Обвязка блока знаний в промпте (вводный текст, заголовки фрагментов) — сверх самих фрагментов.
+KNOWLEDGE_MARGIN = 300
+
 HISTORY_CUT_NOTE = "\n[…результат сокращён в истории диалога]"
 
 
@@ -75,6 +81,8 @@ class Prepared:
     parent_id: UUID | None
     user_id: UUID
     guard_block: list[str]
+    overhead: int = 0  # токены описаний инструментов
+    rag_budget: int = 0  # сколько токенов фрагментов авто-поиска поместится после вложений
 
 
 def history_steps(calls: list[ToolCall], limit: int) -> tuple[ToolStep, ...]:
@@ -210,13 +218,7 @@ async def prepare(
                 )
             ).all()
         )
-    # Вложения ищутся вместе с базами, когда в промпте только их оглавление (§10.4).
-    scope = await build_scope(
-        db, user.id, (r.role.id for r in roles),
-        attachment_ids=[f.id for f in attachments.files]
-        if attachments.mode == "outline" else (),
-        only_kb_ids=only_kb_ids,
-    )  # fmt: skip
+    scope = await build_scope(db, user.id, (r.role.id for r in roles), only_kb_ids=only_kb_ids)
     has_kb = bool(scope.kb_ids or scope.personal_kb_ids)
     # Инструменты: включены ∩ разрешены сценарием ∩ доступны ролям (§9.1).
     tools = (
@@ -231,6 +233,30 @@ async def prepare(
         if plan.endpoint.supports_tools
         else []
     )
+    # Бюджет системной части (§8.3): инструкции, инструменты и вопрос — как есть; вложения
+    # ужимаются под остаток, авто-поиск получает то, что осталось после них. Иначе модель с
+    # малым контекстом отказывала бы на любом сообщении с большим документом.
+    budget = (plan.endpoint.context_length or DEFAULT_CONTEXT) - (
+        plan.endpoint.max_output_tokens or DEFAULT_RESERVE
+    )
+    overhead = schemas_tokens(counter, [t.schema() for t in tools])
+    room = (
+        budget
+        - overhead
+        - counter.count_messages(
+            [{"role": "system", "content": base_system}, {"role": "user", "content": question}]
+        )
+    )
+    attachments = fit_attachments(
+        attachments, limit=max(room, 0), renderer=deps.renderer, counter=counter
+    )
+    rag_budget = min(
+        int((plan.endpoint.context_length or DEFAULT_CONTEXT) * deps.settings.rag.context_share),
+        max(room - attachments.tokens - KNOWLEDGE_MARGIN, 0),
+    )
+    # Вложения ищутся вместе с базами, когда в промпте только их оглавление (§10.4).
+    if attachments.mode == "outline":
+        scope = replace(scope, attachment_ids=tuple(f.id for f in attachments.files))
     step_chars = deps.settings.tools.history_result_max_chars
     if tools and step_chars:
         # Прошлые вызовы инструментов — в историю: на уточняющий вопрос модель
@@ -278,4 +304,6 @@ async def prepare(
         parent_id=parent_id,
         user_id=user_id,
         guard_block=guard_block,
+        overhead=overhead,
+        rag_budget=rag_budget,
     )

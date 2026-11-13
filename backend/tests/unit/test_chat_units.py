@@ -11,6 +11,7 @@ from prometheus_client import REGISTRY
 
 from app.core.config import REPO_ROOT, ModelEndpoint, load_settings
 from app.core.errors import AppError
+from app.modules.completions.attachments import AttachmentsBlock, fit_attachments
 from app.modules.completions.context import DROPPED_NOTE, TRUNCATED_NOTE, LoopContext
 from app.modules.completions.finish import clean_title, fallback_title, observe
 from app.modules.completions.preparation import HISTORY_CUT_NOTE, history_steps
@@ -255,9 +256,10 @@ def test_history_keeps_tool_turn_whole_and_leaves_reserve() -> None:
         **kwargs, endpoint=_endpoint(context=1000, reserve=100), history_reserve=880
     )
     assert tight.history_used == 0 and [m["role"] for m in tight.messages] == ["system", "user"]
-    # Описания инструментов занимают контекст: с ними вопрос может не поместиться.
-    with pytest.raises(AppError, match="слишком длинное"):
+    # Описания инструментов занимают контекст; отказ называет причину: вопрос-то короткий.
+    with pytest.raises(AppError, match="не помещаются в контекст") as error:
         build_messages(**kwargs, endpoint=_endpoint(context=1000, reserve=100), overhead=890)
+    assert error.value.code == "context_overflow"
 
 
 def _loop(budget: int, history: list[Turn] | None = None) -> LoopContext:
@@ -456,3 +458,48 @@ def test_generation_metrics() -> None:
     assert value("app_tool_calls_total", tool="drop_all_tables", status="ok") == 0
     assert value("app_context_trims_total", kind="tool_results_truncated") == before["trims"] + 1
     assert value("app_generation_ttft_seconds_count", role="chat") == before["ttft"] + 1
+
+
+def _attachments(mode: str = "outline") -> AttachmentsBlock:
+    counter = TokenCounter(None)
+    text = "Кодовое слово: Сириус. " + "Обычная строка длинного документа. " * 600
+    outline = "\n".join(
+        ["Файл «Отчёт.docx»: страниц — 30."] + [f"- Раздел {i} (стр. {i})" for i in range(1, 121)]
+    )
+    item = {
+        "name": "Отчёт.docx",
+        "type": "docx",
+        "pages": 30,
+        "text": text,
+        "outline": outline,
+        "preview": text[:6000],
+    }
+    rendered = RENDERER.render("system/attachments.md.j2", files=[item], mode=mode)
+    return AttachmentsBlock(rendered, mode, (), counter.count(rendered), items=(item,))
+
+
+def _fit(block: AttachmentsBlock, limit: int) -> AttachmentsBlock:
+    return fit_attachments(block, limit=limit, renderer=RENDERER, counter=TokenCounter(None))
+
+
+def test_attachments_shrink_to_fit_small_context() -> None:
+    block = _attachments()
+    # Места хватает — блок не трогаем.
+    assert _fit(block, block.tokens) is block
+    # Немного не хватает — короче начало документа, оглавление ещё целиком.
+    half = _fit(block, block.tokens - 500)
+    assert half.shrunk and half.tokens <= block.tokens - 500
+    assert "Раздел 120" in (half.text or "") and "Кодовое слово" in (half.text or "")
+    # Совсем мало — остаются имя файла и первые строки оглавления: дальше читают инструментами.
+    tiny = _fit(block, 250)
+    assert tiny.shrunk and tiny.tokens <= 250 and tiny.mode == "outline"
+    assert "Отчёт.docx" in (tiny.text or "") and "Обычная строка" not in (tiny.text or "")
+    # Не помещается даже минимум — возвращается минимум, отказ решает вызывающий.
+    floor = _fit(block, 10)
+    assert 10 < floor.tokens <= tiny.tokens
+
+
+def test_full_text_attachments_fall_back_to_outline() -> None:
+    block = _attachments(mode="full")
+    fitted = _fit(block, block.tokens // 2)
+    assert fitted.mode == "outline" and fitted.shrunk and fitted.tokens <= block.tokens // 2

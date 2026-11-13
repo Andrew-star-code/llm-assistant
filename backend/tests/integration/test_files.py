@@ -385,6 +385,55 @@ async def test_tool_results_are_fitted_into_context(
         assert context["peak_tokens"] <= context["budget"] == CONTEXT - 1000
 
 
+async def test_large_attachment_fits_a_small_context_model(
+    make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
+) -> None:
+    """Модель с малым контекстом и большой документ: вложение ужимается под остаток, а не отказ.
+
+    Найдено проверкой на рабочей станции: инструкции и описания инструментов занимают больше
+    половины контекста в 8К, и любое сообщение с документом падало с «Сообщение слишком длинное».
+    На тестовом стенде инструментов меньше, поэтому контекст здесь — 6000.
+    """
+    app, client = await _client(
+        make_client,
+        infra,
+        tmp_path,
+        fake_llm_url,
+        models={
+            "chat": {
+                "base_url": fake_llm_url,
+                "model": "fake-chat",
+                "supports_tools": True,
+                "context_length": 6000,
+                "max_output_tokens": 1000,
+            }
+        },
+    )
+    file = await upload_ready(client, "Отчёт.docx", samples.docx_pages(30, needle_page=25))
+    chat_id = await new_chat(client)
+    events = await ask(
+        client,
+        chat_id,
+        "[[scenario:tool:read_document]] стр. 25 «Кодовое слово»",
+        attachment_ids=[file["id"]],
+    )
+    assert events[-1].data == {"status": "completed", "finish_reason": "stop"}, events[-2].data
+    assert text_of(events) == f"Готово. Результат инструмента: {samples.NEEDLE}"
+    # Уточняющий вопрос в том же чате — тоже отвечает (раньше падал даже при 16К).
+    events = await ask(client, chat_id, "А что на первой странице?")
+    assert events[-1].data["status"] == "completed"
+    detail = (await client.get(f"/api/chats/{chat_id}")).json()
+    async with app.state.db_sessions() as db:
+        for message in detail["messages"]:
+            if message["role"] != "assistant":
+                continue
+            row = await db.get(Message, message["id"])
+            assert row is not None and row.trace is not None
+            assert row.trace["attachments"]["mode"] == "outline"
+            assert row.trace["attachments"]["shrunk"] is True
+            assert row.trace["context"]["peak_tokens"] <= row.trace["context"]["budget"] == 5000
+
+
 async def test_unknown_tool_call_is_reported_to_model(
     make_client: Any, infra: Infra, tmp_path: Path, fake_llm_url: str
 ) -> None:

@@ -84,16 +84,20 @@ async def auto_rag(
     used = 0
     for fragment in fragments:
         cost = counter.count(fragment.text)
-        if kept and used + cost > budget:
+        if used + cost > budget:
             break
         kept.append(fragment)
         used += cost
     numbered = context.sources.add(kept)
     trace["fragments"] = len(numbered)
     trace["tokens"] = used
+    if fragments and not kept:
+        # Нашлось, но в остаток контекста не поместилось: не говорить модели «ничего не найдено» —
+        # у неё остаётся инструмент поиска.
+        trace["skipped"] = "no_room"
     knowledge = (
         deps.renderer.render("system/knowledge.md.j2", fragments=fragments_context(numbered))
-        if status == "ok"
+        if status == "ok" and (kept or not fragments)
         else None
     )
     await writer.emit(

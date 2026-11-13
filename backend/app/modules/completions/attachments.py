@@ -8,7 +8,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import Any
 
 from app.core.config import ModelEndpoint, Settings
 from app.core.storage import Storage
@@ -26,6 +27,9 @@ class AttachmentsBlock:
     mode: str  # none | full | outline
     files: tuple[ToolFile, ...]
     tokens: int
+    # Данные шаблона — чтобы ужать блок под остаток контекста без повторного чтения файлов.
+    items: tuple[dict[str, Any], ...] = ()
+    shrunk: bool = False
 
 
 def tool_file(row: File) -> ToolFile:
@@ -90,4 +94,37 @@ async def build_attachments(
         for f in files
     ]
     text = renderer.render("system/attachments.md.j2", files=context, mode=mode)
-    return AttachmentsBlock(text, mode, files, counter.count(text))
+    return AttachmentsBlock(text, mode, files, counter.count(text), items=tuple(context))
+
+
+def fit_attachments(
+    block: AttachmentsBlock, *, limit: int, renderer: PromptRenderer, counter: TokenCounter
+) -> AttachmentsBlock:
+    """Ужимает блок вложений до ``limit`` токенов (§8.3): модель с малым контекстом должна
+    ответить, а не отказать из-за размера оглавления.
+
+    Ступени — от щадящей к крайней: оглавление и начало вместо полного текста, затем короче
+    начало, короче оглавление, в конце — только имена файлов. Полный текст модель дочитывает
+    инструментами. Не помещается и последняя ступень — возвращается она: отказ — дело вызывающего.
+    """
+    if not block.items or block.tokens <= limit:
+        return block
+    preview = max((len(i["preview"]) for i in block.items), default=0)
+    steps = [(preview, 200), (preview // 2, 200), (preview // 4, 100), (1000, 50), (0, 20), (0, 1)]
+    if block.mode == "outline":
+        steps = steps[1:]  # первая ступень — то, что уже есть
+    best = block
+    for chars, lines in steps:
+        items = [
+            {
+                **item,
+                "preview": item["text"][: min(chars, preview)],
+                "outline": "\n".join(item["outline"].splitlines()[:lines]),
+            }
+            for item in block.items
+        ]
+        text = renderer.render("system/attachments.md.j2", files=items, mode="outline")
+        best = replace(block, text=text, mode="outline", tokens=counter.count(text), shrunk=True)
+        if best.tokens <= limit:
+            break
+    return best
